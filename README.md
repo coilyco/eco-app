@@ -20,6 +20,7 @@ Dev commands are declared in [`.ward/ward.yaml`](.ward/ward.yaml). Run them as `
 
 - [AGENTS.md](AGENTS.md) - agent-facing operating rules.
 - [docs/FEATURES.md](docs/FEATURES.md) - inventory of what ships today.
+- [docs/discord-bot.md](docs/discord-bot.md) - implementation specification for rich Discord slash-command embeds.
 - [.ward/ward.yaml](.ward/ward.yaml) - allowlisted commands. Agents route through ward, not bare `make` / `uv` / `python` / `dotnet`.
 
 Cross-reference convention from [coilysiren/agentic-os#59](https://github.com/coilyco-flight-deck/agentic-os/issues/59).
