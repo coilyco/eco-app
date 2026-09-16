@@ -16,6 +16,7 @@ Covers:
 from __future__ import annotations
 
 import json
+from typing import Any
 
 import httpx
 import mcp.types as mt
@@ -741,6 +742,10 @@ def test_preview_currency_json_sanitizes_nested_nonfinite_values(
         "totalSupply": None,
         "tradeValue7d": None,
         "hasSupplyData": True,
+        "supplyNote": (
+            "A null money figure means its series was not read, not that the "
+            "world holds no money. `hasSupplyData` says which."
+        ),
     }
     assert payload["series"] == {
         "personalWealth": [[0.0, None]],
@@ -1030,3 +1035,49 @@ async def test_the_markdown_summarises_every_row_despite_limit() -> None:
 
     assert len(payload["currencies"]) <= 1
     assert payload["counts"]["total"] >= len(payload["currencies"])
+
+
+# eco-app#6077: an unread dataset must report null, never zero. The money block
+# is the second instance found by the 25-tool sweep, after the holder block.
+_MONEY_FIGURES = ("personalWealth", "governmentHoldings", "totalSupply", "tradeValue7d")
+
+
+def _money(**series: list[tuple[float, float]]) -> dict[str, Any]:
+    snapshot = CurrencySnapshot(
+        fetched_at_iso="2026-09-16T00:00:00+00:00",
+        source_base_url=_DEFAULT_BASE,
+        info=_info(),  # type: ignore[arg-type]
+        days_elapsed=4,
+        admin_ok=True,
+    )
+    for name, points in series.items():
+        setattr(snapshot, name, points)
+    money = currency_mod.compute_currency_payload(snapshot)["money"]
+    assert isinstance(money, dict)
+    return money
+
+
+@pytest.mark.parametrize("figure", _MONEY_FIGURES)
+def test_an_unread_money_series_reports_null_never_zero(figure: str) -> None:
+    """Measured live: every figure read 0.0 beside `hasSupplyData: false`.
+
+    A zero there asserts the world holds no money, which is a different claim
+    from not having read the ledger.
+    """
+    money = _money()
+
+    assert money[figure] is None
+    assert money["hasSupplyData"] is False
+
+
+def test_a_measured_zero_stays_zero() -> None:
+    """Or the invariant would be satisfied by nulling everything."""
+    money = _money(
+        personal_wealth_series=[(0.0, 0.0)],
+        government_holdings_series=[(0.0, 0.0)],
+        trades_7d_series=[(0.0, 0.0)],
+    )
+
+    for figure in _MONEY_FIGURES:
+        assert money[figure] == 0.0, f"{figure} was measured at zero and must stay zero"
+    assert money["hasSupplyData"] is True

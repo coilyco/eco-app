@@ -763,8 +763,18 @@ def _now_iso() -> str:
 # ---------------------------------------------------------------------------
 
 
-def _series_last(pts: list[tuple[float, float]]) -> float:
-    return float(pts[-1][1]) if pts else 0.0
+def _series_last(pts: list[tuple[float, float]]) -> float | None:
+    """Latest value of a level series, or None when it carries no sample.
+
+    None rather than 0.0, because an empty series means the dataset was not
+    read (no admin token, or the exporter refused), and a zero there asserts
+    the world holds no money (eco-app#6077).
+    """
+    return float(pts[-1][1]) if pts else None
+
+
+def _round_or_none(value: float | None) -> float | None:
+    return round(value, 2) if value is not None else None
 
 
 def _classify(rec: CurrencyRecord) -> str:
@@ -865,14 +875,19 @@ def compute_currency_payload(
     # (#257). The server's own ActiveCurrencies dataset counts currencies the
     # game considers live; the ledger count is distinct currency ids that have
     # ever appeared in a trade. Keep both, name both, and never blend them.
-    reported_active = int(_series_last(snapshot.active_currencies_series))
+    reported_active_raw = _series_last(snapshot.active_currencies_series)
+    reported_active = int(reported_active_raw) if reported_active_raw is not None else 0
     ledger_ids = len(records)
     active_source = ACTIVE_CURRENCIES_DATASET if reported_active else "trade-ledger"
     active_now = reported_active or ledger_ids
     personal_wealth = _series_last(snapshot.personal_wealth_series)
     government_holdings = _series_last(snapshot.government_holdings_series)
     trade_value_7d = _series_last(snapshot.trades_7d_series)
-    money_supply = personal_wealth + government_holdings
+    money_supply = (
+        personal_wealth + government_holdings
+        if personal_wealth is not None and government_holdings is not None
+        else None
+    )
 
     minted = [r for r in records if r.is_minted]
     personal = [r for r in records if not r.is_minted]
@@ -910,12 +925,16 @@ def compute_currency_payload(
         )
         if reported_active and reported_active != ledger_ids
         else "",
-        "personalWealth": round(personal_wealth, 2),
-        "governmentHoldings": round(government_holdings, 2),
-        "totalSupply": round(money_supply, 2),
-        "tradeValue7d": round(trade_value_7d, 2),
+        "personalWealth": _round_or_none(personal_wealth),
+        "governmentHoldings": _round_or_none(government_holdings),
+        "totalSupply": _round_or_none(money_supply),
+        "tradeValue7d": _round_or_none(trade_value_7d),
         "hasSupplyData": bool(
             snapshot.personal_wealth_series or snapshot.government_holdings_series
+        ),
+        "supplyNote": (
+            "A null money figure means its series was not read, not that the "
+            "world holds no money. `hasSupplyData` says which."
         ),
     }
 
