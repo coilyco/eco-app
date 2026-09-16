@@ -73,8 +73,12 @@ class CurrencyInput(BoundedServerInput):
     )
 
 
-class TradeInput(ServerInput):
-    """Select an Eco server and optional market filters."""
+class TradeInput(BoundedServerInput):
+    """Select an Eco server and optional market filters, bounded.
+
+    Bounded because `markets` grows with the number of distinct traded items
+    and the logistics arrays with the number of stores (#6076).
+    """
 
     item: str | None = Field(
         default=None,

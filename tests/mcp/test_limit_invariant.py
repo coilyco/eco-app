@@ -18,6 +18,7 @@ would need each one's upstream mocked.
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 import mcp.types as mt
@@ -29,11 +30,13 @@ from eco_mcp_app.server import build_server
 # Every tool whose schema advertises `limit`. Adding one without routing it
 # through _bound_rows or _thin_series is the regression this pins.
 LIMIT_BEARING = {
+    "find_trade",
     "get_civics",
     "get_climate",
     "get_crafting_atlas",
     "get_currency",
     "get_map",
+    "get_market",
     "get_recipes",
     "get_social",
     "get_species",
@@ -129,3 +132,55 @@ def test_limit_zero_means_every_row(helper: str) -> None:
 
     assert payload["rows"] == rows
     assert "warnings" not in payload
+
+
+class _Report:
+    """Stands in for a market or logistics report, which only needs to_dict."""
+
+    def __init__(self, payload: dict[str, Any]) -> None:
+        self._payload = payload
+
+    def to_dict(self) -> dict[str, Any]:
+        return self._payload
+
+
+@pytest.mark.parametrize(
+    ("tool", "target", "markdown", "key"),
+    [
+        ("get_market", "fetch_market", "market_markdown", "markets"),
+        ("find_trade", "fetch_logistics", "logistics_markdown", "cheapest"),
+    ],
+)
+@pytest.mark.asyncio
+async def test_the_two_newly_bounded_tools_actually_bound(
+    monkeypatch: pytest.MonkeyPatch, tool: str, target: str, markdown: str, key: str
+) -> None:
+    """Their upstream answers 401 off the cluster, so the bound is pinned here.
+
+    Both grew with world size and took no `limit` until eco-app#6076: markets
+    with the count of distinct traded items, the logistics arrays with stores.
+    """
+    rows = [{"i": i} for i in range(40)]
+    holder = eco_server.market_mod if tool == "get_market" else eco_server
+
+    async def _fetch(**_: Any) -> _Report:
+        return _Report({key: list(rows)})
+
+    monkeypatch.setattr(holder, target, _fetch)
+    monkeypatch.setattr(
+        eco_server.market_mod if tool == "get_market" else eco_server,
+        markdown,
+        lambda _report: "stub",
+    )
+
+    handler = build_server().request_handlers[mt.CallToolRequest]
+    result = await handler(
+        mt.CallToolRequest(
+            method="tools/call",
+            params=mt.CallToolRequestParams(name=tool, arguments={"limit": 5}),
+        )
+    )
+    payload = json.loads(result.root.content[-1].text)
+
+    assert len(payload[key]) == 5
+    assert any(w.startswith(f"{key}:") for w in payload["warnings"])

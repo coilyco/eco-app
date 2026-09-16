@@ -2648,7 +2648,7 @@ def build_server(route_registry: DualRouteRegistry | None = None) -> Server:
             # Markdown off the full payload, deeds bounded after: deedCount and
             # polygonCount keep describing every one (eco-app#6076).
             map_markdown = _format_map_markdown(payload)
-            _bound_rows(json_payload, _resolve_limit(arguments or {}), "deeds")
+            _bound_rows(json_payload, _resolve_limit(arguments or {}), "deeds", "owners")
             return CallToolResult(
                 content=[
                     TextContent(type="text", text=map_markdown),
@@ -2872,10 +2872,15 @@ def build_server(route_registry: DualRouteRegistry | None = None) -> Server:
                 )
             except httpx.HTTPError as e:
                 return _unreachable_result("Eco exporter", e)
+            # Markdown first: its totals describe every market, and the JSON
+            # rows are what a client truncates blind.
+            market_payload = intel.to_dict()
+            market_markdown = market_mod.market_markdown(intel)
+            _bound_rows(market_payload, _resolve_limit(arguments or {}), "markets")
             return CallToolResult(
                 content=[
-                    TextContent(type="text", text=market_mod.market_markdown(intel)),
-                    TextContent(type="text", text=json.dumps(intel.to_dict(), default=str)),
+                    TextContent(type="text", text=market_markdown),
+                    TextContent(type="text", text=json.dumps(market_payload, default=str)),
                 ],
             )
 
@@ -2893,10 +2898,21 @@ def build_server(route_registry: DualRouteRegistry | None = None) -> Server:
                 )
             except httpx.HTTPError as e:
                 return _unreachable_result("Eco exporter", e)
+            logistics_payload = report.to_dict()
+            logistics_md = logistics_markdown(report)
+            _bound_rows(
+                logistics_payload,
+                _resolve_limit(arguments or {}),
+                "cheapest",
+                "resale",
+                "arbitrage",
+                "supplyGaps",
+                "marketSummaries",
+            )
             return CallToolResult(
                 content=[
-                    TextContent(type="text", text=logistics_markdown(report)),
-                    TextContent(type="text", text=json.dumps(report.to_dict(), default=str)),
+                    TextContent(type="text", text=logistics_md),
+                    TextContent(type="text", text=json.dumps(logistics_payload, default=str)),
                 ],
             )
 
