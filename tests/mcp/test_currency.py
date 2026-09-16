@@ -899,3 +899,69 @@ def test_a_reachable_ledger_with_no_holders_still_reports_zero() -> None:
     assert view["reachable"] is True
     assert view["accountsCounted"] == 0
     assert view["totalHoldings"] == 0.0
+
+
+async def _absorb(entries: list[dict]) -> CurrencySnapshot:
+    """Drive the real fetch against a mocked holdings endpoint."""
+    snapshot = CurrencySnapshot(
+        fetched_at_iso="2026-09-16T00:00:00+00:00",
+        source_base_url=_DEFAULT_BASE,
+        info=_info(),  # type: ignore[arg-type]
+        days_elapsed=4,
+        admin_ok=True,
+    )
+    base = "http://eco.test:3001"
+    with respx.mock:
+        respx.get(f"{base}{currency_mod.CURRENCY_HOLDINGS_PATH}").mock(
+            return_value=httpx.Response(200, json=entries)
+        )
+        async with httpx.AsyncClient() as client:
+            await currency_mod._fetch_currency_holdings(client, base, {}, snapshot)
+    return snapshot
+
+
+@pytest.mark.asyncio
+async def test_a_truncated_holder_list_announces_itself() -> None:
+    """`limit` does not reach this cap, so the cap has to say so itself.
+
+    A list of 15 beside accountsCounted 22 is silent truncation, which reads as
+    the whole population. Measured live on eco.coilysiren.me. See eco-app#6076.
+    """
+    snapshot = await _absorb(
+        [
+            {
+                "currency": "reihtnog Credit",
+                "accountsCounted": 22,
+                "totalHoldings": 1500.0,
+                "topHolders": [
+                    {"account": f"acct{i}", "holder": f"h{i}", "balance": float(100 - i)}
+                    for i in range(22)
+                ],
+            }
+        ]
+    )
+
+    rec = snapshot.record("reihtnog Credit")
+    assert len(rec.top_holders) == currency_mod._MAX_HOLDERS
+    assert rec.accounts_counted == 22
+    warning = next((w for w in snapshot.warnings if "holder rows" in w), None)
+    assert warning is not None, f"truncation was silent: {snapshot.warnings}"
+    assert "15 of 22" in warning
+    assert "not `limit`" in warning
+
+
+@pytest.mark.asyncio
+async def test_an_untruncated_holder_list_stays_quiet() -> None:
+    """The negative control: no truncation, no warning."""
+    snapshot = await _absorb(
+        [
+            {
+                "currency": "small",
+                "accountsCounted": 2,
+                "totalHoldings": 3.0,
+                "topHolders": [{"account": "a", "holder": "h", "balance": 2.0}],
+            }
+        ]
+    )
+
+    assert not [w for w in snapshot.warnings if "holder rows" in w]
