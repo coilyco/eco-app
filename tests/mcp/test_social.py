@@ -397,3 +397,54 @@ def test_a_small_reputation_graph_stays_quiet() -> None:
     build_surface(surface, edges, activity, NAME_MAP, show_names=True)
 
     assert not [w for w in surface.warnings if w.startswith("reputationEdges:")]
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_get_social_accepts_a_limit(monkeypatch: pytest.MonkeyPatch) -> None:
+    """One of the four tools #6076 names as taking no `limit` at all.
+
+    Both its arrays grow with world size, and warning about truncation is not
+    the same as letting a caller ask for fewer rows. See eco-app#6076.
+    """
+    monkeypatch.setenv("ECO_ADMIN_API_KEY", "k")
+    total = 6
+    rep = "Citizen,ReceiverCitizen,Amount,Count,Time\n" + "".join(
+        f"{200000 + i},{300000 + i},{float(total - i)},1,{1000 + i}\n" for i in range(total)
+    )
+    respx.get(PLAY_URL).mock(return_value=httpx.Response(200, text=_PLAY_CSV))
+    respx.get(LOGIN_URL).mock(return_value=httpx.Response(200, text=_LOGIN_CSV))
+    respx.get(REP_URL).mock(return_value=httpx.Response(200, text=rep))
+    respx.get(CITIZENS_URL).mock(return_value=httpx.Response(200, json=_CITIZENS_JSON))
+
+    mcp = build_server()
+    handler = mcp.request_handlers[mt.CallToolRequest]
+    result = await handler(
+        mt.CallToolRequest(
+            method="tools/call",
+            params=mt.CallToolRequestParams(
+                name="get_social",
+                arguments={"server": "eco.example.com:3001", "limit": 2},
+            ),
+        )
+    )
+    payload = json.loads(result.root.content[1].text)
+
+    assert len(payload["reputationEdges"]) == 2
+    warning = next((w for w in payload["warnings"] if w.startswith("reputationEdges:")), None)
+    assert warning is not None, f"bounded without saying so: {payload['warnings']}"
+    assert f"showing 2 of {total}" in warning
+
+    # Rule 5: the aggregate still describes every row.
+    assert payload["totalReputationTransfers"] >= total
+
+
+@pytest.mark.asyncio
+async def test_get_social_declares_its_limit() -> None:
+    """The schema has to advertise it, or no caller knows it exists."""
+    mcp = build_server()
+    handler = mcp.request_handlers[mt.ListToolsRequest]
+    result = await handler(mt.ListToolsRequest(method="tools/list"))
+    tool = next(t for t in result.root.tools if t.name == "get_social")
+
+    assert "limit" in tool.inputSchema["properties"]

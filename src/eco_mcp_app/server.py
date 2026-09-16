@@ -2015,6 +2015,18 @@ def build_server(route_registry: DualRouteRegistry | None = None) -> Server:
                                 "redacted regardless. Default false."
                             ),
                         },
+                        "limit": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "description": (
+                                "Maximum detail rows to return per unbounded "
+                                "list (newArrivals, reputationEdges). Defaults "
+                                "to a slice that keeps a no-argument call "
+                                "inside an MCP client's response cap; the "
+                                "summary and aggregate fields always cover "
+                                "every row regardless. 0 means no limit."
+                            ),
+                        },
                     },
                     "additionalProperties": False,
                 },
@@ -2535,10 +2547,20 @@ def build_server(route_registry: DualRouteRegistry | None = None) -> Server:
                 )
             except httpx.HTTPError as e:
                 return _unreachable_result("Eco exporter", e)
+            # Markdown first, off the full surface: rule 5 of eco-app#6076 keeps
+            # summaries describing every row regardless of `limit`.
+            markdown = social_markdown(surface)
+            social_payload = surface.to_dict()
+            _bound_rows(
+                social_payload,
+                _resolve_limit(arguments or {}),
+                "newArrivals",
+                "reputationEdges",
+            )
             return CallToolResult(
                 content=[
-                    TextContent(type="text", text=social_markdown(surface)),
-                    TextContent(type="text", text=json.dumps(surface.to_dict())),
+                    TextContent(type="text", text=markdown),
+                    TextContent(type="text", text=json.dumps(social_payload)),
                 ],
             )
 
