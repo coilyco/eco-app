@@ -15,6 +15,7 @@ Covers:
 from __future__ import annotations
 
 import json
+from typing import Any
 
 import httpx
 import mcp.types as mt
@@ -1119,3 +1120,45 @@ def test_attributed_pollution_reports_emissions_not_counts() -> None:
     assert attribution["top_stations"][0] == {"name": "BlastFurnaceItem", "emissions": 6858.75}
     assert attribution["top_citizens"][0] == {"name": "coilysiren", "emissions": 12.5}
     assert "count" not in attribution["top_stations"][0]
+
+
+def test_thin_series_keeps_the_endpoints_and_says_so() -> None:
+    """The curve-shaped sibling of _bound_rows, for get_climate's seven series.
+
+    A head slice of a series reports the shape of day one and calls it the
+    trend, so these thin by even spacing with the true endpoints preserved.
+    See eco-app#6076.
+    """
+    points = [[float(i), float(i * 2)] for i in range(100)]
+    payload: dict[str, Any] = {"co2Series": list(points), "seaLevelSeries": list(points)}
+
+    eco_server._thin_series(payload, 10, "co2Series", "seaLevelSeries")
+
+    for key in ("co2Series", "seaLevelSeries"):
+        assert len(payload[key]) == 10
+        assert payload[key][0] == points[0], "the first sample must stay true"
+        assert payload[key][-1] == points[-1], "the last sample must stay true"
+        warning = next(w for w in payload["warnings"] if w.startswith(f"{key}:"))
+        assert "10 evenly-spaced samples of 100" in warning
+        assert "endpoints preserved" in warning
+
+
+def test_thin_series_leaves_a_short_curve_alone() -> None:
+    """The negative control: under the limit, untouched and unannounced."""
+    points = [[0.0, 1.0], [1.0, 2.0]]
+    payload: dict[str, Any] = {"co2Series": list(points)}
+
+    eco_server._thin_series(payload, 10, "co2Series")
+
+    assert payload["co2Series"] == points
+    assert "warnings" not in payload
+
+
+def test_thin_series_at_limit_zero_is_a_no_op() -> None:
+    """limit=0 means every sample, matching _bound_rows and the schema text."""
+    points = [[float(i), float(i)] for i in range(50)]
+    payload: dict[str, Any] = {"co2Series": list(points)}
+
+    eco_server._thin_series(payload, 0, "co2Series")
+
+    assert payload["co2Series"] == points

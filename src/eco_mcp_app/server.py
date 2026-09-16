@@ -1424,6 +1424,29 @@ def _bound_rows(payload: dict[str, Any], limit: int, *keys: str) -> None:
         )
 
 
+def _thin_series(payload: dict[str, Any], limit: int, *keys: str) -> None:
+    """Thin time series in place, and say what was thinned.
+
+    The curve-shaped sibling of `_bound_rows`. A head slice of a series reports
+    the shape of day one and calls it the trend, so these get even spacing with
+    the endpoints preserved. See eco-app#6076.
+    """
+    if limit <= 0:
+        return
+    for key in keys:
+        points = payload.get(key)
+        if not isinstance(points, list):
+            continue
+        thinned, was_thinned = _downsample(points, limit)
+        if not was_thinned:
+            continue
+        payload[key] = thinned
+        payload.setdefault("warnings", []).append(
+            f"{key}: thinned to {len(thinned):,} evenly-spaced samples of "
+            f"{len(points):,} (endpoints preserved); pass limit=0 for every sample"
+        )
+
+
 def _downsample(points: list[Any], limit: int) -> tuple[list[Any], bool]:
     """Thin a time series to at most `limit` evenly-spaced samples.
 
@@ -2606,9 +2629,13 @@ def build_server(route_registry: DualRouteRegistry | None = None) -> Server:
             json_payload = {
                 k: v for k, v in payload.items() if k not in ("gifDataUri", "pollutionDataUri")
             }
+            # Markdown off the full payload, deeds bounded after: deedCount and
+            # polygonCount keep describing every one (eco-app#6076).
+            map_markdown = _format_map_markdown(payload)
+            _bound_rows(json_payload, _resolve_limit(arguments or {}), "deeds")
             return CallToolResult(
                 content=[
-                    TextContent(type="text", text=_format_map_markdown(payload)),
+                    TextContent(type="text", text=map_markdown),
                     TextContent(type="text", text=json.dumps(json_payload)),
                 ],
             )
@@ -2718,9 +2745,25 @@ def build_server(route_registry: DualRouteRegistry | None = None) -> Server:
                 default_admin_base=default_admin_base,
             )
             payload = climate_mod.compute_climate_payload(snapshot)
+            # Markdown off the full payload; the curves thin after it, so the
+            # narrative and the status still read every point (eco-app#6076).
+            climate_markdown = _format_climate_markdown(payload)
+            climate_limit = _resolve_limit(arguments or {})
+            _thin_series(
+                payload,
+                climate_limit,
+                "co2Series",
+                "seaLevelSeries",
+                "pollutionSeries",
+                "temperatureSeries",
+                "co2PollutionSeries",
+                "co2AnimalsSeries",
+                "co2PlantsSeries",
+            )
+            _bound_rows(payload, climate_limit, "topPolluterCitizens")
             return CallToolResult(
                 content=[
-                    TextContent(type="text", text=_format_climate_markdown(payload)),
+                    TextContent(type="text", text=climate_markdown),
                     TextContent(type="text", text=json.dumps(payload, default=str)),
                 ],
             )

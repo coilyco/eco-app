@@ -65,7 +65,7 @@ class ExplainItemInput(BaseModel):
     )
 
 
-class MapInput(ServerInput):
+class MapInput(BoundedServerInput):
     """Select an Eco server, and choose whether to include render geometry."""
 
     include_geometry: bool = Field(
@@ -241,7 +241,7 @@ def register_wave2_routes(registry: DualRouteRegistry, invoke: ToolInvoker) -> N
             "CO2 context, and available Eco pollution attribution."
         ),
         rest_path=WAVE2_PATHS["get_climate"],
-        input_model=ServerInput,
+        input_model=BoundedServerInput,
     )
     register_json_route(
         registry,

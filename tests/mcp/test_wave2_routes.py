@@ -20,7 +20,7 @@ WAVE2_ARGUMENTS: dict[str, dict[str, Any]] = {
     # include_geometry is spelled out for the same reason as include_image:
     # it defaults to False and the registry passes the resolved model through.
     # SVG coordinates are opt-in so an MCP caller stays readable (eco-app#264).
-    "get_map": {"server": "eco.test:3001", "include_geometry": False},
+    "get_map": {"server": "eco.test:3001", "include_geometry": False, "limit": 50},
     "get_milestones": {"server": "eco.test:3001"},
     # include_image is spelled out because it defaults to False and the
     # registry passes the resolved model through — inlined images are opt-in so
@@ -38,7 +38,7 @@ WAVE2_ARGUMENTS: dict[str, dict[str, Any]] = {
         "server": "eco.test:3001",
     },
     "get_region": {"server": "eco.test:3001"},
-    "get_climate": {"server": "eco.test:3001"},
+    "get_climate": {"server": "eco.test:3001", "limit": 50},
     "get_government": {"server": "eco.test:3001"},
 }
 
