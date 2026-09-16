@@ -469,3 +469,54 @@ async def test_rows_that_all_fail_to_parse_are_unmeasured() -> None:
         points = await _fetch_dataset(client, "http://e", "AnyDataset", 5, {})
 
     assert points is None
+
+
+def _kpis_with_all_datasets_read() -> dict[str, object]:
+    """Baseline: every dataset present and carrying real activity."""
+    raw = _raw({name: [1.0, 2.0, 3.0] for name in ECONOMY_DATASETS})
+    return compute_economy_payload(raw)["kpis"]
+
+
+def test_withholding_any_dataset_yields_null_never_zero() -> None:
+    """The invariant, over every dataset rather than one case per tool.
+
+    Three commits fixed this shape one tool at a time without converging, so
+    the rule is asserted as a property: a KPI that moves when its dataset goes
+    unread must move to None. A 0.0 is a measured "no activity" and cannot be
+    told apart from "never looked" by any caller. See eco-app#6077.
+    """
+    baseline = _kpis_with_all_datasets_read()
+
+    for withheld in ECONOMY_DATASETS:
+        present = {name: [1.0, 2.0, 3.0] for name in ECONOMY_DATASETS if name != withheld}
+        raw = _raw(present)
+        raw["series"] = {
+            name: [(float(i), float(v)) for i, v in enumerate(vals)]
+            for name, vals in present.items()
+        }
+        payload = compute_economy_payload(raw)
+
+        assert withheld in payload["datasets_unavailable"], (
+            f"{withheld} was not read and is missing from datasets_unavailable, "
+            "so a caller cannot tell which nulls it produced"
+        )
+
+        for key, was in baseline.items():
+            now = payload["kpis"][key]
+            if now == was:
+                continue
+            assert now is None, (
+                f"withholding {withheld} moved kpis[{key}] from {was!r} to {now!r}. "
+                "An unread dataset must yield None: a zero asserts the server "
+                "reported no activity, which is a different claim"
+            )
+
+
+def test_a_measured_zero_stays_zero() -> None:
+    """The negative control, or the rule above is satisfied by nulling everything."""
+    raw = _raw({name: [0.0, 0.0] for name in ECONOMY_DATASETS})
+    kpis = compute_economy_payload(raw)["kpis"]
+
+    assert kpis["wages_total"] == 0.0
+    assert kpis["taxes_paid"] == 0.0
+    assert compute_economy_payload(raw)["datasets_unavailable"] == []

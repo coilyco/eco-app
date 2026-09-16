@@ -869,3 +869,33 @@ async def test_a_genuinely_empty_server_still_reads_as_early_cycle() -> None:
     assert snap.admin_reads_refused is False
     narrative = compute_currency_payload(snap)["narrative"]
     assert "refused" not in narrative.lower(), narrative
+
+
+def test_an_unreachable_holder_ledger_reports_null_not_zero() -> None:
+    """The same rule as get_economy's KPIs, on the block that still broke it.
+
+    `reachable: False` means the exporter mod is not deployed, so no count was
+    observed. Reporting 0 there claims nobody holds the currency, which is a
+    different statement and one a caller cannot distinguish. See eco-app#6077.
+    """
+    rec = currency_mod.CurrencyRecord(name="unreadable")
+    rec.holders_reachable = False
+
+    view = currency_mod._holders_view(rec)
+
+    assert view["reachable"] is False
+    assert view["accountsCounted"] is None
+    assert view["totalHoldings"] is None
+    assert view["list"] == []
+
+
+def test_a_reachable_ledger_with_no_holders_still_reports_zero() -> None:
+    """The negative control: a measured empty ledger is a real zero."""
+    rec = currency_mod.CurrencyRecord(name="empty")
+    rec.holders_reachable = True
+
+    view = currency_mod._holders_view(rec)
+
+    assert view["reachable"] is True
+    assert view["accountsCounted"] == 0
+    assert view["totalHoldings"] == 0.0

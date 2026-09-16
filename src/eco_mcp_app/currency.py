@@ -227,8 +227,8 @@ class CurrencySnapshot:
                     "tradeVolume": r.trade_volume,
                     "createdBy": r.created_by,
                     "holdersReachable": r.holders_reachable,
-                    "totalHoldings": round(r.total_holdings, 2),
-                    "accountsCounted": r.accounts_counted,
+                    "totalHoldings": round(r.total_holdings, 2) if r.holders_reachable else None,
+                    "accountsCounted": r.accounts_counted if r.holders_reachable else None,
                     "topHolders": [
                         {"account": h.account, "holder": h.holder, "balance": round(h.balance, 2)}
                         for h in r.top_holders
@@ -801,8 +801,10 @@ def _holders_view(rec: CurrencyRecord, *, include_note: bool = True) -> dict[str
         return {
             "reachable": False,
             "note": HOLDERS_UNAVAILABLE_NOTE if include_note else "",
-            "accountsCounted": 0,
-            "totalHoldings": 0.0,
+            # null, never 0: the ledger was unread, so no count was observed.
+            # A 0 here reads as "nobody holds it". See eco-app#6077.
+            "accountsCounted": None,
+            "totalHoldings": None,
             "list": [],
         }
     return {

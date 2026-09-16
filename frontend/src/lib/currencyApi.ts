@@ -29,8 +29,9 @@ export interface CurrencyRecord {
   // Optional: present in the snapshot payload, not yet rendered by the currency
   // strip. `holdersReachable` is false when that mod is not deployed on the server.
   holdersReachable?: boolean
-  totalHoldings?: number
-  accountsCounted?: number
+  // null when holdersReachable is false: unread, not zero. eco-app#6077.
+  totalHoldings?: number | null
+  accountsCounted?: number | null
   topHolders?: CurrencyHolder[]
 }
 
