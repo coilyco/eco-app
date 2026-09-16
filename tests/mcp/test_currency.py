@@ -965,3 +965,68 @@ async def test_an_untruncated_holder_list_stays_quiet() -> None:
     )
 
     assert not [w for w in snapshot.warnings if "holder rows" in w]
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_the_roster_is_not_shipped_twice() -> None:
+    """`minted` and `personal` partition what `currencies` already carries.
+
+    Shipping them as full views sent every record twice, on the tool whose own
+    warnings are about response caps. They are names now: the partition
+    survives, the copy does not. See eco-app#6076.
+    """
+    respx.get(DEFAULT_ECO_INFO_URL).mock(return_value=httpx.Response(200, json=_info()))
+    _route_datasets({})
+    _route_flatlist([])
+    _route_all_actions()
+
+    mcp = build_server()
+    handler = mcp.request_handlers[mt.CallToolRequest]
+    result = await handler(
+        mt.CallToolRequest(
+            method="tools/call",
+            params=mt.CallToolRequestParams(name="get_currency", arguments={}),
+        )
+    )
+    payload = json.loads(result.root.content[1].text)
+
+    assert payload["minted"] == [] or all(isinstance(x, str) for x in payload["minted"])
+    assert payload["personal"] == [] or all(isinstance(x, str) for x in payload["personal"])
+
+    # Every partitioned name still resolves to a record in `currencies`, so the
+    # partition is information rather than a dangling label.
+    roster = {row["name"] for row in payload["currencies"]}
+    for key in ("minted", "personal"):
+        assert set(payload[key]) <= roster, f"{key} names a currency the roster dropped"
+
+    # And the counts still describe the whole population.
+    assert payload["counts"]["minted"] == len(payload["minted"])
+    assert payload["counts"]["personal"] == len(payload["personal"])
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_the_markdown_summarises_every_row_despite_limit() -> None:
+    """Rule 5: summaries describe every row regardless of `limit`.
+
+    The markdown renders before the roster is bounded, so a limit=1 call still
+    names the minted and personal sections off the full population.
+    """
+    respx.get(DEFAULT_ECO_INFO_URL).mock(return_value=httpx.Response(200, json=_info()))
+    _route_datasets({})
+    _route_flatlist([])
+    _route_all_actions()
+
+    mcp = build_server()
+    handler = mcp.request_handlers[mt.CallToolRequest]
+    result = await handler(
+        mt.CallToolRequest(
+            method="tools/call",
+            params=mt.CallToolRequestParams(name="get_currency", arguments={"limit": 1}),
+        )
+    )
+    payload = json.loads(result.root.content[1].text)
+
+    assert len(payload["currencies"]) <= 1
+    assert payload["counts"]["total"] >= len(payload["currencies"])

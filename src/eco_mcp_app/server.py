@@ -2733,16 +2733,21 @@ def build_server(route_registry: DualRouteRegistry | None = None) -> Server:
             # response, and the only filter path led to notFound on every
             # value because no currency on that server resolves to a name
             # (#256). A bounded roster is the workaround that actually works.
-            _bound_rows(
-                payload,
-                _resolve_limit(arguments or {}),
-                "currencies",
-                "personal",
-                "minted",
-            )
+            #
+            # Markdown first, off the full roster: rule 5 of eco-app#6076 keeps
+            # summaries describing every row regardless of `limit`.
+            markdown = _format_currency_markdown(payload)
+            # `minted` and `personal` partition the same records `currencies`
+            # already carries, so shipping them as views sent every record
+            # twice. Names keep the partition and drop the copy (eco-app#6076).
+            for key in ("minted", "personal"):
+                rows = payload[key]
+                if isinstance(rows, list):
+                    payload[key] = [row["name"] for row in rows]
+            _bound_rows(payload, _resolve_limit(arguments or {}), "currencies")
             return CallToolResult(
                 content=[
-                    TextContent(type="text", text=_format_currency_markdown(payload)),
+                    TextContent(type="text", text=markdown),
                     TextContent(type="text", text=json.dumps(payload, default=str)),
                 ],
             )
