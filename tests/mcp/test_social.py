@@ -360,3 +360,40 @@ def test_new_arrivals_stays_quiet_when_nothing_is_cut() -> None:
 
     assert len(surface.new_arrivals) == 3
     assert not [w for w in surface.warnings if w.startswith("newArrivals:")]
+
+
+def test_the_reputation_graph_announces_its_truncation() -> None:
+    """The other array in this tool that grows with world size.
+
+    newArrivals was fixed at #267 and this one was left, so a caller read a
+    truncated graph with no way to tell. The graph grows with the square of the
+    citizen count, so it is the one that runs away. See eco-app#6076.
+    """
+    cap = social_mod.MAX_REPUTATION_EDGES
+    total = cap + 25
+    header = "Citizen,ReceiverCitizen,Amount,Count,Time\n"
+    body = "".join(
+        f"{200000 + i},{300000 + i},{float(total - i)},1,{1000 + i}\n" for i in range(total)
+    )
+
+    surface = SocialSurface(fetched_at_iso="t", source_base_url="b")
+    edges: list = []
+    parse_reputation_rows(_rows(header + body), surface, edges)
+    build_surface(surface, edges, [], {}, show_names=False)
+
+    assert len(surface.reputation_edges) == cap
+    warning = next((w for w in surface.warnings if w.startswith("reputationEdges:")), None)
+    assert warning is not None, f"truncation was silent: {surface.warnings}"
+    assert f"{cap:,} of {total:,}" in warning
+
+    amounts = [edge["amount"] for edge in surface.reputation_edges]
+    assert amounts == sorted(amounts, key=abs, reverse=True)
+
+
+def test_a_small_reputation_graph_stays_quiet() -> None:
+    """The negative control: under the cap, no warning."""
+    surface = SocialSurface(fetched_at_iso="t", source_base_url="b")
+    edges, activity = _parse_all(surface)
+    build_surface(surface, edges, activity, NAME_MAP, show_names=True)
+
+    assert not [w for w in surface.warnings if w.startswith("reputationEdges:")]

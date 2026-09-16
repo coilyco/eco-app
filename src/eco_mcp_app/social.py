@@ -48,6 +48,9 @@ SOCIAL_ACTION_TYPES = (PLAY_ACTION, FIRST_LOGIN_ACTION, REPUTATION_ACTION)
 DEFAULT_CACHE_TTL_S = float(os.environ.get("ECO_SOCIAL_CACHE_TTL", "60"))
 MAX_ROWS_PER_ACTION = int(os.environ.get("ECO_SOCIAL_MAX_ROWS", "500000"))
 MAX_NEW_ARRIVALS = int(os.environ.get("ECO_SOCIAL_ARRIVALS", "60"))
+# The reputation graph grows with the square of the citizen count, so it is the
+# other array here that runs away. See eco-app#6076.
+MAX_REPUTATION_EDGES = int(os.environ.get("ECO_SOCIAL_REPUTATION_EDGES", "120"))
 SECONDS_PER_DAY = 86400.0
 NAMES_ALLOW_ENV = "ECO_SOCIAL_ALLOW_NAMES"
 
@@ -395,7 +398,7 @@ def build_surface(
             "list in social.py to light the reputation graph up."
         )
 
-    surface.reputation_edges = sorted(
+    ranked: list[dict[str, Any]] = sorted(
         (
             {
                 "source": source,
@@ -408,6 +411,15 @@ def build_surface(
         key=lambda edge: abs(edge["amount"]),
         reverse=True,
     )
+    # Say so, the same way newArrivals does. Largest by absolute amount first,
+    # so a truncated graph keeps the edges that carry the weight.
+    if len(ranked) > MAX_REPUTATION_EDGES:
+        surface.warnings.append(
+            f"reputationEdges: showing {MAX_REPUTATION_EDGES:,} of {len(ranked):,} "
+            "rows, largest by amount first"
+        )
+        ranked = ranked[:MAX_REPUTATION_EDGES]
+    surface.reputation_edges = ranked
     surface.top_reputation_givers = sorted(given.items(), key=lambda row: row[1], reverse=True)
     surface.top_reputation_receivers = sorted(
         received.items(), key=lambda row: row[1], reverse=True
