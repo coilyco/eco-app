@@ -213,7 +213,7 @@ async def test_wave1_routes_share_success_payloads(name: str, path: str) -> None
         # MCP response (eco-app#232).
         # `citizen` is left unset, and both transports drop unset optionals.
         arguments = resolved = {"server": "eco.test:3001", "include_timelines": False}
-    elif name in ("get_civics", "get_stores", "get_currency"):
+    elif name in ("get_civics", "get_stores", "get_currency", "get_world"):
         # Detail arrays are bounded by default so a no-argument call stays
         # inside an MCP client's response cap (eco-app#256).
         arguments = resolved = {"server": "eco.test:3001", "limit": 50}

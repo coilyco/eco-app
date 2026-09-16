@@ -187,7 +187,7 @@ def register_wave1_routes(registry: DualRouteRegistry, invoke: ToolInvoker) -> N
             "server-side admin API key."
         ),
         rest_path="/preview/world.json",
-        input_model=ServerInput,
+        input_model=BoundedServerInput,
     )
 
 

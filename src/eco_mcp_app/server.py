@@ -2225,10 +2225,26 @@ def build_server(route_registry: DualRouteRegistry | None = None) -> Server:
                 activity = await fetch_world(base_url=server_arg, api_key=api_key)
             except httpx.HTTPError as e:
                 return _unreachable_result("Eco exporter", e)
+            # Markdown off the full activity; totalEvents and perActionCounts
+            # keep describing every event either way (eco-app#6076).
+            world_text = world_markdown(activity)
+            world_payload = activity.to_dict()
+            world_limit = _resolve_limit(arguments or {})
+            # timeline is a day series, so it thins rather than truncating: a
+            # head slice would report the first days and call it the history.
+            _thin_series(world_payload, world_limit, "timeline")
+            _bound_rows(
+                world_payload,
+                world_limit,
+                "byCitizen",
+                "byPolluter",
+                "byObject",
+                "hotspots",
+            )
             return CallToolResult(
                 content=[
-                    TextContent(type="text", text=world_markdown(activity)),
-                    TextContent(type="text", text=json.dumps(activity.to_dict())),
+                    TextContent(type="text", text=world_text),
+                    TextContent(type="text", text=json.dumps(world_payload)),
                 ],
             )
 
