@@ -562,6 +562,13 @@ async def _fetch_currency_holdings(
             )
         holders.sort(key=lambda x: x.balance, reverse=True)
         rec.top_holders = holders[:_MAX_HOLDERS]
+        # Say so. accountsCounted keeps the real total either way, but a list of
+        # 15 beside a count of 22 is silent truncation. See eco-app#6076.
+        if len(holders) > _MAX_HOLDERS:
+            snapshot.warnings.append(
+                f"{rec.name}: showing {_MAX_HOLDERS:,} of {len(holders):,} holder "
+                f"rows; this cap is ECO_CURRENCY_MAX_HOLDERS, not `limit`"
+            )
 
 
 async def fetch_currency_id_map(
