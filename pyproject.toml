@@ -121,4 +121,4 @@ excludes = ["**/obj/**", "**/bin/**"]
 [tool.agentic-os.repo-pointer-skills]
 # This repo lives under the coilyco-gaming org dir, so its repo-pointer
 # skill points at ~/projects/coilyco-gaming/. Needs agentic-os >= v0.18.0.
-org = "coilyco-gaming"
+org = "coilyco"
