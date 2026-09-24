@@ -52,7 +52,7 @@ docker rm -f "${image_container_id}" >/dev/null
 image_container_id=""
 
 export FORGEJO_PACKAGE_URL="${GITHUB_SERVER_URL:-https://forgejo.coilysiren.me}"
-export FORGEJO_PACKAGE_OWNER="coilyco-gaming"
+export FORGEJO_PACKAGE_OWNER="coilyco"
 export FORGEJO_PACKAGE_USER="coilyco-ops"
 # The trusted publisher runner injects one current write:package credential.
 # Reuse it for both OCI and generic packages so a stale repository Actions
