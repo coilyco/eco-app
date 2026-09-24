@@ -2,7 +2,7 @@
 set -euo pipefail
 
 registry="forgejo.coilysiren.me"
-image_name="coilyco-gaming/eco-app"
+image_name="coilyco/eco-app"
 dev_image="${registry}/coilyco-flight-deck/agentic-os:release"
 
 for required in REGISTRY_TOKEN MOD_PACKAGE_NAME; do
