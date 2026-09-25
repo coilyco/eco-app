@@ -91,9 +91,10 @@ def register_wave1_routes(registry: DualRouteRegistry, invoke: ToolInvoker) -> N
         name="get_server_status",
         title="Eco - server status",
         description=(
-            "Show a public Eco server's online players, meteor countdown, world "
-            "statistics, economy, and version. Returns a readable summary and "
-            "structured JSON. Omit server to use the configured default."
+            "Show a public Eco server as it is right now: whether it is up, who is "
+            "online, the meteor countdown, world statistics, economy headline, and "
+            "game version. For how active the community has been over recent days "
+            "use get_social. Omit server to use the configured default."
         ),
         rest_path="/preview.json",
         input_model=ServerInput,
@@ -104,9 +105,20 @@ def register_wave1_routes(registry: DualRouteRegistry, invoke: ToolInvoker) -> N
         name="get_currency",
         title="Eco - currency and money supply",
         description=(
-            "Show live Eco currencies, issuance, trade activity, money supply, "
-            "and optional per-currency holder detail. Admin-backed data degrades "
-            "to the public server headline when the server-side key is absent."
+            "Show the currencies on this server and who holds them. Currency names "
+            "are invented by players and can be any word, so 'who holds the most "
+            "X' or 'who is richest in X', where X is not an item, animal, or "
+            "reputation, is a currency question and belongs here. Reputation is "
+            "get_social's. Covers which "
+            "currencies exist and who founded them, which are minted or backed and "
+            "by how much, trade activity per currency, total money supply, and each "
+            "currency's top holders. Pass currency to get one currency's holders. Questions about "
+            "exchanging or converting "
+            "one currency into another start here, with which currencies are "
+            "backed and actively traded. For stores pricing in one currency use "
+            "find_trade with its currency filter. "
+            "Admin-backed data degrades to the public server headline when the "
+            "server-side key is absent."
         ),
         rest_path="/preview/currency.json",
         input_model=CurrencyInput,
@@ -117,9 +129,14 @@ def register_wave1_routes(registry: DualRouteRegistry, invoke: ToolInvoker) -> N
         name="get_market",
         title="Eco - market price intelligence",
         description=(
-            "Build per-item market history, volume, and price trends from the "
-            "Eco trade ledger. Optional item and currency filters narrow the "
-            "report. Requires the server-side admin API key."
+            "Show how an item's price has moved over time: daily median, low, and "
+            "high price, trade volume, and whether the price is rising, falling, "
+            "or flat, per item and currency, from past trades. Answers 'is X "
+            "getting cheaper' and 'which items change hands most by volume'. "
+            "Optional item and currency filters narrow the report. For whether a "
+            "given price is fair use fair_price, for where to buy or sell an item "
+            "right now use find_trade, and for individual trades use get_trades. "
+            "Requires the server-side admin API key."
         ),
         rest_path="/preview/market.json",
         input_model=TradeInput,
@@ -130,9 +147,13 @@ def register_wave1_routes(registry: DualRouteRegistry, invoke: ToolInvoker) -> N
         name="get_stores",
         title="Eco - store and trader directory",
         description=(
-            "Build store and trader profiles from Eco trade history, including "
-            "owners, items, volumes, counterparties, and recent activity. Requires "
-            "the server-side admin API key."
+            "Profile the stores and traders on this server: who owns each store, "
+            "what it trades, its volume, its customers, and when it last traded, "
+            "plus what each player buys and sells as a trader. Answers 'who runs "
+            "the biggest store', 'what does this shop trade', and 'which player "
+            "moves the most goods'. It has no item filter, so for where to buy or sell "
+            "a specific item use find_trade. Requires the server-side admin API "
+            "key."
         ),
         rest_path="/preview/stores.json",
         input_model=BoundedServerInput,
@@ -143,9 +164,16 @@ def register_wave1_routes(registry: DualRouteRegistry, invoke: ToolInvoker) -> N
         name="find_trade",
         title="Eco - trade and store logistics",
         description=(
-            "Turn trade history and live store shelves into resale, arbitrage, "
-            "and supply-gap decisions. Optional item and currency filters narrow "
-            "the report. Requires the server-side admin API key."
+            "Answer where to buy or sell an item on this server: the cheapest "
+            "store selling it, the store paying the most for it, whether anyone "
+            "is buying it, buy-low-sell-high spreads between stores, and items "
+            "with buyers but no sellers. That supply-gap board is the answer to "
+            "what a store should carry to earn money. Reads live store shelves, falling back to "
+            "recent "
+            "trade prices. Pass item for one item, or currency for offers priced "
+            "in that currency. For price trends use get_market, for individual "
+            "past trades get_trades, and for who owns which store get_stores. "
+            "Requires the server-side admin API key."
         ),
         rest_path="/preview/logistics.json",
         input_model=TradeInput,
@@ -156,9 +184,13 @@ def register_wave1_routes(registry: DualRouteRegistry, invoke: ToolInvoker) -> N
         name="get_civics",
         title="Eco - civics and governance",
         description=(
-            "Show election outcomes, turnout, demographic movement, settlements, "
-            "and homesteads from Eco's civic history. Requires the server-side "
-            "admin API key."
+            "Show the civic history of this server: past election outcomes and "
+            "turnout, population movement, and settlements, including how many "
+            "settlements and homesteads have been started. For the laws and elected titles in "
+            "force right now use "
+            "get_government, and for who owns one particular plot or deed use "
+            "get_map. "
+            "Requires the server-side admin API key."
         ),
         rest_path="/preview/civics.json",
         input_model=BoundedServerInput,
@@ -169,9 +201,13 @@ def register_wave1_routes(registry: DualRouteRegistry, invoke: ToolInvoker) -> N
         name="get_progression",
         title="Eco - progression and skills history",
         description=(
-            "Reconstruct server-wide skill trajectories and progression trends "
-            "from Eco action exports and daily series. Requires the server-side "
-            "admin API key."
+            "Show which professions and specialties players have gained and "
+            "when, including whether anyone on the server holds a given "
+            "specialty yet (a tailor, a mason, a cook), plus level-ups, class "
+            "completions, leaderboards, and per-day trends in how fast the server "
+            "is moving through the skill tree. Pass citizen for one player's "
+            "history. For the fixed list of skills and how many recipes each "
+            "unlocks use get_skills. Requires the server-side admin API key."
         ),
         rest_path="/preview/progression.json",
         input_model=ProgressionInput,
@@ -182,9 +218,11 @@ def register_wave1_routes(registry: DualRouteRegistry, invoke: ToolInvoker) -> N
         name="get_world",
         title="Eco - world and industry activity",
         description=(
-            "Reconstruct construction, terraforming, roads, pollution, garbage, "
-            "and other world activity from Eco's action history. Requires the "
-            "server-side admin API key."
+            "Show what players have done to the world and who did it: "
+            "construction, terraforming, road building, polluting actions, "
+            "garbage dumping, and other world activity from the action history. "
+            "For current pollution levels in the air, water, and ground use "
+            "get_climate. Requires the server-side admin API key."
         ),
         rest_path="/preview/world.json",
         input_model=BoundedServerInput,

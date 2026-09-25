@@ -2005,9 +2005,12 @@ def build_server(route_registry: DualRouteRegistry | None = None) -> Server:
                 name="get_social",
                 title="Eco - community activity",
                 description=(
-                    "Reconstruct the community side of an Eco server from its "
-                    "action-log exporter: play activity, new arrivals from "
-                    "FirstLogin, and a reputation graph showing who reps whom. "
+                    "Show how active the community has been over recent days: "
+                    "play activity, new players arriving, and a reputation graph "
+                    "of who gives reputation to whom. Answers 'are people still "
+                    "playing' and 'who is most respected'. For who is online right "
+                    "now use get_server_status. Built from the action-log "
+                    "exporter's Play, FirstLogin, and ReputationTransfer rows. "
                     "ChatSent is deliberately not fetched. Player names are "
                     "hashed to stable handles by default. A names-in-the-clear "
                     "mode is operator-gated and needs "
@@ -2058,12 +2061,15 @@ def build_server(route_registry: DualRouteRegistry | None = None) -> Server:
                 name="trade_watchers",
                 title="Eco — trade watchers",
                 description=(
-                    "Host-agnostic trade watchers — the website-and-MCP answer to "
-                    "DiscordLink's WatchTradeFeed / WatchTradeDisplay / "
-                    "UnwatchTradeFeed / ListTradeWatchers, with no Discord "
-                    "dependency. Watch an item, a store, a trader, or a price "
-                    "threshold (e.g. 'iron ingot under 2.5'), then evaluate against "
-                    "the trades the server already exports. `evaluate` returns both "
+                    "Set up and check trade alerts, the tool for any 'ping me', "
+                    "'alert me', or 'tell me when' request about trades: watch an "
+                    "item, a store, a "
+                    "trader, or a price threshold (e.g. 'iron ingot under 2.5' or "
+                    "'tell me when clay drops under 3'), then check which trades "
+                    "match. Matches collect for the next `evaluate` and show on "
+                    "the website's trades page, rather than being pushed. This replaces "
+                    "DiscordLink's WatchTradeFeed family with no Discord "
+                    "dependency. `evaluate` returns both "
                     "the feed (matching trades new since the watcher last checked) "
                     "and the display (the current matching state). Watchers persist "
                     "in SQLite and survive restarts; they also show on the SPA "

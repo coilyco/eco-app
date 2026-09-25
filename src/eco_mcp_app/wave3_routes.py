@@ -154,9 +154,14 @@ def register_wave3_routes(registry: DualRouteRegistry, invoke: ToolInvoker) -> N
         name="get_recipes",
         title="Eco - recipes and bills of materials",
         description=(
-            "Look up Eco crafting recipes: ingredients, products, skill, station, and craft "
-            "time. Filter by product, skill, or station. Summary-first — the full graph is "
-            "~1,450 recipes, so pass a filter or raise `limit`. The payload names its source "
+            "Look up how to make things in Eco: each recipe's ingredients, products, "
+            "required skill, crafting station, and craft time. Answers 'what do I need to "
+            "make X' and 'what can I make at a sawmill'. Filter by product, skill, or "
+            "station, for example everything a workbench or a sawmill can make. Each recipe lists "
+            "its inputs, so the graph also shows what an item is "
+            "used in. For what making it costs in currency use price_recipe. Summary-first, "
+            "the full graph is ~1,450 recipes, so pass a filter or raise `limit`. The "
+            "payload names its source "
             "and whether it is the running server's modded graph or the vanilla seed."
         ),
         rest_path=WAVE3_PATHS["get_recipes"],
@@ -168,9 +173,11 @@ def register_wave3_routes(registry: DualRouteRegistry, invoke: ToolInvoker) -> N
         name="price_recipe",
         title="Eco - recipe cost and margin",
         description=(
-            "Cost out an Eco recipe against the live market: per-unit ingredient cost, labor "
-            "and time, the resulting margin, and which leaf prices came from the market "
-            "versus went unpriced. An unreachable market degrades to all-unpriced rather "
+            "Work out what it costs to make an item at current market prices: per-unit "
+            "ingredient cost, labor and time, and the profit margin, with which prices came "
+            "from the market and which went unpriced. Answers 'how much does it cost to "
+            "make X' and 'is crafting X profitable'. For the ingredient list alone use "
+            "get_recipes. An unreachable market degrades to all-unpriced rather "
             "than failing."
         ),
         rest_path=WAVE3_PATHS["price_recipe"],
@@ -182,8 +189,11 @@ def register_wave3_routes(registry: DualRouteRegistry, invoke: ToolInvoker) -> N
         name="get_skills",
         title="Eco - skills and recipe coverage",
         description=(
-            "List Eco's skills with how many recipes each one gates — the profession axis "
-            "behind 'what is this specialty actually worth'."
+            "List every Eco skill and specialty with how many recipes each one unlocks, "
+            "from the recipe data rather than from players: the recipe count behind whether "
+            "a specialty is worth taking. Use it to compare specialties when choosing which "
+            "to pick or level next. Answers 'how many recipes does Masonry unlock'. "
+            "For which players hold a specialty use get_progression."
         ),
         rest_path=WAVE3_PATHS["get_skills"],
         input_model=SkillsInput,

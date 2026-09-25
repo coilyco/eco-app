@@ -126,7 +126,9 @@ def register_wave2_routes(registry: DualRouteRegistry, invoke: ToolInvoker) -> N
         title="Eco - economic health dashboard",
         description=(
             "Show live economic vitals for an Eco server, including trades, contracts, "
-            "loans, wages, tax flow, culture, and volatile-series trends. A KPI is null "
+            "loans, wages, tax flow, and volatile-series trends. Answers whether the "
+            "economy as a whole is healthy. For culture score and culture achievements "
+            "use get_milestones, and for one currency use get_currency. A KPI is null "
             "when its dataset could not be read and zero only when the server reported "
             "no activity; `datasets_unavailable` names every dataset behind a null."
         ),
@@ -153,8 +155,9 @@ def register_wave2_routes(registry: DualRouteRegistry, invoke: ToolInvoker) -> N
         name="get_milestones",
         title="Eco - milestone tracker",
         description=(
-            "Show progress toward server-wide culture achievements and total culture "
-            "for a public Eco server."
+            "Show the server's total culture score and how close it is to each "
+            "server-wide culture achievement, for a public Eco server. Any question about "
+            "culture points or culture goals lands here."
         ),
         rest_path=WAVE2_PATHS["get_milestones"],
         input_model=ServerInput,
@@ -165,8 +168,11 @@ def register_wave2_routes(registry: DualRouteRegistry, invoke: ToolInvoker) -> N
         name="get_species",
         title="Eco - species profile",
         description=(
-            "Show real-world taxonomy and imagery plus live in-server population history "
-            "for one Eco species."
+            "Profile one animal or plant species, such as elk, salmon, or cedar: its "
+            "real-world taxonomy and imagery, plus its population on this server over "
+            "time. Answers 'what is an elk', 'how many elk are left', and 'is the elk "
+            "population falling'. For the "
+            "whole world's biomes and every species at once use get_region."
         ),
         rest_path=WAVE2_PATHS["get_species"],
         input_model=SpeciesInput,
@@ -177,8 +183,10 @@ def register_wave2_routes(registry: DualRouteRegistry, invoke: ToolInvoker) -> N
         name="explain_item",
         title="Eco - explain item",
         description=(
-            "Look up an Eco item on Wikidata and Wikipedia and return its image, short "
-            "description, and category-specific facts."
+            "Explain what an Eco item is in real life: looks it up on Wikidata and "
+            "Wikipedia and returns its image, a short description, and category-specific "
+            "facts. Answers 'what is basalt in the real world'. For how to make it in game "
+            "use get_recipes, and for an animal or plant use get_species."
         ),
         rest_path=WAVE2_PATHS["explain_item"],
         input_model=ExplainItemInput,
@@ -189,8 +197,12 @@ def register_wave2_routes(registry: DualRouteRegistry, invoke: ToolInvoker) -> N
         name="get_crafting_atlas",
         title="Eco - crafting activity atlas",
         description=(
-            "Reconstruct bounded crafting, harvesting, and mining activity from Eco's "
-            "action exporter. Requires the server-side admin API key."
+            "Show who has been producing the most and what: the busiest players by "
+            "crafting, harvesting, hunting, tree chopping, and mining actions, the most "
+            "crafted and gathered items, and the busiest crafting stations. Answers 'who is "
+            "the busiest miner' and 'what gets crafted most'. For what a station can "
+            "make use get_recipes. Requires the "
+            "server-side admin API key."
         ),
         rest_path=WAVE2_PATHS["get_crafting_atlas"],
         input_model=BoundedServerInput,
@@ -201,8 +213,12 @@ def register_wave2_routes(registry: DualRouteRegistry, invoke: ToolInvoker) -> N
         name="get_trades",
         title="Eco - trades ledger",
         description=(
-            "Return the detailed Eco trade ledger and its buyer, seller, currency, item, "
-            "and price-history aggregates. Requires the server-side admin API key."
+            "List individual past trades: who bought what from whom, at which store, for "
+            "how much, and when, plus top buyers and sellers per currency. Answers 'list "
+            "today's copper ore trades' and 'who bought my iron'. For which "
+            "players or stores trade the most overall use get_stores, for where to buy "
+            "or sell an item now use find_trade, and for price trends get_market. "
+            "Requires the server-side admin API key."
         ),
         rest_path=WAVE2_PATHS["get_trades"],
         input_model=BoundedServerInput,
@@ -213,8 +229,10 @@ def register_wave2_routes(registry: DualRouteRegistry, invoke: ToolInvoker) -> N
         name="fair_price",
         title="Eco - fair-price advisor",
         description=(
-            "Compare an Eco item's in-game market evidence with an advisory real-world "
-            "commodity benchmark and optional cycle calibration."
+            "Judge what a fair price for an Eco item is: what it has actually sold for on "
+            "this server beside an advisory real-world commodity benchmark, with optional "
+            "cycle calibration. Answers 'am I overcharging for X' and 'what should I "
+            "charge for X'. For how its price has moved over time use get_market."
         ),
         rest_path=WAVE2_PATHS["fair_price"],
         input_model=FairPriceInput,
@@ -225,8 +243,9 @@ def register_wave2_routes(registry: DualRouteRegistry, invoke: ToolInvoker) -> N
         name="get_region",
         title="Eco - biodiversity and ecoregion match",
         description=(
-            "Classify the world's biome composition against WWF ecoregions and report "
-            "per-species population drift."
+            "Show what biomes the world is made of, which real-world WWF ecoregion it "
+            "most resembles, and how every species' population is drifting. Answers "
+            "'how much of the world is desert or forest'. For one species use get_species."
         ),
         rest_path=WAVE2_PATHS["get_region"],
         input_model=ServerInput,
@@ -237,8 +256,10 @@ def register_wave2_routes(registry: DualRouteRegistry, invoke: ToolInvoker) -> N
         name="get_climate",
         title="Eco - climate and pollution",
         description=(
-            "Show atmospheric state, sea-level evidence, ground pollution, real-world "
-            "CO2 context, and available Eco pollution attribution."
+            "Show the world's climate and pollution levels now: atmospheric state and CO2, "
+            "sea-level evidence, ground pollution, real-world CO2 context, and available "
+            "pollution attribution by source. For which players built, dumped, or "
+            "polluted use get_world."
         ),
         rest_path=WAVE2_PATHS["get_climate"],
         input_model=BoundedServerInput,
