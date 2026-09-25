@@ -20,11 +20,14 @@ ARGS_META_KEY = "coilyco/args"
 
 # Which vocabulary and which entry field each templated argument takes. The
 # field is what the tool's own handler accepts (see the contract doc).
-TOOL_ARGS: dict[str, dict[str, dict[str, str]]] = {
-    "find_trade": {"item": {"vocabulary": ITEMS_URI, "field": "name"}},
+# Shop words are items too (Store), and in a trade question they mean the shop,
+# so the trade tools never take them as the item (sirens-echo#8249).
+SHOP_WORDS = ["store", "shop", "market"]
+TOOL_ARGS: dict[str, dict[str, dict[str, Any]]] = {
+    "find_trade": {"item": {"vocabulary": ITEMS_URI, "field": "name", "ignore": SHOP_WORDS}},
     # get_market folds spaces out only on the id side, so a multi-word display
     # name would never match: it takes the id.
-    "get_market": {"item": {"vocabulary": ITEMS_URI, "field": "id"}},
+    "get_market": {"item": {"vocabulary": ITEMS_URI, "field": "id", "ignore": SHOP_WORDS}},
     "price_recipe": {"product": {"vocabulary": ITEMS_URI, "field": "id"}},
     "get_currency": {"currency": {"vocabulary": CURRENCIES_URI, "field": "name"}},
 }

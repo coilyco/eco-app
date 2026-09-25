@@ -94,3 +94,6 @@ entry's `field`. Source: `src/eco_mcp_app/vocab.py`.
   `get_market.item` and `price_recipe.product` take `id`: `get_market`
   folds spaces out of the id side only, so a multi-word display name never
   matches there.
+- **Ignore** - an optional `ignore` list names forms that are domain words
+  for that tool, never values. The trade tools ignore shop words, since
+  Store is an item and "my store" means the shop.
