@@ -507,10 +507,12 @@ def to_payload(info: dict[str, Any]) -> dict[str, Any]:
     """
     per_day = info.get("ExhaustionHoursGainPerWeekday") or {}
     total_culture, culture_source = resolve_total_culture(info)
-    # A countdown to a meteor that is not coming is not a measurement.
-    # GreenLeaf Prime returns daysUntilMeteor: -17 with hasMeteor: false (#237).
+    # A countdown to a meteor that is not coming, or has already passed, is not a
+    # measurement: GreenLeaf reports -17 with no meteor (#237), Sirens -22 with one.
     has_meteor = bool(info.get("HasMeteor"))
     days_until_meteor = _opt_int(info, "DaysUntilMeteor") if has_meteor else None
+    if days_until_meteor is not None and days_until_meteor < 0:
+        days_until_meteor = None
     animals = _opt_int(info, "Animals")
     return {
         "view": "eco_status",

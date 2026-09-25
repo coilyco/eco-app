@@ -233,3 +233,9 @@ def test_get_server_status_mentions_the_meteor_only_when_one_is_coming() -> None
         render_reply(templates, to_payload(no_meteor), {})
         == "7 players online on day 12. Server version 0.12.0.6."
     )
+    # Live Sirens reported a meteor 22 days past; the countdown must not render.
+    passed = {**info, "DaysUntilMeteor": -22}
+    assert (
+        render_reply(templates, to_payload(passed), {})
+        == "7 players online on day 12. Server version 0.12.0.6."
+    )

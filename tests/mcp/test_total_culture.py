@@ -88,6 +88,14 @@ def test_meteor_countdown_is_null_when_no_meteor_is_coming() -> None:
     assert cycle["daysUntilMeteor"] is None
 
 
+def test_meteor_countdown_is_null_once_the_meteor_date_has_passed() -> None:
+    # Sirens reported hasMeteor: true with daysUntilMeteor: -22, which the direct
+    # status reply rendered as "The meteor hits in -22 days".
+    cycle = to_payload(dict(_SIRENS_INFO, HasMeteor=True, DaysUntilMeteor=-22))["cycle"]
+    assert cycle["hasMeteor"] is True
+    assert cycle["daysUntilMeteor"] is None
+
+
 def test_meteor_countdown_survives_when_a_meteor_is_coming() -> None:
     cycle = to_payload(_SIRENS_INFO)["cycle"]
     assert cycle["hasMeteor"] is True
