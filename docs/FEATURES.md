@@ -12,7 +12,8 @@ consolidation (coilysiren/inbox#101).
   `DualRouteRegistry`. See [dual-route-inventory.md](dual-route-inventory.md).
 - **Reply templates** - one-line answers carried on a tool's MCP `_meta` under
   `coilyco/templates`, so a router that already picked the tool can reply
-  without an LLM. See [dual-route-inventory.md](dual-route-inventory.md#reply-templates).
+  without an LLM, plus item and currency vocabularies as MCP resources so it
+  can fill the arguments without one. See [dual-route-inventory.md](dual-route-inventory.md#reply-templates).
 - **Privileged `/admin` MCP** - `src/eco_mcp_app/admin/`, flagged off in the
   ordinary app. See [admin-mcp.md](admin-mcp.md).
 - **React frontend** - `frontend/`, a Vite SPA the fused service serves at `/`.

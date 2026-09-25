@@ -14,14 +14,17 @@ from urllib.parse import urlparse, urlunparse
 import httpx
 from cachetools import TTLCache
 from mcp.server.lowlevel import NotificationOptions, Server
+from mcp.server.lowlevel.helper_types import ReadResourceContents
 from mcp.server.models import InitializationOptions
 from mcp.server.stdio import stdio_server
 from mcp.types import (
     CallToolResult,
     Icon,
+    Resource,
     TextContent,
     Tool,
 )
+from pydantic import AnyUrl
 
 from . import climate as climate_mod
 from . import currency as currency_mod
@@ -29,6 +32,7 @@ from . import ecoregion as ecoregion_mod
 from . import fair_price as fair_price_mod
 from . import market as market_mod
 from . import species as species_mod
+from . import vocab as vocab_mod
 from . import wave1_routes, wave2_routes, wave3_routes
 from .civics import civics_markdown, fetch_civics
 from .crafting import atlas_markdown, fetch_atlas
@@ -998,6 +1002,23 @@ def _append_site_link(tool: str, result: CallToolResult) -> CallToolResult:
         return result
     first.text = f"{first.text}\n\nFull detail: {url}"
     return result
+
+
+async def _currency_vocabulary_entries() -> list[dict[str, Any]]:
+    """The default server's named currencies, empty rather than failing when the
+    server or its admin data is out of reach."""
+    try:
+        info = await fetch_eco_info(None)
+        snapshot = await currency_mod.fetch_currency(
+            None,
+            info=info,
+            days_elapsed=int(info.get("DaysRunning") or 1),
+            admin_token=os.environ.get("ECO_ADMIN_TOKEN") or _get_admin_token(),
+            default_admin_base=DEFAULT_ECO_INFO_URL.rsplit("/info", 1)[0],
+        )
+    except Exception:  # a vocabulary degrades to empty, never an error
+        return []
+    return vocab_mod.currency_vocabulary(snapshot.currencies.values())
 
 
 def _unreachable_result(subject: str, exc: Exception) -> CallToolResult:
@@ -2154,6 +2175,39 @@ def build_server(route_registry: DualRouteRegistry | None = None) -> Server:
         if duplicates:
             raise ValueError(f"dual routes duplicate existing MCP tools: {', '.join(duplicates)}")
         return with_reply_templates([*tools, *registered_tools])
+
+    # Argument vocabularies for model-free callers (sirens-echo#8249). No
+    # annotations, so no client pulls them into a prompt as grounding.
+    @server.list_resources()
+    async def list_resources() -> list[Resource]:
+        return [
+            Resource(
+                uri=AnyUrl(vocab_mod.ITEMS_URI),
+                name="eco-item-vocabulary",
+                description="Every Eco item name, for matching a player's words to an item.",
+                mimeType="application/json",
+            ),
+            Resource(
+                uri=AnyUrl(vocab_mod.CURRENCIES_URI),
+                name="eco-currency-vocabulary",
+                description="Every named currency on the server, for a currency argument.",
+                mimeType="application/json",
+            ),
+        ]
+
+    @server.read_resource()
+    async def read_resource(uri: AnyUrl) -> list[ReadResourceContents]:
+        key = str(uri)
+        if key == vocab_mod.ITEMS_URI:
+            from .recipes import load_recipe_index
+
+            entries = vocab_mod.item_vocabulary(load_recipe_index())
+        elif key == vocab_mod.CURRENCIES_URI:
+            entries = await _currency_vocabulary_entries()
+        else:
+            raise ValueError(f"unknown resource {key}")
+        body = json.dumps({"entries": entries})
+        return [ReadResourceContents(content=body, mime_type="application/json")]
 
     async def _dispatch_call_tool(name: str, arguments: dict[str, Any]) -> CallToolResult:
         if name == "explain_item":

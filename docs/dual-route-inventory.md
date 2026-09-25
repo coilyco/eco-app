@@ -75,3 +75,22 @@ against this same contract.
 
 Every shipped template is rendered in `tests/mcp/test_reply_templates.py`
 against a payload from the builder that produces the tool's result.
+
+### Argument vocabularies
+
+A template gated on `when_args` needs the argument filled without a model
+(teable:coilyco/sirens-echo#8249). `_meta["coilyco/args"]` maps an argument
+to `{"vocabulary": "<resource uri>", "field": "id" | "name"}`, and the caller
+matches the member's words against that resource and passes the matched
+entry's `field`. Source: `src/eco_mcp_app/vocab.py`.
+
+- **Resources** - `eco://vocab/items` (every product and ingredient in the
+  recipe graph `get_recipes` serves, tags excluded) and
+  `eco://vocab/currencies` (the live named-currency roster, an empty list
+  when admin data is unreachable). Both are `application/json`
+  `{"entries": [{"id", "name", "aliases"}]}` with no annotations, so no
+  client reads them as grounding.
+- **Fields** - `find_trade.item` and `get_currency.currency` take `name`.
+  `get_market.item` and `price_recipe.product` take `id`: `get_market`
+  folds spaces out of the id side only, so a multi-word display name never
+  matches there.

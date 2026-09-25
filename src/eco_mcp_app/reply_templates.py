@@ -14,6 +14,8 @@ from typing import Any
 
 from mcp.types import Tool
 
+from .vocab import ARGS_META_KEY, TOOL_ARGS
+
 TEMPLATES_META_KEY = "coilyco/templates"
 MAX_REPLY_CHARS = 280
 
@@ -92,15 +94,19 @@ REPLY_TEMPLATES: dict[str, list[dict[str, Any]]] = {
 
 
 def with_reply_templates(tools: Sequence[Tool]) -> list[Tool]:
-    """Attach each shipped template list to its tool, keeping any other _meta."""
+    """Attach each shipped template list and argument vocabulary map to its
+    tool, keeping any other _meta."""
     attached: list[Tool] = []
     for tool in tools:
-        templates = REPLY_TEMPLATES.get(tool.name)
-        if templates is None:
+        extra: dict[str, Any] = {}
+        if (templates := REPLY_TEMPLATES.get(tool.name)) is not None:
+            extra[TEMPLATES_META_KEY] = templates
+        if (args := TOOL_ARGS.get(tool.name)) is not None:
+            extra[ARGS_META_KEY] = args
+        if not extra:
             attached.append(tool)
             continue
-        meta = {**(tool.meta or {}), TEMPLATES_META_KEY: templates}
-        attached.append(tool.model_copy(update={"meta": meta}))
+        attached.append(tool.model_copy(update={"meta": {**(tool.meta or {}), **extra}}))
     return attached
 
 

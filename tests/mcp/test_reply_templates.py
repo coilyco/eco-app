@@ -29,6 +29,7 @@ from eco_mcp_app.reply_templates import (
     with_reply_templates,
 )
 from eco_mcp_app.server import to_payload
+from eco_mcp_app.vocab import ARGS_META_KEY, TOOL_ARGS
 
 
 def _t(text: str, when_args: list[str] | None = None) -> dict[str, Any]:
@@ -95,7 +96,11 @@ def test_attaching_templates_keeps_other_meta_and_leaves_descriptions_alone() ->
         Tool(name="get_world", description="w", inputSchema={"type": "object"}),
     ]
     attached = with_reply_templates(tools)
-    assert attached[0].meta == {"ui": 1, TEMPLATES_META_KEY: REPLY_TEMPLATES["find_trade"]}
+    assert attached[0].meta == {
+        "ui": 1,
+        TEMPLATES_META_KEY: REPLY_TEMPLATES["find_trade"],
+        ARGS_META_KEY: TOOL_ARGS["find_trade"],
+    }
     assert attached[0].description == "d"
     assert attached[1].meta is None
 

@@ -648,8 +648,12 @@ async def test_tool_declaration_uses_currency_uri() -> None:
 
 @pytest.mark.asyncio
 async def test_no_mcp_app_resources_registered() -> None:
+    # The argument vocabularies are resources too (sirens-echo#8249), so assert
+    # the widget half only: no ui:// resource, per eco-app#87's just-data rule.
     mcp = build_server()
-    assert mt.ListResourcesRequest not in mcp.request_handlers
+    handler = mcp.request_handlers[mt.ListResourcesRequest]
+    result = await handler(mt.ListResourcesRequest(method="resources/list"))
+    assert not [r for r in result.root.resources if str(r.uri).startswith("ui://")]
 
 
 # ---------------------------------------------------------------------------
