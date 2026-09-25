@@ -642,7 +642,8 @@ async def test_tool_declaration_uses_currency_uri() -> None:
     handler = mcp.request_handlers[mt.ListToolsRequest]
     result = await handler(mt.ListToolsRequest(method="tools/list"))
     tool = next(t for t in result.root.tools if t.name == "get_currency")
-    assert tool.meta is None
+    # Reply templates share _meta (docs/dual-route-inventory.md), so check the widget key only.
+    assert "ui" not in (tool.meta or {})
 
 
 @pytest.mark.asyncio

@@ -36,6 +36,7 @@ from .dual_routes import DualRouteRegistry
 from .logistics import fetch_logistics, logistics_markdown
 from .map import build_map_payload, fetch_map_bundle
 from .progression import fetch_history, history_markdown
+from .reply_templates import with_reply_templates
 from .social import fetch_social, social_markdown
 from .stores import directory_markdown, fetch_directory
 from .telemetry import instrument_mcp_server
@@ -2152,7 +2153,7 @@ def build_server(route_registry: DualRouteRegistry | None = None) -> Server:
         duplicates = sorted(tool.name for tool in registered_tools if tool.name in existing_names)
         if duplicates:
             raise ValueError(f"dual routes duplicate existing MCP tools: {', '.join(duplicates)}")
-        return [*tools, *registered_tools]
+        return with_reply_templates([*tools, *registered_tools])
 
     async def _dispatch_call_tool(name: str, arguments: dict[str, Any]) -> CallToolResult:
         if name == "explain_item":

@@ -36,3 +36,42 @@ needing a bounded typed operation. Single-surface REST keeps `preview-map.json`
 generated FastAPI docs under the Jobs mount. Excluded: `/preview/{tool}` as a
 compatibility adapter, `/healthz`, both `/page-auth` verbs, the `/mcp`,
 `/admin`, `/assets`, and livereload mounts, and the SPA fallbacks.
+
+## Reply templates
+
+A tool can carry one-line reply templates in its `tools/list` entry, so a
+router that has already picked the tool answers from the call result without
+an LLM. Descriptions are untouched, because they are routing criteria
+(teable:coilyco/sirens-echo#8229). The shipped set and the reference renderer
+live in `src/eco_mcp_app/reply_templates.py`. Sirens Echo renders them in Go
+against this same contract.
+
+### Contract
+
+- **Key** - `_meta["coilyco/templates"]` holds an ordered list of
+  `{"when_args": [...], "text": "..."}`. The first eligible entry wins, and
+  when none is eligible the caller falls back to its LLM path.
+- **`when_args`** - every named call argument was passed and is not empty or
+  whitespace. An empty list always applies.
+- **`text`** - plain text with `{{path}}` placeholders and nothing else, no
+  sections or loops. A path is dot-separated keys into the call result's
+  `structuredContent`. A decimal segment indexes a list. A leading `args`
+  segment reads the call arguments instead, so a payload key named `args`
+  is unreachable.
+- **Values** - strings render as-is, integers as digits, and floats with at
+  most 2 decimals, trailing zeros and point trimmed (`-0` becomes `0`).
+  Missing, null, empty or whitespace strings, booleans, objects and lists
+  make the entry ineligible.
+- **Cap** - a rendered reply over 280 characters (Unicode code points) is
+  ineligible.
+
+### Shipped
+
+- `find_trade`, `get_market`, `price_recipe`, `get_currency`, and
+  `get_server_status`.
+- `get_recipes` has no template, because an ingredient list needs a loop.
+- `get_milestones` has no template, because the next unfinished
+  achievement needs a filter, since rows sort completed ones first.
+
+Every shipped template is rendered in `tests/mcp/test_reply_templates.py`
+against a payload from the builder that produces the tool's result.
