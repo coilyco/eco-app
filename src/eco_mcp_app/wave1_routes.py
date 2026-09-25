@@ -92,9 +92,14 @@ def register_wave1_routes(registry: DualRouteRegistry, invoke: ToolInvoker) -> N
         title="Eco - server status",
         description=(
             "Show a public Eco server as it is right now: whether it is up, who is "
-            "online, the meteor countdown, world statistics, economy headline, and "
-            "game version. For how active the community has been over recent days "
-            "use get_social. Omit server to use the configured default."
+            "online, how many days the current cycle has run, the meteor countdown, "
+            "world statistics, economy headline, and game version. It reports live "
+            "state only. It holds no wipe, reset, restart, or patch schedule, and "
+            "knows nothing about a player's own game install or computer, so "
+            "crashes, kicks, disconnects, and launch problems are outside it and "
+            "outside every other tool here. For how active the community has been "
+            "over recent days use get_social. Omit server to use the configured "
+            "default."
         ),
         rest_path="/preview.json",
         input_model=ServerInput,
