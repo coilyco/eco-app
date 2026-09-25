@@ -232,7 +232,9 @@ def register_wave2_routes(registry: DualRouteRegistry, invoke: ToolInvoker) -> N
             "Judge what a fair price for an Eco item is: what it has actually sold for on "
             "this server beside an advisory real-world commodity benchmark, with optional "
             "cycle calibration. Answers 'am I overcharging for X' and 'what should I "
-            "charge for X'. For how its price has moved over time use get_market."
+            "charge for X'. It judges one price rather than listing prices: for what an item "
+            "is selling for right now use find_trade, and for how its price has moved over "
+            "time use get_market."
         ),
         rest_path=WAVE2_PATHS["fair_price"],
         input_model=FairPriceInput,

@@ -111,7 +111,8 @@ def register_wave1_routes(registry: DualRouteRegistry, invoke: ToolInvoker) -> N
         title="Eco - currency and money supply",
         description=(
             "Show the currencies on this server and who holds them. Currency names "
-            "are invented by players and can be any word, so 'who holds the most "
+            "are invented by players and can be any word, often a plural noun like "
+            "Credits, Crowns, or Shells, so 'who holds the most "
             "X' or 'who is richest in X', where X is not an item, animal, or "
             "reputation, is a currency question and belongs here. Reputation is "
             "get_social's. Covers which "
@@ -169,9 +170,11 @@ def register_wave1_routes(registry: DualRouteRegistry, invoke: ToolInvoker) -> N
         name="find_trade",
         title="Eco - trade and store logistics",
         description=(
-            "Answer where to buy or sell an item on this server: the cheapest "
-            "store selling it, the store paying the most for it, whether anyone "
-            "is buying it, buy-low-sell-high spreads between stores, and items "
+            "Answer where to buy or sell an item on this server: its current "
+            "asking prices, the cheapest store selling it, the store paying the most for it, "
+            "whether anyone "
+            "is buying it, buy-low-sell-high spreads (which store to buy from, which store to "
+            "resell to, and the profit per unit), and items "
             "with buyers but no sellers. That supply-gap board is the answer to "
             "what a store should carry to earn money. Reads live store shelves, falling back to "
             "recent "
