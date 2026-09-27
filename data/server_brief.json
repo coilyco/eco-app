@@ -1,5 +1,5 @@
 {
-  "_comment": "Player-facing server brief rendered by the homepage (frontend/src/pages/Home.tsx). The inputs live in eco-ops (configs/Configs/*.diff.json, mods/Mods, mods/Configs/SkillsRequirements.eco), but this page describes the world players join, so where the live server has drifted from eco-ops the live value wins (deep ocean building, restarts). This file is a reviewed copy, so bump reviewedOn whenever it is re-checked. Cycle number, world size, meteor length, meteor state and the Eco version are deliberately absent: the homepage reads them from live status, and a second copy here is how the old Discord block went stale.",
+  "_comment": "Player-facing server brief rendered by the homepage (frontend/src/pages/Home.tsx). The inputs live in eco-ops (configs/Configs/*.diff.json, mods/Mods, mods/Configs/SkillsRequirements.eco), but this page describes the world players join, so where the live server has drifted from eco-ops the live value wins (restarts). This file is a reviewed copy, so bump reviewedOn whenever it is re-checked. Cycle number, world size, meteor length, meteor state and the Eco version are deliberately absent: the homepage reads them from live status, and a second copy here is how the old Discord block went stale.",
   "reviewedOn": "2026-09-27",
   "join": {
     "serverName": "Eco via Sirens",
@@ -59,7 +59,7 @@
         { "label": "Rivers", "value": "5 to 10 (vanilla 2 to 5)" },
         { "label": "Coastlines", "value": "Wider beaches and shallows" },
         { "label": "Height limit", "value": "200 blocks for terrain and building (vanilla 120 terrain, 160 build)" },
-        { "label": "Deep ocean building", "value": "On" },
+        { "label": "Deep ocean building", "value": "Off" },
         { "label": "Restarts", "value": "Once a day, with a cleanup 15 minutes before" }
       ]
     }
@@ -147,8 +147,8 @@
       "body": "Paid items are sold in stores and work without a blueprint."
     },
     {
-      "title": "Build high, build out",
-      "body": "Terrain and buildings reach 200 blocks, and deep ocean building is on. On an archipelago with wide shallows, the sea is buildable land."
+      "title": "Build high, not deep",
+      "body": "Terrain and buildings reach 200 blocks, but deep ocean building is off. Shallows and beaches are wide, so the coasts are the frontier."
     }
   ]
 }
