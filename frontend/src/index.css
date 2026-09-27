@@ -926,13 +926,6 @@ a.k-card:visited {
   color: var(--ink-faint);
 }
 
-/* "+N new" feed badge on a trade watcher — flags matches since last check. */
-.watcher-badge {
-  color: var(--meteor);
-  font-weight: 600;
-  font-size: 1em;
-}
-
 .ledger-table {
   width: 100%;
   border-collapse: collapse;

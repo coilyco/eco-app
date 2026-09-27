@@ -10,7 +10,6 @@ import { fetchMarket, type ItemMarket, type MarketTrend } from "../lib/marketApi
 import { fetchStores } from "../lib/storesApi"
 import { fetchLogistics, type GapReason, type SupplyGap } from "../lib/logisticsApi"
 import { fetchTradesLedger, type Trade as TradeRow } from "../lib/tradesApi"
-import { fetchWatchers, type WatcherHit } from "../lib/watchersApi"
 import { formatMoney, formatCount, prettifyEcoName, stripEcoMarkup } from "../lib/format"
 import { useFreshData } from "../lib/useFreshData"
 
@@ -197,42 +196,6 @@ function MarketList({
   )
 }
 
-// Read-only sidebar of the stored trade watchers and their current hits —
-// mirrors the /trades panel. Watchers are managed over MCP; this is display
-// only.
-function WatcherList({ hits }: { hits: WatcherHit[] }) {
-  return (
-    <ul className="rank-rows" data-testid="watcher-list">
-      {hits.map((h) => (
-        <li key={h.id}>
-          <div className="rank-row" data-testid="watcher-row">
-            <span className="rank-name">
-              {h.label}
-              {h.feedCount > 0 && (
-                <span className="watcher-badge" data-testid="watcher-badge">
-                  {" "}
-                  +{formatCount(h.feedCount)} new
-                </span>
-              )}
-            </span>
-            <span className="rank-count">
-              {formatCount(h.display.matchCount)} match
-              {h.display.bestUnitPrice !== null ? (
-                <>
-                  , cheapest{" "}
-                  <ItemPrice price={h.display.bestUnitPrice} norm={h.display.norm} layout="inline" />
-                </>
-              ) : (
-                ""
-              )}
-            </span>
-          </div>
-        </li>
-      ))}
-    </ul>
-  )
-}
-
 function matchesTrade(t: TradeRow, needle: string): boolean {
   if (!needle) return true
   const hay = [stripEcoMarkup(t.seller), stripEcoMarkup(t.buyer), prettifyEcoName(t.item), t.currency]
@@ -249,25 +212,23 @@ export default function Trade() {
   //
   // Every plane stays best-effort and independent: siblings land on their own
   // schedule, so one 404 must never take the page down. Each resolves to null
-  // (or [] for watchers) and its panel degrades in place. The trades ledger
+  // and its panel degrades in place. The trades ledger
   // (folded in from the former /trades page, eco-app#90) is one more such
   // plane: the market plane carries the price-intelligence view, the ledger
   // the row-level trades.
   const tradePlane = useFreshData("trade", async (signal) => {
-    const [market, stores, logistics, ledger, watchers] = await Promise.all([
+    const [market, stores, logistics, ledger] = await Promise.all([
       fetchMarket(signal).catch(() => null),
       fetchStores(signal).catch(() => null),
       fetchLogistics(signal).catch(() => null),
       fetchTradesLedger(signal).catch(() => null),
-      fetchWatchers(signal).catch((): WatcherHit[] => []),
     ])
-    return { market, stores, logistics, ledger, watchers }
+    return { market, stores, logistics, ledger }
   })
   const market = tradePlane.data?.market ?? null
   const stores = tradePlane.data?.stores ?? null
   const logistics = tradePlane.data?.logistics ?? null
   const ledger = tradePlane.data?.ledger ?? null
-  const watchers = tradePlane.data?.watchers ?? []
   const loaded = !tradePlane.loading
   const [params, setParams] = useSearchParams()
   const q = params.get("q") ?? ""
@@ -334,7 +295,7 @@ export default function Trade() {
   )
 
   const nothing =
-    loaded && !market && !stores && !logistics && !ledger && watchers.length === 0
+    loaded && !market && !stores && !logistics && !ledger
 
   return (
     <Layout fetchedAtISO={market?.fetchedAtISO ?? stores?.fetchedAtISO}>
@@ -632,17 +593,6 @@ export default function Trade() {
               ))}
             </ul>
           )}
-        </section>
-      )}
-
-      {/* Watchers panel. */}
-      {watchers.length > 0 && (
-        <section data-testid="watchers-section">
-          <h2 className="section-title">
-            Your trade watchers{" "}
-            <span className="section-sub">({watchers.length} watching — manage over MCP)</span>
-          </h2>
-          <WatcherList hits={watchers} />
         </section>
       )}
 

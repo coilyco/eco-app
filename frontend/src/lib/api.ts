@@ -80,7 +80,7 @@ export async function fetchEcoStatus(
 // Best-effort JSON fetch for the multi-panel /trade surface: a missing, empty,
 // or failed endpoint resolves to null so each panel degrades on its own rather
 // than taking the whole page down. The sibling data planes (market, stores,
-// logistics, currency, watchers) land independently, so a 404 here is expected
+// logistics, currency) land independently, so a 404 here is expected
 // wiring, not an exceptional error. An aborted fetch also resolves to null —
 // the caller unmounts, so there is nothing to surface.
 export async function fetchJsonOrNull<T>(url: string, signal?: AbortSignal): Promise<T | null> {

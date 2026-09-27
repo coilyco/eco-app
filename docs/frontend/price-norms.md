@@ -37,7 +37,7 @@ of a trade and bad for the other.
 
 A payload holds one `norm` per item row and one `normContext` for the whole
 payload (stage, live currency, caveat). `hydrateNorms` folds the context into
-every norm when `fetchJsonOrNull` (or the item, watcher or user fetch) reads the
+every norm when `fetchJsonOrNull` (or the item or user fetch) reads the
 payload. Nested offers use their row's norm.
 
 The page divides its own price by `referencePrice` when the currencies match,

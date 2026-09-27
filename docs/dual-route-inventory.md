@@ -18,16 +18,15 @@ Eco server endpoints are upstream dependencies, not routes this service owns.
 
 ## State
 
-The public server exposes 22 tools. **Twenty are registered** and serve both
+The public server defines 24 tools, two of them disabled (`get_economy`,
+`fair_price`). **Twenty-three are registered** and serve both
 surfaces, each at `GET /preview/<tool>.json` except the Wave 1 set, which keeps
 its shorter paths: `preview.json` (`get_server_status`), and `world`, `stores`,
 `progression`, `market`, `logistics`, `currency`, `civics`, and
 `list_public_eco_servers`.
 
-**Two await prerequisites.** `get_social`, because the REST path always
+**One awaits a prerequisite.** `get_social`, because the REST path always
 suppresses `reveal_names` while MCP may accept it behind `ECO_SOCIAL_ALLOW_NAMES`.
-`trade_watchers`, because the MCP tool multiplexes create, list, remove, and
-evaluate, where the REST peek is read-only.
 
 Also awaiting prerequisites: `items`, `food`, `item`, and `price-history`, each
 needing a bounded typed operation. Single-surface REST keeps `preview-map.json`

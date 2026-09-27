@@ -10,7 +10,7 @@ namespace EcoStoreExporter;
 // its own (same as mods/jobs).
 //
 // Returns the current shelf of every live store: the shelf-accurate snapshot
-// that upgrades the store-directory, logistics-engine, and watcher siblings
+// that upgrades the store-directory and logistics-engine siblings
 // from history-derived to live `Trades <item>` parity. See ../docs/dto.md.
 [ApiController]
 [Route("api/v1/stores")]

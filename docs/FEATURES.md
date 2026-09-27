@@ -43,7 +43,7 @@ consolidation (coilysiren/inbox#101).
 [price-history.md](price-history.md), [recipes.md](recipes.md),
 [modded-recipes.md](modded-recipes.md), [trades.md](trades.md),
 [uses.md](uses.md), [world.md](world.md), [calculator.md](calculator.md),
-[watchers.md](watchers.md), and [spa-freshness.md](spa-freshness.md).
+and [spa-freshness.md](spa-freshness.md).
 
 **Mods, build, and dev.**
 In-game C# plugins live in `mods/` (jobs, replay, telemetry, stores), built

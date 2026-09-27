@@ -345,11 +345,6 @@ PRICE_FIELDS: dict[str, tuple[PriceSpec, ...]] = {
         ("recipes[].cost.ingredients[]", "unitCost"),
     ),
     "fair_price": (("", "inGameMedian"),),
-    "trade_watchers": (
-        ("hits[].feed[]", "unitPrice"),
-        ("hits[].display.recent[]", "unitPrice"),
-        ("hits[].display", "bestUnitPrice"),
-    ),
     # SPA data routes, not MCP tools. Their pages show the same prices.
     "/preview/item.json": (("", ""),),
     "/preview/price-history.json": (("", "distribution.median"),),
@@ -394,9 +389,6 @@ def _visit(node: Any, parts: list[str], inherited: tuple[str | None, str | None]
     if not isinstance(node, dict):
         return
     item = next((node[k] for k in _ITEM_KEYS if isinstance(node.get(k), str)), inherited[0])
-    # An item or price watcher names its item in `value`, and its display prices it.
-    if node.get("kind") in ("item", "price") and isinstance(node.get("value"), str):
-        item = node["value"]
     cur = next((node[k] for k in _CURRENCY_KEYS if isinstance(node.get(k), str)), inherited[1])
     if not parts:
         fn(node, item, cur)

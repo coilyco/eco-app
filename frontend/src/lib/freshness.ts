@@ -70,12 +70,6 @@ export const REFRESH_CONTRACTS = {
     staleAfterMs: 2 * LIVE_POLL_MS,
     rationale: "Players trade continuously; the ledger grows during a session.",
   },
-  watchers: {
-    mode: "live",
-    pollMs: LIVE_POLL_MS,
-    staleAfterMs: 2 * LIVE_POLL_MS,
-    rationale: "A watcher exists to report new matches, so it has to keep looking.",
-  },
 
   // --- Manual: advances, but slowly enough that a timer is not justified ---
   civics: {
@@ -125,8 +119,8 @@ export const REFRESH_CONTRACTS = {
     pollMs: LIVE_POLL_MS,
     staleAfterMs: 2 * LIVE_POLL_MS,
     rationale:
-      "Composes market, stores, currency, logistics, the ledger and watchers. Two of those " +
-      "are live, and this is the page a trader leaves open while deciding, so the whole " +
+      "Composes market, stores, logistics and the ledger. The ledger is live, " +
+      "and this is the page a trader leaves open while deciding, so the whole " +
       "board keeps up rather than going quietly stale under them.",
   },
 

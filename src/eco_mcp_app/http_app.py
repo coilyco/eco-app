@@ -606,32 +606,6 @@ def create_app(route_registry: DualRouteRegistry | None = None) -> Starlette:
             return JSONResponse({"error": "no JSON block from get_social"}, status_code=502)
         return JSONResponse(payload)
 
-    async def preview_watchers_json(request: Request) -> JSONResponse:
-        """`/preview/watchers.json` — the SPA's trade-watcher data plane.
-
-        Dispatches `trade_watchers` with `action=evaluate` in *peek* mode
-        (`advance=false`), so loading the `/trades` page shows each watcher's
-        current matching state without consuming its feed mark — only the MCP
-        `evaluate` verb (advance defaulting true) advances the last-seen marks.
-        A dedicated route (not the generic `/preview/<tool>.json`) so the bool
-        arg is a real boolean, not the truthy string a query param would be.
-        """
-        args: dict[str, Any] = {"action": "evaluate", "advance": False}
-        if "server" in request.query_params:
-            args["server"] = request.query_params["server"]
-        req = mt.CallToolRequest(
-            method="tools/call",
-            params=mt.CallToolRequestParams(name="trade_watchers", arguments=args),
-        )
-        try:
-            result = await call_tool_handler(req)
-        except Exception as e:
-            return JSONResponse({"error": str(e)}, status_code=500)
-        payload = _extract_json_block(cast(mt.CallToolResult, result.root))
-        if payload is None:
-            return JSONResponse({"error": "no JSON block from trade_watchers"}, status_code=502)
-        return JSONResponse(payload)
-
     def _resolve_admin_key() -> str | None:
         # Same precedence the MCP tool handlers use (env override, then SSM).
         return os.environ.get(ADMIN_API_KEY_ENV) or _get_admin_token()
@@ -792,7 +766,6 @@ def create_app(route_registry: DualRouteRegistry | None = None) -> Starlette:
         *dual_routes.starlette_routes(),
         Route("/preview-map.json", preview_map_json, methods=["GET"]),
         Route("/preview/social.json", preview_social_json, methods=["GET"]),
-        Route("/preview/watchers.json", preview_watchers_json, methods=["GET"]),
         Route("/preview/user.json", preview_user_json, methods=["GET"]),
         Route("/preview/items.json", preview_items_json, methods=["GET"]),
         Route("/preview/food.json", preview_food_json, methods=["GET"]),

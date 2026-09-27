@@ -49,9 +49,9 @@ LIMIT_BEARING = {
 async def _advertised_tools() -> list[mt.Tool]:
     """Every tool the server lists, not only the typed dual routes.
 
-    get_social and trade_watchers are hand-written Tools in server.py rather
-    than registry entries, so enumerating the registry alone misses them. It
-    missed get_social, which is one this record is about.
+    get_social is a hand-written Tool in server.py rather than a registry
+    entry, so enumerating the registry alone misses it. It did miss it, and
+    get_social is one this record is about.
     """
     mcp_server = build_server(disabled_tools=frozenset())
     handler = mcp_server.request_handlers[mt.ListToolsRequest]
@@ -60,9 +60,9 @@ async def _advertised_tools() -> list[mt.Tool]:
 
 
 @pytest.mark.asyncio
-async def test_the_surface_is_still_twenty_five_tools() -> None:
-    """#6076 audits "all 25 MCP tools", so the count is part of the claim."""
-    assert len(await _advertised_tools()) == 25
+async def test_the_surface_is_still_twenty_four_tools() -> None:
+    """#6076 audited "all 25 MCP tools". trade_watchers left in #8404, so 24 is the claim now."""
+    assert len(await _advertised_tools()) == 24
 
 
 @pytest.mark.asyncio

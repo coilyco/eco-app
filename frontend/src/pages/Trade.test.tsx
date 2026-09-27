@@ -237,28 +237,6 @@ const LOGISTICS = {
   warnings: [],
 }
 
-const WATCHERS_REPORT = {
-  view: "watcher_hits",
-  advanced: false,
-  hits: [
-    {
-      id: "w_abc123",
-      kind: "price",
-      value: "IronIngotItem",
-      op: "under",
-      threshold: 2.5,
-      label: "cheap iron",
-      server: null,
-      lastSeen: 0,
-      createdAt: 0,
-      describe: "Iron Ingot under 2.5",
-      feed: [],
-      feedCount: 2,
-      display: { matchCount: 5, recent: [], bestUnitPrice: 2, totalVolume: 40, lastMatchTime: 300000 },
-      newLastSeen: 300000,
-    },
-  ],
-}
 
 // The trades ledger folded into /trade (eco-app#90).
 const TRADES = {
@@ -343,7 +321,6 @@ function stub(
     stores?: unknown
     logistics?: unknown
     trades?: unknown
-    watchers?: unknown
   } = {},
 ) {
   const planes: Record<string, unknown> = {
@@ -351,7 +328,6 @@ function stub(
     "stores.json": overrides.stores ?? STORES,
     "logistics.json": overrides.logistics ?? LOGISTICS,
     "get_trades.json": overrides.trades ?? TRADES,
-    "watchers.json": overrides.watchers ?? { hits: [] },
   }
   vi.stubGlobal(
     "fetch",
@@ -491,17 +467,6 @@ describe("Trade", () => {
     expect(screen.getAllByTestId("gap-row")).toHaveLength(22)
   })
 
-  it("shows the watcher panel with a feed badge when watchers exist", async () => {
-    stub({ watchers: WATCHERS_REPORT })
-    renderTrade()
-
-    await waitFor(() => {
-      expect(screen.getByTestId("watchers-section")).toBeInTheDocument()
-    })
-    expect(screen.getByTestId("watcher-row")).toHaveTextContent("cheap iron")
-    expect(screen.getByTestId("watcher-badge")).toHaveTextContent("+2 new")
-  })
-
   it("still renders when the logistics plane 404s", async () => {
     stub({ logistics: NOT_FOUND })
     renderTrade()
@@ -520,7 +485,6 @@ describe("Trade", () => {
       stores: NOT_FOUND,
       logistics: NOT_FOUND,
       trades: NOT_FOUND,
-      watchers: NOT_FOUND,
     })
     renderTrade()
 

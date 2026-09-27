@@ -7,8 +7,8 @@ never the current shelf or per-account balances. This mod closes both gaps from
 inside the Eco process, over HTTP:
 
 - **`GET /api/v1/stores`** — walks every live `StoreComponent` and exposes each
-  store's current offers, so the Python store-directory, logistics-engine, and
-  watcher siblings move from history-derived to shelf-accurate.
+  store's current offers, so the Python store-directory and logistics-engine
+  siblings move from history-derived to shelf-accurate.
   ([eco-app#55](https://forgejo.coilysiren.me/coilyco-gaming/eco-app/issues/55))
 - **`GET /api/v1/currency-holdings`** — reads per-account, per-currency balances
   from the in-process `CurrencyManager` and joins account owners to citizen

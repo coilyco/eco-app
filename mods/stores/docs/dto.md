@@ -10,7 +10,6 @@ Consumers that wire the live path against this contract:
 
 - **Store & trader directory** — [eco-app#50](https://forgejo.coilysiren.me/coilyco-gaming/eco-app/issues/50). Uses `name`, `owner`, `currency`, `location`.
 - **Logistics engine** (cheapest-source / arbitrage / supply-gap) — [eco-app#51](https://forgejo.coilysiren.me/coilyco-gaming/eco-app/issues/51). Uses `offers[]` with `item`, `buying`, `price`, `quantity`.
-- **Trade watchers** — [eco-app#52](https://forgejo.coilysiren.me/coilyco-gaming/eco-app/issues/52). Diffs successive snapshots for shelf changes.
 
 Every sibling works from historical trade *events* today and sharpens to this
 shelf-accurate feed automatically once the mod deploys.
