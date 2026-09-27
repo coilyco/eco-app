@@ -1,0 +1,154 @@
+{
+  "_comment": "Player-facing server brief rendered by the homepage (frontend/src/pages/Home.tsx). The inputs live in eco-ops (configs/Configs/*.diff.json, mods/Mods, mods/Configs/SkillsRequirements.eco), but this page describes the world players join, so where the live server has drifted from eco-ops the live value wins (deep ocean building, restarts). This file is a reviewed copy, so bump reviewedOn whenever it is re-checked. Cycle number, world size, meteor length, meteor state and the Eco version are deliberately absent: the homepage reads them from live status, and a second copy here is how the old Discord block went stale.",
+  "reviewedOn": "2026-09-27",
+  "join": {
+    "serverName": "Eco via Sirens",
+    "discordUrl": "https://discord.gg/mGhwcAb98y",
+    "steps": [
+      "Own Eco on Steam.",
+      "Open Eco, choose Join, and search the server browser for Eco via Sirens.",
+      "Join the Discord for announcements, trade, and help from other players.",
+      "Read the welcome message the first time you log in."
+    ]
+  },
+  "nextCycle": "Cycle 15 is being prepared on Eco 0.14 with a rebuilt mod list. The start date is announced in the Discord.",
+  "configs": [
+    {
+      "group": "Pace and difficulty",
+      "items": [
+        { "label": "Collaboration", "value": "High" },
+        { "label": "Game speed", "value": "Slow" },
+        { "label": "Exhaustion", "value": "Off, play as long as you like" },
+        { "label": "Animals", "value": "Defensive only, they fight back but never start it" }
+      ]
+    },
+    {
+      "group": "Skills and specialties",
+      "items": [
+        { "label": "Skill cost", "value": "3x" },
+        { "label": "Skill gain", "value": "0.5x" },
+        { "label": "Late joiner XP", "value": "Boosted, 33 (vanilla 12)" },
+        { "label": "Claims per skill learned", "value": "2 claim papers and 0.1 claim stakes" },
+        { "label": "Abandon a specialty", "value": "Not allowed, choose carefully" }
+      ]
+    },
+    {
+      "group": "Items and logistics",
+      "items": [
+        { "label": "Stack size", "value": "2x" },
+        { "label": "Item weight", "value": "50%" },
+        { "label": "Inventory connection range", "value": "2x" },
+        { "label": "Fuel efficiency", "value": "2x" },
+        { "label": "Crafting queue", "value": "10 items (vanilla 5)" },
+        { "label": "Tool repair penalty", "value": "0.1 (vanilla 0.2)" },
+        { "label": "Paid items", "value": "Sold in stores and usable without a blueprint" }
+      ]
+    },
+    {
+      "group": "Food and farming",
+      "items": [
+        { "label": "Plant growth", "value": "2x" },
+        { "label": "Dinner parties", "value": "3 per day count toward the bonus (vanilla 1)" },
+        { "label": "Prepared food freshness", "value": "600 minutes (vanilla 60)" }
+      ]
+    },
+    {
+      "group": "World",
+      "items": [
+        { "label": "Map shape", "value": "Archipelago, 34 to 44% land across 2 to 3 continents and small islands" },
+        { "label": "Rivers", "value": "5 to 10 (vanilla 2 to 5)" },
+        { "label": "Coastlines", "value": "Wider beaches and shallows" },
+        { "label": "Height limit", "value": "200 blocks for terrain and building (vanilla 120 terrain, 160 build)" },
+        { "label": "Deep ocean building", "value": "On" },
+        { "label": "Restarts", "value": "Once a day, with a cleanup 15 minutes before" }
+      ]
+    }
+  ],
+  "mods": [
+    {
+      "group": "Content",
+      "items": [
+        { "name": "Alpacacorn Item Pack", "summary": "Decorative and practical furniture and items." },
+        { "name": "Animal Husbandry", "summary": "Raise and breed livestock, with its own profession." },
+        { "name": "Beekeeping", "summary": "Bees, hives, honey, and a Beekeeping profession." },
+        { "name": "CavRn HotWheels", "summary": "Extra vehicles and vehicle parts." },
+        { "name": "Dirt Decomposition", "summary": "Break dirt down into sand, clay, and compost." },
+        { "name": "Easier Shop Cart", "summary": "The Shop Cart takes wood boards instead of lumber, so early markets can open sooner." },
+        { "name": "Elixr Mods Trucking", "summary": "Trucks and hauling vehicles." },
+        { "name": "Fishing Reloaded", "summary": "Expanded fishing, fish processing, and seafood dishes." },
+        { "name": "Greenhouses", "summary": "Greenhouses and hydroponics for growing crops anywhere." },
+        { "name": "Mixology", "summary": "Coffee, drinks, cocktails, and a Mixology profession." },
+        { "name": "Pan Drippings", "summary": "Filter and purify the pan drippings cooking leaves behind." },
+        { "name": "Storage More", "summary": "More storage containers and larger variants." }
+      ]
+    },
+    {
+      "group": "Sirens originals",
+      "items": [
+        { "name": "BunWulf Agricultural", "summary": "Extended crops, processing, compost, paper, and oils." },
+        { "name": "Biochemist", "summary": "A plant-based path into industrial chemistry, from BunWulf Biochemical." },
+        { "name": "Librarian", "summary": "A profession for skill books, research papers, ink, and paper, from BunWulf Educational." },
+        { "name": "BunWulf HardwareCo", "summary": "The Sledgehammer and a low-tech streetlamp." },
+        { "name": "Direct Carbon Capture", "summary": "Late-game direct air capture for pulling CO2 back out." },
+        { "name": "EcoNil", "summary": "Cloud Seeder and Dehydrator for local rain and soil moisture." },
+        { "name": "Mines & Quarries & Pits", "summary": "Expensive mines, quarries, and pits built for vertical integration." },
+        { "name": "Shop Boat", "summary": "A fuelled boat with its own store and storage." },
+        { "name": "World Counter", "summary": "A Bookkeeping Desk that counts nearby blocks and reports totals." }
+      ]
+    },
+    {
+      "group": "Quality of life",
+      "items": [
+        { "name": "Discord Link", "summary": "Bridges in-game chat and events with the Sirens Discord." },
+        { "name": "Nutri View", "summary": "Hover your food stats to see the ideal nutrient balance." },
+        { "name": "Skill Trees", "summary": "Advanced skills need their prerequisites, and a few are pick-one. See Skill trees below." },
+        { "name": "Easy Mining", "summary": "Mined rock goes straight into your pack instead of dropping rubble." },
+        { "name": "Easy Logging", "summary": "Felled trees hand you their debris and seeds, and stumps clear themselves." },
+        { "name": "Easy Digging", "summary": "Shovels carry more, 10, 20, 30, and 40 blocks from wooden to modern." }
+      ]
+    }
+  ],
+  "skillTrees": {
+    "pickOne": ["Biochemist", "Electronics", "Industry", "Oil Drilling"],
+    "chains": [
+      ["Campfire Cooking", "Cooking", "Advanced Cooking"],
+      ["Campfire Cooking", "Baking", "Advanced Baking"],
+      ["Campfire Cooking", "Mixology"],
+      ["Hunting", "Fishing"],
+      ["Hunting", "Butchery", "Animal Husbandry"],
+      ["Gathering", "Beekeeping"],
+      ["Farming", "Fertilizers", "Biochemist"],
+      ["Farming", "Milling"],
+      ["Masonry", "Pottery", "Advanced Masonry"],
+      ["Masonry", "Glassworking", "Electronics"],
+      ["Mining", "Smelting", "Advanced Smelting"],
+      ["Mining", "Blacksmith"],
+      ["Logging", "Carpentry", "Composites"],
+      ["Logging", "Shipwright"],
+      ["Basic Engineering", "Mechanics", "Industry"],
+      ["Basic Engineering", "Oil Drilling"]
+    ]
+  },
+  "gameplayNotes": [
+    {
+      "title": "Dinner parties",
+      "body": "Three parties a day count toward the bonus. Spread them across time zones so everyone gets a seat, and remember prepared food stays fresh for 600 minutes."
+    },
+    {
+      "title": "Every skill pays claims",
+      "body": "Learning any skill grants 2 claim papers and 0.1 claim stakes, so land grows with what you know."
+    },
+    {
+      "title": "Specialize on purpose",
+      "body": "Specialties cannot be abandoned and skills cost 3x, so plan your path with the skill trees and talk to the town before you commit."
+    },
+    {
+      "title": "Paid items",
+      "body": "Paid items are sold in stores and work without a blueprint."
+    },
+    {
+      "title": "Build high, build out",
+      "body": "Terrain and buildings reach 200 blocks, and deep ocean building is on. On an archipelago with wide shallows, the sea is buildable land."
+    }
+  ]
+}
