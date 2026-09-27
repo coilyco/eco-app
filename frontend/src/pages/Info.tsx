@@ -32,40 +32,6 @@ export default function Info() {
     <Layout fetchedAtISO={status?.fetchedAtISO}>
       <Hero status={status} error={error} />
 
-      <section className="server-inspector" aria-labelledby="server-inspector-heading">
-        <h2 className="section-title" id="server-inspector-heading">
-          Inspect another Eco server
-        </h2>
-        <p className="section-subcopy">
-          Enter any public Eco server address to see its status, online players, meteor
-          timing, and world totals. No admin access is needed.
-        </p>
-        <form className="filter-row server-inspector-form" onSubmit={inspectServer}>
-          <input
-            aria-label="Eco server address"
-            className="filter-input"
-            defaultValue={targetServer}
-            key={targetServer}
-            name="server"
-            placeholder="host, host:port, or full /info URL"
-            type="text"
-          />
-          <button className="button" type="submit">
-            Inspect server
-          </button>
-          {targetServer && (
-            <button className="button" onClick={useSirensServer} type="button">
-              Use Sirens server
-            </button>
-          )}
-        </form>
-        {targetServer && (
-          <p className="empty-note" data-testid="server-target">
-            Inspecting {targetServer}
-          </p>
-        )}
-      </section>
-
       {loading && (
         <p className="loading" data-testid="loading">
           listening for the world…
@@ -76,34 +42,68 @@ export default function Info() {
         <>
           <MeteorBanner cycle={status.cycle} achievements={status.achievements} />
           <StatGrid status={status} />
-          <section aria-labelledby="online-players-heading">
-            <h2 className="section-title" id="online-players-heading">
+          <section className="k-stack k-stack--3" aria-labelledby="online-players-heading">
+            <h2 className="k-h2 info-h2" id="online-players-heading">
               Online now
             </h2>
             {status.players.onlineNames.length > 0 ? (
               <ul className="online-player-list" data-testid="online-player-list">
                 {status.players.onlineNames.map((name) => (
-                  <li className="mini-pill" key={name}>
+                  <li className="info-player" key={name}>
                     {name}
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="empty-note" data-testid="online-player-empty">
-                Nobody is online right now.
-              </p>
+              <div className="k-note" data-testid="online-player-empty">
+                <p>Nobody is online right now.</p>
+              </div>
             )}
           </section>
         </>
       )}
 
-      <section className="cta-row">
+      <section className="k-stack k-stack--3" aria-labelledby="server-inspector-heading">
+        <h2 className="k-h2 info-h2" id="server-inspector-heading">
+          Inspect another Eco server
+        </h2>
+        <p className="info-sub">
+          Enter any public Eco server address to see its status, online players, meteor
+          timing, and world totals. No admin access is needed.
+        </p>
+        <form className="info-inspect" onSubmit={inspectServer}>
+          <input
+            aria-label="Eco server address"
+            className="k-input"
+            defaultValue={targetServer}
+            key={targetServer}
+            name="server"
+            placeholder="host, host:port, or full /info URL"
+            type="text"
+          />
+          <button className="k-btn k-btn--primary" type="submit">
+            Inspect server
+          </button>
+          {targetServer && (
+            <button className="k-btn k-btn--ghost" onClick={useSirensServer} type="button">
+              Use Sirens server
+            </button>
+          )}
+        </form>
+        {targetServer && (
+          <p className="info-sub" data-testid="server-target">
+            Inspecting {targetServer}
+          </p>
+        )}
+      </section>
+
+      <section className="k-btn-row">
         {discordUrl && (
           <a className="button button-discord" href={discordUrl}>
             Join the Discord
           </a>
         )}
-        <a className="button" href={STEAM_URL}>
+        <a className="k-btn k-btn--ghost" href={STEAM_URL}>
           Eco on Steam
         </a>
       </section>

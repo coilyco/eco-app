@@ -29,7 +29,7 @@ export default function StatGrid({ status }: { status: EcoStatus }) {
       // (eco-app#237).
       detail:
         status.world.totalCultureSource === "milestones"
-          ? "at least — from milestones, the server reported 0"
+          ? "At least this much, counted from milestones. The server reported 0."
           : undefined,
     },
     {
@@ -42,14 +42,16 @@ export default function StatGrid({ status }: { status: EcoStatus }) {
   ]
 
   return (
-    <section className="stats" aria-label="world snapshot">
-      {stats.map((s) => (
-        <div className="stat" key={s.label}>
-          <p className="stat-value">{s.value}</p>
-          <p className="stat-label">{s.label}</p>
-          {s.detail && <p className="stat-detail">{s.detail}</p>}
-        </div>
-      ))}
+    <section aria-label="world snapshot">
+      <div className="k-facts info-facts" data-testid="world-facts">
+        {stats.map((s) => (
+          <div className="k-fact" key={s.label}>
+            <span className="k-fact__label">{s.label}</span>
+            <span className="k-fact__value">{s.value}</span>
+            {s.detail && <span className="info-fact-detail">{s.detail}</span>}
+          </div>
+        ))}
+      </div>
     </section>
   )
 }

@@ -44,7 +44,9 @@ describe("Info", () => {
     })
     expect(screen.getByTestId("live-pill")).toHaveTextContent("1 online now")
     expect(screen.getByTestId("online-player-list")).toHaveTextContent("coilysiren")
-    expect(screen.getByText("Eco via Sirens | Cycle 13")).toBeInTheDocument()
+    // The description splits into the name and its tags (eco-app#8314).
+    expect(screen.getByRole("heading", { level: 1, name: "Eco via Sirens" })).toBeInTheDocument()
+    expect(screen.getByTestId("server-tags")).toHaveTextContent("Cycle 13")
     expect(screen.getByText("64,342")).toBeInTheDocument()
     expect(screen.getByRole("link", { name: "Join the Discord" })).toHaveAttribute(
       "href",
@@ -114,7 +116,7 @@ describe("Info", () => {
     renderServer()
 
     await waitFor(() => {
-      expect(screen.getByTestId("live-pill")).toHaveTextContent("live snapshot unavailable")
+      expect(screen.getByTestId("live-pill")).toHaveTextContent("Live snapshot unavailable")
     })
     expect(screen.getByRole("link", { name: "Eco on Steam" })).toBeInTheDocument()
     expect(screen.queryByTestId("meteor-count")).not.toBeInTheDocument()

@@ -370,21 +370,24 @@ a.k-card:visited {
 /* --- Meteor banner --------------------------------------------------- */
 
 .meteor {
-  padding: 1.75rem 2rem;
-  border-radius: 16px;
-  border: 1px solid var(--meteor-edge);
+  padding: var(--k-s-5) var(--k-s-6);
+  border-radius: var(--k-r-1);
+  border: var(--k-edge-w) solid var(--meteor-edge);
+  border-left: 3px solid var(--meteor);
   background: linear-gradient(135deg, var(--meteor-wash), var(--k-surface));
   box-shadow: var(--k-shadow-2);
   backdrop-filter: blur(6px);
 }
 
 .meteor-clear {
-  border-color: var(--card-border);
+  border-color: var(--k-edge);
+  border-left-color: var(--k-brand);
   background: var(--card);
 }
 
 .meteor-count {
   margin: 0;
+  font-family: var(--k-font-display);
   font-size: clamp(1.4rem, 3.5vw, 2rem);
   font-weight: 700;
   color: var(--meteor);
@@ -411,7 +414,7 @@ a.k-card:visited {
 
 .meteor-caption {
   margin: 0.75rem 0 0;
-  font-size: 0.9rem;
+  font-size: var(--k-t-body);
   color: var(--ink-faint);
 }
 
@@ -2194,4 +2197,57 @@ a.k-card:visited {
 .home-chip-pick {
   color: var(--k-context);
   font-weight: 700;
+}
+
+/* --- /info on the kit (eco-app#8314) ----------------------------------- */
+
+.info-hero .k-display,
+.info-h2 {
+  margin: 0;
+  text-wrap: balance;
+}
+
+.info-sub {
+  margin: 0;
+  max-width: 68ch;
+  color: var(--k-dim);
+}
+
+.info-pill {
+  width: fit-content;
+  font-size: var(--k-t-body);
+}
+
+.info-inspect {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--k-s-3);
+  align-items: center;
+}
+
+.info-inspect .k-input {
+  flex: 1 1 280px;
+  min-width: 0;
+}
+
+.info-facts {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+@media (max-width: 900px) {
+  .info-facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.info-fact-detail {
+  color: var(--k-dim);
+}
+
+.info-player {
+  padding: var(--k-s-1) var(--k-s-3);
+  border: var(--k-edge-w) solid var(--k-edge);
+  border-radius: var(--k-r-1);
+  background: var(--k-surface);
+  font-weight: 600;
 }
