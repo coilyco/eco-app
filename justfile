@@ -46,6 +46,10 @@ join-watch *ARGS:
 autogen-refresh *ARGS:
     @uv run python scripts/autogen_refresh.py "$@"
 
+# Regenerate data/eco_trades_baseline.json.gz from the #eco-trades Discord history. Native args - fetch RAW.jsonl (needs the tailnet discord MCP) | build RAW.jsonl [--output PATH].
+trades-baseline *ARGS:
+    @uv run python scripts/trades_baseline.py "$@"
+
 # Install frontend deps into frontend/node_modules (pnpm).
 frontend-install *ARGS:
     @pnpm --dir frontend install "$@"
