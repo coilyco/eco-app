@@ -290,12 +290,12 @@ export default function Recipes() {
             </section>
           )}
 
-          <section className="dir-cards">
-            <Link className="dir-card" to="/items" data-testid="link-items">
+          <section className="k-card-grid k-card-grid--condensed dir-cards">
+            <Link className="k-card dir-card" to="/items" data-testid="link-items">
               <h3>Item directory →</h3>
               <p>Every item's market history — trades, price, who's making it, and shelves.</p>
             </Link>
-            <Link className="dir-card" to="/crafting" data-testid="link-crafting">
+            <Link className="k-card dir-card" to="/crafting" data-testid="link-crafting">
               <h3>Crafting atlas →</h3>
               <p>What the world is actually making — top items, stations, and crafters.</p>
             </Link>

@@ -157,12 +157,12 @@ export default function Replay() {
             )}
           </section>
 
-          <section className="dir-cards">
-            <Link className="dir-card" to="/jobs" data-testid="link-jobs">
+          <section className="k-card-grid k-card-grid--condensed dir-cards">
+            <Link className="k-card dir-card" to="/jobs" data-testid="link-jobs">
               <h3>Jobs →</h3>
               <p>Who can make what — the professions and skills behind the people in this log.</p>
             </Link>
-            <Link className="dir-card" to="/trade" data-testid="link-trade">
+            <Link className="k-card dir-card" to="/trade" data-testid="link-trade">
               <h3>Trade →</h3>
               <p>The market and full ledger — every individual trade, who sold what to whom.</p>
             </Link>

@@ -114,12 +114,12 @@ export default function UsesArbitrage() {
       )}
 
       {loaded && (
-        <section className="dir-cards">
-          <Link className="dir-card" to="/uses/buy-sell" data-testid="link-buy-sell">
+        <section className="k-card-grid k-card-grid--condensed dir-cards">
+          <Link className="k-card dir-card" to="/uses/buy-sell" data-testid="link-buy-sell">
             <h3>Where to buy / sell →</h3>
             <p>Price one item across every shelf — the cheapest to buy, the best to sell into.</p>
           </Link>
-          <Link className="dir-card" to="/trade" data-testid="link-trade">
+          <Link className="k-card dir-card" to="/trade" data-testid="link-trade">
             <h3>Trade &amp; logistics →</h3>
             <p>The whole market — movers, price history, stores, and the full ledger.</p>
           </Link>

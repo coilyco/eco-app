@@ -114,16 +114,16 @@ a.k-card:visited {
 
 .hero-kicker {
   margin: 0 0 0.75rem;
-  font-size: 0.95rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
+  font-size: var(--k-t-body);
+  font-weight: 500;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--ink-faint);
 }
 
 .hero-title {
   margin: 0;
-  font-size: clamp(2.4rem, 6vw, 3.8rem);
+  font-size: var(--k-t-display);
   line-height: 1.08;
   letter-spacing: -0.025em;
   font-weight: 700;
@@ -135,9 +135,9 @@ a.k-card:visited {
 
 .hero-tagline {
   margin: 1.25rem 0 0;
-  font-size: 1.15rem;
+  font-size: var(--k-t-lead);
   line-height: 1.6;
-  color: var(--ink-soft);
+  color: var(--k-dim);
   max-width: 56ch;
 }
 
@@ -147,10 +147,10 @@ a.k-card:visited {
   gap: 0.55rem;
   margin: 1.5rem 0 0;
   padding: 0.45rem 1rem;
-  border-radius: 999px;
+  border-radius: var(--k-r-1);
   border: 1px solid var(--card-border);
   background: var(--card);
-  font-size: 0.95rem;
+  font-size: var(--k-t-body);
   color: var(--ink-soft);
 }
 
@@ -217,7 +217,7 @@ a.k-card:visited {
   max-width: 26rem;
   margin: 3rem auto;
   padding: 2rem;
-  border-radius: 14px;
+  border-radius: var(--k-r-1);
   border: 1px solid var(--card-border);
   background: var(--card);
   backdrop-filter: blur(6px);
@@ -233,7 +233,7 @@ a.k-card:visited {
 
 .gate-note {
   margin: 0 0 1.4rem;
-  font-size: 0.95rem;
+  font-size: var(--k-t-body);
   line-height: 1.55;
   color: var(--ink-soft);
 }
@@ -251,7 +251,7 @@ a.k-card:visited {
 
 .gate-error {
   margin: 1rem 0 0;
-  font-size: 0.9rem;
+  font-size: var(--k-t-body);
   color: var(--meteor);
 }
 
@@ -282,10 +282,10 @@ a.k-card:visited {
 
 .mini-pill {
   padding: 0.2rem 0.65rem;
-  border-radius: 999px;
+  border-radius: var(--k-r-1);
   border: 1px solid var(--card-border);
   background: var(--k-ground);
-  font-size: 0.78rem;
+  font-size: var(--k-t-body);
   font-weight: 600;
   color: var(--ink-soft);
   font-variant-numeric: tabular-nums;
@@ -361,7 +361,7 @@ a.k-card:visited {
 
 .stat {
   padding: 1.25rem 1.4rem;
-  border-radius: 14px;
+  border-radius: var(--k-r-1);
   border: 1px solid var(--card-border);
   background: var(--card);
   backdrop-filter: blur(6px);
@@ -369,24 +369,24 @@ a.k-card:visited {
 
 .stat-value {
   margin: 0;
-  font-size: 1.6rem;
+  font-size: var(--k-t-h2);
   font-weight: 700;
-  color: var(--leaf);
+  color: var(--k-text);
   letter-spacing: -0.01em;
 }
 
 .stat-label {
   margin: 0.3rem 0 0;
-  font-size: 0.85rem;
+  font-size: var(--k-t-body);
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   color: var(--ink-faint);
 }
 
 .stat-detail {
   margin: 0.35rem 0 0;
-  font-size: 0.85rem;
+  font-size: var(--k-t-body);
   color: var(--ink-soft);
 }
 
@@ -412,7 +412,7 @@ a.k-card:visited {
   margin: 0;
   padding: 1.25rem 1.5rem 1.25rem 1.6rem;
   list-style: none;
-  border-radius: 14px;
+  border-radius: var(--k-r-1);
   border: 1px solid var(--card-border);
   border-left: 3px solid var(--leaf);
   background: var(--card);
@@ -443,9 +443,9 @@ a.k-card:visited {
 
 .mock-banner {
   padding: 0.7rem 1.25rem;
-  border-radius: 12px;
+  border-radius: var(--k-r-1);
   text-align: center;
-  font-size: 0.9rem;
+  font-size: var(--k-t-body);
   font-weight: 600;
   color: var(--meteor);
   background: var(--meteor-wash);
@@ -454,9 +454,9 @@ a.k-card:visited {
 
 .mock-banner code {
   padding: 0.1rem 0.35rem;
-  border-radius: 6px;
+  border-radius: var(--k-r-1);
   background: var(--k-ground);
-  font-size: 0.8rem;
+  font-size: var(--k-t-body);
 }
 
 .intro {
@@ -472,11 +472,12 @@ a.k-card:visited {
 
 .section-title {
   margin: 0 0 1rem;
-  font-size: 0.95rem;
+  font-size: var(--k-t-h2);
+  font-family: var(--k-font-display);
   font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--ink-faint);
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--k-text);
 }
 
 .cards {
@@ -490,7 +491,7 @@ a.k-card:visited {
 
 .card {
   padding: 1.1rem 1.3rem;
-  border-radius: 14px;
+  border-radius: var(--k-r-1);
   border: 1px solid var(--card-border);
   background: var(--card);
   backdrop-filter: blur(6px);
@@ -519,12 +520,12 @@ a.k-card:visited {
   font-variant-numeric: tabular-nums;
   color: var(--leaf);
   font-weight: 600;
-  font-size: 0.95rem;
+  font-size: var(--k-t-body);
 }
 
 .kicker {
   margin: 0 0 0.6rem;
-  font-size: 0.72rem;
+  font-size: var(--k-t-body);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.1em;
@@ -543,7 +544,7 @@ a.k-card:visited {
   justify-content: space-between;
   gap: 0.5rem;
   padding: 0.3rem 0;
-  font-size: 0.85rem;
+  font-size: var(--k-t-body);
   border-bottom: 1px dotted var(--card-border);
 }
 
@@ -575,7 +576,7 @@ a.k-card:visited {
 .warn-note {
   margin: 0.35rem 0 0.55rem;
   color: var(--meteor-deep);
-  font-size: 0.82rem;
+  font-size: var(--k-t-body);
   font-weight: 600;
 }
 
@@ -585,7 +586,7 @@ a.k-card:visited {
   gap: 0.35rem;
   margin-top: 0.65rem;
   color: var(--ink-faint);
-  font-size: 0.84rem;
+  font-size: var(--k-t-body);
 }
 
 .species-risk-table td:first-child {
@@ -597,14 +598,14 @@ a.k-card:visited {
   max-width: 34rem;
   margin-top: 0.25rem;
   color: var(--ink-faint);
-  font-size: 0.76rem;
+  font-size: var(--k-t-body);
   line-height: 1.35;
 }
 
 .species-state {
   display: inline-block;
   white-space: nowrap;
-  font-size: 0.78rem;
+  font-size: var(--k-t-body);
   font-weight: 700;
 }
 
@@ -632,7 +633,7 @@ a.k-card:visited {
   max-height: 24rem;
   object-fit: cover;
   border: 1px solid var(--card-border);
-  border-radius: 12px;
+  border-radius: var(--k-r-1);
 }
 
 .empty-note {
@@ -643,9 +644,9 @@ a.k-card:visited {
   padding: 0.55rem 0.8rem 0.55rem 2.15rem;
   border: 1px solid var(--card-border);
   border-left: 3px solid var(--leaf-dim);
-  border-radius: 10px;
+  border-radius: var(--k-r-1);
   background: var(--card);
-  font-size: 0.82rem;
+  font-size: var(--k-t-body);
   line-height: 1.45;
   color: var(--ink-soft);
 }
@@ -723,7 +724,7 @@ a.k-card:visited {
   display: block;
   margin-top: 0.2rem;
   color: var(--ink-faint);
-  font-size: 0.78rem;
+  font-size: var(--k-t-body);
   line-height: 1.35;
 }
 
@@ -756,7 +757,7 @@ a.k-card:visited {
 .pill {
   padding: 0.15rem 0.6rem;
   border-radius: 999px;
-  font-size: 0.65rem;
+  font-size: var(--k-t-body);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -800,12 +801,12 @@ a.k-card:visited {
   flex: 1;
   max-width: 28rem;
   padding: 0.65rem 1rem;
-  border-radius: 10px;
+  border-radius: var(--k-r-1);
   border: 1px solid var(--card-border);
   background: var(--k-ground);
   color: var(--ink);
   font: inherit;
-  font-size: 0.95rem;
+  font-size: var(--k-t-body);
 }
 
 .filter-input:focus {
@@ -836,11 +837,11 @@ a.k-card:visited {
   width: 100%;
   padding: 0.45rem 0.8rem;
   border: 1px solid transparent;
-  border-radius: 8px;
+  border-radius: var(--k-r-1);
   background: transparent;
   color: var(--ink);
   font: inherit;
-  font-size: 0.9rem;
+  font-size: var(--k-t-body);
   text-align: left;
   cursor: pointer;
   overflow: hidden;
@@ -866,7 +867,7 @@ a.k-card:visited {
   position: absolute;
   inset: 0 auto 0 0;
   background: var(--leaf-wash);
-  border-radius: 8px;
+  border-radius: var(--k-r-1);
 }
 
 /* Price-trend tag on the /trade markets: a glyph + word + delta, coloured by
@@ -900,7 +901,7 @@ a.k-card:visited {
 .gap-row {
   padding: 0.6rem 0.8rem;
   border: 1px solid var(--leaf-dim);
-  border-radius: 8px;
+  border-radius: var(--k-r-1);
   background: var(--leaf-wash);
 }
 
@@ -914,7 +915,7 @@ a.k-card:visited {
 
 .gap-name {
   font-weight: 600;
-  font-size: 0.95rem;
+  font-size: var(--k-t-body);
 }
 
 .gap-tag {
@@ -925,14 +926,14 @@ a.k-card:visited {
 
 .gap-summary {
   margin: 0.25rem 0 0;
-  font-size: 0.85rem;
+  font-size: var(--k-t-body);
   color: var(--ink-soft);
   font-variant-numeric: tabular-nums;
 }
 
 .gap-who {
   margin: 0.35rem 0 0;
-  font-size: 0.85rem;
+  font-size: var(--k-t-body);
   color: var(--ink-soft);
   line-height: 1.5;
 }
@@ -962,7 +963,7 @@ a.k-card:visited {
 
 .button {
   padding: 0.7rem 1.4rem;
-  border-radius: 10px;
+  border-radius: var(--k-r-1);
   border: 1px solid var(--leaf-dim);
   /* A <button> otherwise keeps the browser's grey fill and system font. */
   background: transparent;
@@ -1006,7 +1007,7 @@ a.k-card:visited {
 /* ---- trades ledger (/trades) ---- */
 .section-sub {
   font-weight: 500;
-  font-size: 0.8rem;
+  font-size: var(--k-t-body);
   letter-spacing: 0.04em;
   text-transform: none;
   color: var(--ink-faint);
@@ -1016,13 +1017,13 @@ a.k-card:visited {
 .watcher-badge {
   color: var(--meteor);
   font-weight: 600;
-  font-size: 0.85em;
+  font-size: 1em;
 }
 
 .ledger-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.9rem;
+  font-size: var(--k-t-body);
 }
 
 .ledger-table th,
@@ -1077,7 +1078,7 @@ a.k-card:visited {
 .pivot-lines li {
   padding: 0.4rem 0.6rem;
   border-bottom: 1px solid var(--card-border);
-  font-size: 0.9rem;
+  font-size: var(--k-t-body);
   line-height: 1.4;
 }
 
@@ -1086,7 +1087,7 @@ a.k-card:visited {
   min-width: 3.5rem;
   color: var(--ink-faint);
   font-variant-numeric: tabular-nums;
-  font-size: 0.8rem;
+  font-size: var(--k-t-body);
 }
 
 /* Replay event bodies are JSON blobs — wrap them tight and monospace so a long
@@ -1094,7 +1095,7 @@ a.k-card:visited {
 .replay-body {
   margin: 0;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 0.8rem;
+  font-size: var(--k-t-body);
   color: var(--ink-faint);
   white-space: pre-wrap;
   word-break: break-word;
@@ -1106,7 +1107,7 @@ a.k-card:visited {
   max-width: 640px;
   height: auto;
   border: 1px solid var(--card-border);
-  border-radius: 12px;
+  border-radius: var(--k-r-1);
   background: var(--k-ground);
   padding: 0.5rem;
 }
@@ -1128,7 +1129,7 @@ a.k-card:visited {
   height: auto;
   padding: 0.45rem;
   border: 1px solid var(--card-border);
-  border-radius: 12px;
+  border-radius: var(--k-r-1);
   background: var(--k-ground);
 }
 
@@ -1186,7 +1187,7 @@ a.k-card:visited {
   height: 220px;
   padding: 0.75rem 0.6rem;
   border: 1px solid var(--card-border);
-  border-radius: 12px;
+  border-radius: var(--k-r-1);
   background: var(--k-ground);
 }
 
@@ -1203,7 +1204,7 @@ a.k-card:visited {
 .price-histogram-count,
 .price-histogram-range {
   color: var(--ink-faint);
-  font-size: 0.68rem;
+  font-size: var(--k-t-body);
   font-variant-numeric: tabular-nums;
   text-align: center;
 }
@@ -1225,7 +1226,7 @@ a.k-card:visited {
   flex-wrap: wrap;
   gap: 1rem;
   margin: 0 0 0.5rem;
-  font-size: 0.8rem;
+  font-size: var(--k-t-body);
   color: var(--ink-faint);
 }
 
@@ -1260,7 +1261,7 @@ a.k-card:visited {
   max-width: 760px;
   height: auto;
   border: 1px solid var(--card-border);
-  border-radius: 12px;
+  border-radius: var(--k-r-1);
   background: var(--k-ground);
   padding: 0.5rem;
 }
@@ -1292,14 +1293,14 @@ a.k-card:visited {
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  font-size: 0.85rem;
+  font-size: var(--k-t-body);
   color: var(--ink-soft);
 }
 
 .legend-swatch {
   width: 12px;
   height: 12px;
-  border-radius: 3px;
+  border-radius: var(--k-r-1);
   flex: none;
 }
 
@@ -1317,7 +1318,7 @@ a.k-card:visited {
   display: flex;
   flex-direction: column;
   gap: 0.45rem;
-  font-size: 0.82rem;
+  font-size: var(--k-t-body);
   color: var(--ink-soft);
 }
 
@@ -1327,7 +1328,7 @@ a.k-card:visited {
   padding: 0.55rem 0.8rem;
   border: 1px solid var(--card-border);
   border-left: 3px solid var(--meteor-deep);
-  border-radius: 10px;
+  border-radius: var(--k-r-1);
   background: var(--card);
   line-height: 1.45;
 }
@@ -1343,7 +1344,7 @@ a.k-card:visited {
 
 .prog-trend {
   border: 1px solid var(--card-border);
-  border-radius: 12px;
+  border-radius: var(--k-r-1);
   background: var(--k-ground);
   padding: 0.75rem;
 }
@@ -1353,7 +1354,7 @@ a.k-card:visited {
   align-items: baseline;
   justify-content: space-between;
   gap: 0.5rem;
-  font-size: 0.85rem;
+  font-size: var(--k-t-body);
   font-weight: 600;
   color: var(--ink-soft);
   text-transform: capitalize;
@@ -1380,7 +1381,7 @@ a.k-card:visited {
 .prog-trend-single {
   margin: 0.6rem 0 0.2rem;
   color: var(--ink-faint);
-  font-size: 0.85rem;
+  font-size: var(--k-t-body);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1391,7 +1392,7 @@ a.k-card:visited {
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
-  font-size: 0.82rem;
+  font-size: var(--k-t-body);
 }
 
 .prog-timeline li {
@@ -1405,7 +1406,7 @@ a.k-card:visited {
   color: var(--ink-faint);
   font-variant-numeric: tabular-nums;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 0.75rem;
+  font-size: var(--k-t-body);
 }
 
 .prog-what {
@@ -1430,14 +1431,14 @@ a.k-card:visited {
 
 .prof-btn-sub {
   margin-top: 0.5rem;
-  font-size: 0.82rem;
+  font-size: var(--k-t-body);
   color: var(--ink-faint);
 }
 
 /* Social / chat surface (eco-app#63) */
 .redaction-note {
   margin: 0.5rem 0 0;
-  font-size: 0.82rem;
+  font-size: var(--k-t-body);
   color: var(--ink-faint);
   max-width: 60ch;
 }
@@ -1454,7 +1455,7 @@ a.k-card:visited {
   max-width: 460px;
   height: auto;
   border: 1px solid var(--card-border);
-  border-radius: 12px;
+  border-radius: var(--k-r-1);
   background: var(--k-ground);
   padding: 0.5rem;
 }
@@ -1474,7 +1475,7 @@ a.k-card:visited {
 
 .section-title-sm {
   margin: 0 0 0.4rem;
-  font-size: 0.95rem;
+  font-size: var(--k-t-body);
   color: var(--ink-soft);
 }
 
@@ -1531,13 +1532,13 @@ a.k-card:visited {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  font-size: 0.85rem;
+  font-size: var(--k-t-body);
 }
 
 .eco-swatch {
   width: 12px;
   height: 12px;
-  border-radius: 3px;
+  border-radius: var(--k-r-1);
   flex: none;
 }
 
@@ -1566,7 +1567,7 @@ a.k-card:visited {
 .eco-matches li {
   padding: 0.7rem 0.9rem;
   border: 1px solid var(--card-border);
-  border-radius: 10px;
+  border-radius: var(--k-r-1);
   background: var(--card);
 }
 
@@ -1596,7 +1597,7 @@ a.k-card:visited {
 
 .eco-match-desc {
   margin: 0.35rem 0 0;
-  font-size: 0.85rem;
+  font-size: var(--k-t-body);
   color: var(--ink-soft);
 }
 
@@ -1615,7 +1616,7 @@ a.k-card:visited {
 
 .eco-drift-head {
   margin: 0 0 0.5rem;
-  font-size: 0.95rem;
+  font-size: var(--k-t-body);
 }
 
 .eco-drift-add {
@@ -1631,7 +1632,7 @@ a.k-card:visited {
 .rank-detail {
   position: relative;
   z-index: 1;
-  font-size: 0.8rem;
+  font-size: var(--k-t-body);
   color: var(--ink-faint);
   font-variant-numeric: tabular-nums;
 }
@@ -1664,7 +1665,7 @@ a.k-card:visited {
   width: 100%;
   max-width: 720px;
   margin: 0 auto;
-  border-radius: 12px;
+  border-radius: var(--k-r-1);
   border: 1px solid var(--card-border);
   overflow: hidden;
   background: var(--k-ground);
@@ -1723,7 +1724,7 @@ a.k-card:visited {
 .map-meta {
   margin: 0.6rem 0 0.4rem;
   text-align: center;
-  font-size: 0.85rem;
+  font-size: var(--k-t-body);
   color: var(--ink-faint);
   font-variant-numeric: tabular-nums;
 }
@@ -1737,7 +1738,7 @@ a.k-card:visited {
   flex-wrap: wrap;
   gap: 0.35rem 1rem;
   justify-content: center;
-  font-size: 0.82rem;
+  font-size: var(--k-t-body);
 }
 
 .map-legend li {
@@ -1758,7 +1759,7 @@ a.k-card:visited {
 /* Biome-legend rows that can highlight the map get a hover affordance. */
 .eco-legend-hoverable {
   cursor: pointer;
-  border-radius: 6px;
+  border-radius: var(--k-r-1);
   transition: background 120ms ease;
 }
 
@@ -1770,7 +1771,7 @@ a.k-card:visited {
 
 .hint-line {
   margin: 0.5rem 0 0;
-  font-size: 0.82rem;
+  font-size: var(--k-t-body);
   color: var(--ink-faint);
   font-style: italic;
 }
@@ -1788,12 +1789,12 @@ a.k-card:visited {
 /* A dropdown styled to match .filter-input, for the actor / event-type filters. */
 .filter-select {
   padding: 0.65rem 1rem;
-  border-radius: 10px;
+  border-radius: var(--k-r-1);
   border: 1px solid var(--card-border);
   background: var(--k-ground);
   color: var(--ink);
   font: inherit;
-  font-size: 0.9rem;
+  font-size: var(--k-t-body);
   max-width: 14rem;
 }
 
@@ -1820,18 +1821,18 @@ a.k-card:visited {
 
 .sort-label {
   color: var(--ink-faint);
-  font-size: 0.85rem;
+  font-size: var(--k-t-body);
   margin-right: 0.25rem;
 }
 
 .chip {
   padding: 0.35rem 0.85rem;
-  border-radius: 999px;
+  border-radius: var(--k-r-1);
   border: 1px solid var(--card-border);
   background: transparent;
   color: var(--ink);
   font: inherit;
-  font-size: 0.85rem;
+  font-size: var(--k-t-body);
   cursor: pointer;
   transition: background 120ms ease, border-color 120ms ease;
 }
@@ -1852,7 +1853,7 @@ a.k-card:visited {
   align-items: center;
   gap: 0.5rem;
   color: var(--ink-faint);
-  font-size: 0.85rem;
+  font-size: var(--k-t-body);
   cursor: pointer;
 }
 
@@ -1871,7 +1872,7 @@ a.k-card:visited {
 
 .pager-status {
   color: var(--ink-faint);
-  font-size: 0.85rem;
+  font-size: var(--k-t-body);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1895,13 +1896,13 @@ a.k-card:visited {
   gap: 0.2rem;
   padding: 0.85rem 1rem;
   border: 1px solid var(--card-border);
-  border-radius: 10px;
+  border-radius: var(--k-r-1);
   background: var(--k-ground);
 }
 
 .fact-label {
   color: var(--ink-faint);
-  font-size: 0.75rem;
+  font-size: var(--k-t-body);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -1933,7 +1934,7 @@ a.k-card:visited {
 }
 
 .recipe-sublink {
-  font-size: 0.8rem;
+  font-size: var(--k-t-body);
   color: var(--ink-faint);
   text-decoration: none;
 }
@@ -1945,7 +1946,7 @@ a.k-card:visited {
 /* Refresh-contract caption (eco-app#201). Every fetching page shows one, so a
    reader can always tell whether what they see is still being updated. */
 .freshness-note {
-  font-size: 0.78rem;
+  font-size: var(--k-t-body);
   color: var(--ink-faint);
   margin: 0.2rem 0 0.6rem;
 }
@@ -2245,4 +2246,66 @@ a.k-card:visited {
 
 .mods-includes span {
   color: var(--k-dim);
+}
+
+/* --- Kit sweep (eco-app#8314) --------------------------------------------- */
+/* Pages not yet rebuilt on kit components still wear the kit through their
+   own class names: the floor, radius, and type rules above, and these. */
+
+.dir-card h3 {
+  margin: 0;
+  font-size: var(--k-t-lead);
+}
+
+.dir-card p {
+  margin: 0;
+}
+
+/* Phones: a wide table scrolls inside itself instead of pushing the page
+   sideways, and long select options or buyer tags wrap. */
+@media (max-width: 600px) {
+  .ledger-table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+  .filter-select {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .gap-buyer {
+    white-space: normal;
+  }
+}
+
+/* The nav floats over the page as coilysiren.me's does: the kit's frame band
+   is already translucent, so sticking it to the top is the whole effect. On a
+   phone the tall two-column nav would eat the screen, so it scrolls away and
+   the one-line k-nav-stub header sticks instead. */
+.k-nav {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+html {
+  scroll-padding-top: 5rem;
+}
+
+@media (max-width: 600px) {
+  .k-nav {
+    position: static;
+  }
+
+  .k-nav-stub {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+  }
+
+  html {
+    scroll-padding-top: 3.5rem;
+  }
 }

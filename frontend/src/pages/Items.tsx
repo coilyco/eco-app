@@ -201,12 +201,12 @@ export default function Items() {
             </section>
           )}
 
-          <section className="dir-cards">
-            <Link className="dir-card" to="/trade" data-testid="link-trade">
+          <section className="k-card-grid k-card-grid--condensed dir-cards">
+            <Link className="k-card dir-card" to="/trade" data-testid="link-trade">
               <h3>Trade →</h3>
               <p>The market and the full ledger — every individual trade, with price over time.</p>
             </Link>
-            <Link className="dir-card" to="/crafting" data-testid="link-crafting">
+            <Link className="k-card dir-card" to="/crafting" data-testid="link-crafting">
               <h3>Crafting atlas →</h3>
               <p>What the world is making — top items, stations, and crafters.</p>
             </Link>

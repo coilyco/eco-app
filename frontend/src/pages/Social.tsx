@@ -340,12 +340,12 @@ export default function Social() {
             </section>
           )}
 
-          <section className="dir-cards">
-            <Link className="dir-card" to="/trade" data-testid="link-trade">
+          <section className="k-card-grid k-card-grid--condensed dir-cards">
+            <Link className="k-card dir-card" to="/trade" data-testid="link-trade">
               <h3>Trade →</h3>
               <p>The material side: the market, the trade ledger, and money supply.</p>
             </Link>
-            <Link className="dir-card" to="/jobs" data-testid="link-jobs">
+            <Link className="k-card dir-card" to="/jobs" data-testid="link-jobs">
               <h3>Jobs →</h3>
               <p>Who can make what: professions, specialties, and every settler's skills.</p>
             </Link>

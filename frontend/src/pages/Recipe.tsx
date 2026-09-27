@@ -228,9 +228,9 @@ export default function Recipe() {
           {/* The market / crafters / buy-sell cross-link: the item pivot already
               aggregates market price (market.py), who's crafted it (crafting.py
               by_crafted), and where to buy or sell it (logistics.py). */}
-          <section className="dir-cards">
+          <section className="k-card-grid k-card-grid--condensed dir-cards">
             <Link
-              className="dir-card"
+              className="k-card dir-card"
               to={itemHref(recipe.product.item)}
               data-testid="recipe-market-link"
             >
@@ -241,7 +241,7 @@ export default function Recipe() {
               </p>
             </Link>
             <Link
-              className="dir-card"
+              className="k-card dir-card"
               to={`/uses/resolve?item=${encodeURIComponent(recipe.product.item)}`}
               data-testid="recipe-resolver-link"
             >
@@ -249,7 +249,7 @@ export default function Recipe() {
               <p>Compare recipe requirements, current offers, and observed specialty holders.</p>
             </Link>
             <Link
-              className="dir-card"
+              className="k-card dir-card"
               to={`/recipes?ingredient=${encodeURIComponent(recipe.product.item)}`}
               data-testid="recipe-consumers-link"
             >

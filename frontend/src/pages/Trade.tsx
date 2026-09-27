@@ -746,12 +746,12 @@ export default function Trade() {
 
       {/* Cross-links. */}
       {loaded && (
-        <section className="dir-cards">
-          <Link className="dir-card" to="/crafting" data-testid="link-crafting">
+        <section className="k-card-grid k-card-grid--condensed dir-cards">
+          <Link className="k-card dir-card" to="/crafting" data-testid="link-crafting">
             <h3>Crafting atlas →</h3>
             <p>Where the traded goods come from — what's made, where, and from what.</p>
           </Link>
-          <Link className="dir-card" to="/jobs" data-testid="link-jobs">
+          <Link className="k-card dir-card" to="/jobs" data-testid="link-jobs">
             <h3>Jobs →</h3>
             <p>Who can make the traded goods — professions, specialties, and skill history.</p>
           </Link>

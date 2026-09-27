@@ -329,8 +329,8 @@ export default function Civics() {
             </section>
           )}
 
-          <section className="dir-cards">
-            <Link className="dir-card" to="/info" data-testid="link-info">
+          <section className="k-card-grid k-card-grid--condensed dir-cards">
+            <Link className="k-card dir-card" to="/info" data-testid="link-info">
               <h3>Info →</h3>
               <p>The live snapshot — elected titles, active laws, and the world at a glance.</p>
             </Link>

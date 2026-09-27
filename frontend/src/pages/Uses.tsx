@@ -86,9 +86,9 @@ export default function Uses() {
         </p>
       </section>
 
-      <section className="dir-cards" aria-label="use cases">
+      <section className="k-card-grid k-card-grid--condensed dir-cards" aria-label="use cases">
         {LIVE.map((c) => (
-          <Link className="dir-card" to={c.to} key={c.to} data-testid={c.testid}>
+          <Link className="k-card dir-card" to={c.to} key={c.to} data-testid={c.testid}>
             <h3>{c.title} →</h3>
             <p>{c.blurb}</p>
           </Link>

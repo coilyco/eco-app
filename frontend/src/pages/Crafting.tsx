@@ -189,12 +189,12 @@ export default function Crafting() {
             <CrafterList rows={atlas.byCitizenIterations} />
           </section>
 
-          <section className="dir-cards">
-            <Link className="dir-card" to="/trade" data-testid="link-trade">
+          <section className="k-card-grid k-card-grid--condensed dir-cards">
+            <Link className="k-card dir-card" to="/trade" data-testid="link-trade">
               <h3>Trade →</h3>
               <p>Where this production goes — the market and every individual trade, with price over time.</p>
             </Link>
-            <Link className="dir-card" to="/items" data-testid="link-items">
+            <Link className="k-card dir-card" to="/items" data-testid="link-items">
               <h3>Item directory →</h3>
               <p>Every item this production touches — click through to its full history.</p>
             </Link>
