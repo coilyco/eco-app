@@ -23,7 +23,9 @@ With no rules and no `404` anywhere, one shell became an unbounded index:
   both as competing originals.
 * **Pages that were never meant to be found.** `/users/<hex>` is one player's
   dossier, unlinked and unbounded. `/social` and `/replay` sit behind a soft
-  password gate. All crawlable.
+  password gate. All crawlable. (`/social` and `/users/<hex>` were removed in
+  eco-app#8385. `/social` redirects home, and `/users/<hex>` now 404s because it
+  was about one person.)
 
 None of that leaked anything: the shell is `index.html`, never the data. It
 filled Search Console.
@@ -44,7 +46,7 @@ know about, so there is one list.
 | a canonical page | `200` + `Link: <…>; rel="canonical"` |
 
 "Real but not canonical" covers three cases: a route marked `noindex` in the
-manifest (`/item`, `/recipe`, `/users/:hex`, `/social`, `/replay`), any URL
+manifest (`/item`, `/recipe`, `/replay`), any URL
 carrying a query string whatever its route, and anything under the `/jobs/*`
 wildcard deeper than `/jobs` itself.
 

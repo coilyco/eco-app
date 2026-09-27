@@ -25,8 +25,10 @@ second copy of a live fact is how the Discord block went stale.
   falling back to an old value.
 * **Meteor** - destroyed (parsed from the world achievement, "Destroyed the
   meteor on Day 57, 23:13") wins over any countdown. Then a countdown in meteor
-  amber, then no meteor, then "not reporting the meteor date". `/info`'s
-  meteor banner reads the same parser.
+  amber, then no meteor, then "not reporting the meteor date".
+* **World totals** - online now, settlers, plants, laws, and culture, the stat
+  grid that lived on `/info` until that page folded in here (eco-app#8385).
+  `/info` now redirects to `/`.
 * **Loading** - "Checking the server" in the live pill, and the brief renders
   at once because it ships in the bundle.
 

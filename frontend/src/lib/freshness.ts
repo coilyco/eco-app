@@ -98,11 +98,6 @@ export const REFRESH_CONTRACTS = {
     staleAfterMs: 15 * MINUTE,
     rationale: "Specialty holders change when someone levels, which is rare within a session.",
   },
-  social: {
-    mode: "manual",
-    staleAfterMs: 15 * MINUTE,
-    rationale: "Play sessions and reputation transfers accrue slowly.",
-  },
   logistics: {
     mode: "manual",
     staleAfterMs: 15 * MINUTE,

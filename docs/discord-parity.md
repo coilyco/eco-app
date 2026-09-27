@@ -6,7 +6,7 @@ chat bridge stays enabled and automatic notification feeds are not command previ
 
 | Active DiscordLink surface | Rich Eco replacement | eco-app data plane | SPA link | State |
 | --- | --- | --- | --- | --- |
-| Server information display (players, in-game time, meteor, elections) | `/eco status` and `/eco player <name>` | `/preview.json`, `/preview/user.json` | `/info`, encoded `/users/<hex>` | Implemented; player/election detail is available by dossier/civics page rather than an always-posted channel card. |
+| Server information display (players, in-game time, meteor, elections) | `/eco status` and `/eco player <name>` | `/preview.json`, `/preview/user.json` | `/`, `/civics` | Implemented; election detail is on the civics page rather than an always-posted channel card. The per-player web page was removed (eco-app#8385), so player detail is Discord-only. |
 | Map display | `/eco world` | `/preview/world.json` | `/map` | Implemented. |
 | Work-party display | No safe replacement yet | No public work-party data plane exists | — | Director/ops checkpoint: add or approve a public-safe eco-app work-party plane before disabling this DiscordLink display. |
 

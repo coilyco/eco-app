@@ -15,7 +15,6 @@ interface LayoutProps {
 // primary browse surface, peer to Items and Crafting.
 const NAV: Array<[string, string]> = [
   ["/", "Home"],
-  ["/info", "Info"],
   ["/mods", "Mods"],
   ["/wiki", "Wiki"],
   ["/jobs", "Jobs"],

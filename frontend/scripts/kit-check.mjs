@@ -40,7 +40,6 @@ const BUDGETS = { "/jobs": 3200, "/recipes": 2000, "/recipe": 2000, "/uses/resol
 
 const SAMPLE = {
   "/jobs/*": "/jobs",
-  "/users/:hex": "/users/636f696c79736972656e",
   "/item": "/item?id=IronBar",
   "/recipe": "/recipe?id=IronBar",
 }

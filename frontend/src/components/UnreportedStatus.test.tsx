@@ -1,6 +1,5 @@
 import { cleanup, render, screen } from "@testing-library/react"
 import { afterEach, describe, expect, it } from "vitest"
-import MeteorBanner from "./MeteorBanner"
 import StatGrid from "./StatGrid"
 import { SAMPLE_STATUS } from "../test/fixtures"
 import type { EcoStatus } from "../lib/api"
@@ -35,17 +34,5 @@ describe("unreported /info fields", () => {
     }
     render(<StatGrid status={zeroed} />)
     expect(screen.getByText("0")).toBeInTheDocument()
-  })
-
-  it("drops the world-clock caption when the clock is unknown", () => {
-    render(<MeteorBanner cycle={UNREPORTED.cycle} />)
-    // "day 0, 0h" would claim the cycle just started.
-    expect(screen.queryByText(/day 0, 0h/)).toBeNull()
-    expect(screen.getByTestId("meteor-count")).toHaveTextContent("A meteor is coming")
-  })
-
-  it("still counts down when the day count is reported", () => {
-    render(<MeteorBanner cycle={SAMPLE_STATUS.cycle} />)
-    expect(screen.getByTestId("meteor-count")).toHaveTextContent("3 days until the meteor")
   })
 })

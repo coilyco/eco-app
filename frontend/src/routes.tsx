@@ -5,7 +5,6 @@ import PagePassword from "./components/PagePassword"
 import Civics from "./pages/Civics"
 import Crafting from "./pages/Crafting"
 import Home from "./pages/Home"
-import Info from "./pages/Info"
 import Item from "./pages/Item"
 import Items from "./pages/Items"
 import Jobs from "./pages/Jobs"
@@ -14,10 +13,8 @@ import Mods from "./pages/Mods"
 import Recipe from "./pages/Recipe"
 import Recipes from "./pages/Recipes"
 import Replay from "./pages/Replay"
-import Social from "./pages/Social"
 import Species from "./pages/Species"
 import Trade from "./pages/Trade"
-import User from "./pages/User"
 import Uses from "./pages/Uses"
 import UsesArbitrage from "./pages/UsesArbitrage"
 import UsesBuySell from "./pages/UsesBuySell"
@@ -39,7 +36,6 @@ import Wiki from "./pages/Wiki"
 
 const PAGES: Record<string, () => ReactElement> = {
   Home,
-  Info,
   Mods,
   Wiki,
   Jobs,
@@ -58,11 +54,9 @@ const PAGES: Record<string, () => ReactElement> = {
   UsesPrice,
   UsesResolve,
   UsesShopCheck,
-  Social,
   Map: MapPage,
   Species,
   Replay,
-  User,
 }
 
 export interface RouteSpec {

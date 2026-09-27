@@ -88,7 +88,7 @@ afterEach(() => {
 })
 
 describe("Civics", () => {
-  it("renders the civic snapshot, turnout, and both cross-links", async () => {
+  it("renders the civic snapshot and turnout", async () => {
     stubFetch()
     renderCivics()
 
@@ -97,7 +97,6 @@ describe("Civics", () => {
     })
     expect(screen.getByTestId("civics-pill")).toHaveTextContent("75% turnout")
     expect(screen.getByTestId("civics-stats")).toHaveTextContent("Turnout")
-    expect(screen.getByTestId("link-info")).toHaveAttribute("href", "/info")
   })
 
   it("charts turnout over time with a two-series legend", async () => {

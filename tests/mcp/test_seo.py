@@ -86,7 +86,13 @@ def test_a_path_no_route_owns_is_a_404() -> None:
 def test_a_retired_path_301s_instead_of_rerendering() -> None:
     """A client-side <Navigate> is a 200 to a crawler, so both URLs index."""
     client = TestClient(create_app(), follow_redirects=False)
-    for old, new in (("/server", "/info"), ("/world", "/map"), ("/trades", "/trade")):
+    for old, new in (
+        ("/server", "/"),
+        ("/info", "/"),
+        ("/social", "/"),
+        ("/world", "/map"),
+        ("/trades", "/trade"),
+    ):
         r = client.get(old)
         assert r.status_code == 301, old
         assert r.headers["location"] == new
@@ -126,11 +132,19 @@ def test_a_query_string_costs_indexability_on_any_route() -> None:
 @pytest.mark.usefixtures("dist")
 def test_url_only_and_personal_pages_are_noindex_but_still_served() -> None:
     client = TestClient(create_app())
-    for path in ("/item", "/recipe", "/social", "/replay", "/users/6b6169", "/jobs/professions"):
+    for path in ("/item", "/recipe", "/replay", "/jobs/professions"):
         r = client.get(path)
         assert r.status_code == 200, path
         assert "spa-shell" in r.text, path
         assert r.headers["x-robots-tag"] == "noindex, follow", path
+
+
+@pytest.mark.usefixtures("dist")
+def test_a_removed_player_dossier_is_gone_not_redirected() -> None:
+    """/users/<hex> was one person's page (eco-app#8385), so it 404s rather than
+    pointing somewhere that implies it still exists."""
+    client = TestClient(create_app(), follow_redirects=False)
+    assert client.get("/users/6b6169").status_code == 404
 
 
 def test_trailing_slashes_and_case_do_not_fork_a_route() -> None:

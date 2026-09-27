@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom"
 import Layout from "../components/Layout"
+import StatGrid from "../components/StatGrid"
 import { useCivicsPulse } from "../hooks/useCivicsPulse"
 import { useClimatePulse } from "../hooks/useClimatePulse"
 import { useCraftingPulse } from "../hooks/useCraftingPulse"
@@ -199,6 +200,9 @@ export default function Home() {
             <Fact label="Game speed" value={humanizeEnum(status?.cycle.gameSpeed)} />
             <Fact label="Eco version" value={version} />
           </div>
+          {/* The live world totals that lived on /info until it folded in here
+              (eco-app#8385). */}
+          <StatGrid status={status} />
         </section>
       )}
 
@@ -219,19 +223,6 @@ export default function Home() {
           </p>
         </div>
         <section className="k-card-grid k-card-grid--condensed dir-cards" aria-label="site directory">
-          <Link className="k-card dir-card" to="/info" data-testid="dir-info">
-            <h3 className="k-card__name">Info</h3>
-            <p>Meteor countdown, players, world stats, and the economy at a glance.</p>
-            {status && (
-              <p className="dir-badges" data-testid="info-badges">
-                {status.cycle.hasMeteor && status.cycle.daysUntilMeteor !== null && (
-                  <span className="mini-pill">☄ {status.cycle.daysUntilMeteor}d to meteor</span>
-                )}
-                <span className="mini-pill">{formatCount(status.players.online)} online</span>
-              </p>
-            )}
-          </Link>
-
           <Link className="k-card dir-card" to="/jobs" data-testid="dir-jobs">
             <h3 className="k-card__name">Jobs</h3>
             <p>Who can make what — professions, specialties, and every player's skills.</p>

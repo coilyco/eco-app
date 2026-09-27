@@ -13,7 +13,12 @@ describe("the shared route manifest", () => {
     expect(elements).toHaveLength(manifest.routes.length + manifest.redirects.length)
     // Every element resolved a component — elementFor throws on an unknown name.
     expect(elements.every((el) => Boolean(el.props.element))).toBe(true)
-    expect(elements.map((el) => el.props.path)).toContain("/users/:hex")
+    const paths = elements.map((el) => el.props.path)
+    expect(paths).toContain("/replay")
+    // /info folded into / and /social went away; both redirect home (eco-app#8385).
+    expect(paths).toContain("/info")
+    expect(paths).toContain("/social")
+    expect(paths).not.toContain("/users/:hex")
   })
 
   it("declares a crawl posture on every route", () => {

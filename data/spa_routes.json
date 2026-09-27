@@ -3,7 +3,6 @@
   "site": "https://eco-app.coilysiren.me",
   "routes": [
     { "path": "/", "component": "Home", "crawl": "index" },
-    { "path": "/info", "component": "Info", "crawl": "index" },
     { "path": "/mods", "component": "Mods", "crawl": "index" },
     { "path": "/wiki", "component": "Wiki", "crawl": "index" },
     {
@@ -38,13 +37,6 @@
     { "path": "/uses/price", "component": "UsesPrice", "crawl": "index" },
     { "path": "/uses/resolve", "component": "UsesResolve", "crawl": "index" },
     { "path": "/uses/shop-check", "component": "UsesShopCheck", "crawl": "index" },
-    {
-      "path": "/social",
-      "component": "Social",
-      "crawl": "noindex",
-      "gate": "password",
-      "note": "URL-only and behind the soft password gate (eco-app#73)."
-    },
     { "path": "/map", "component": "Map", "crawl": "index" },
     { "path": "/species", "component": "Species", "crawl": "index" },
     {
@@ -53,16 +45,12 @@
       "crawl": "noindex",
       "gate": "password",
       "note": "URL-only and behind the soft password gate (eco-app#73)."
-    },
-    {
-      "path": "/users/:hex",
-      "component": "User",
-      "crawl": "noindex",
-      "note": "One player's dossier, keyed by the base16 of their username. Unbounded, unlinked, and about a person."
     }
   ],
   "redirects": [
-    { "from": "/server", "to": "/info" },
+    { "from": "/server", "to": "/" },
+    { "from": "/info", "to": "/" },
+    { "from": "/social", "to": "/" },
     { "from": "/progression", "to": "/jobs" },
     { "from": "/economy", "to": "/" },
     { "from": "/calculator", "to": "/" },

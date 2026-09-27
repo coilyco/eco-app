@@ -40,7 +40,8 @@ describe("Home", () => {
     expect(
       screen.getByText(/intelligence and companionship for serious Eco servers/i),
     ).toHaveTextContent("what happened while you were away")
-    expect(screen.getByTestId("dir-info")).toHaveAttribute("href", "/info")
+    // /info folded into this page (eco-app#8385), so it has no card.
+    expect(screen.queryByTestId("dir-info")).not.toBeInTheDocument()
     expect(screen.getByTestId("dir-jobs")).toHaveAttribute("href", "/jobs")
     expect(screen.getByTestId("dir-wiki")).toHaveAttribute("href", "/wiki")
     // The eco-gnome calculator is a homepage card that links out to the gnome
@@ -55,10 +56,10 @@ describe("Home", () => {
     expect(screen.queryByTestId("dir-trades")).not.toBeInTheDocument()
     expect(screen.queryByTestId("dir-climate")).not.toBeInTheDocument()
 
+    // The world totals that lived on /info.
     await waitFor(() => {
-      expect(screen.getByTestId("info-badges")).toHaveTextContent("3d to meteor")
+      expect(screen.getByTestId("world-facts")).toHaveTextContent("Online now")
     })
-    expect(screen.getByTestId("info-badges")).toHaveTextContent("1 online")
     expect(screen.getByRole("link", { name: "Join the Discord" })).toHaveAttribute(
       "href",
       "https://discord.gg/example",
@@ -137,8 +138,7 @@ describe("Home", () => {
     await waitFor(() => {
       expect(screen.getByTestId("dir-jobs")).toBeInTheDocument()
     })
-    expect(screen.getByTestId("dir-info")).toBeInTheDocument()
-    expect(screen.queryByTestId("info-badges")).not.toBeInTheDocument()
+    expect(screen.queryByTestId("world-facts")).not.toBeInTheDocument()
   })
 
   it("keeps the brief, the join steps, and the invite on screen when live status fails", async () => {

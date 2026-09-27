@@ -291,66 +291,6 @@ a.k-card:visited {
   font-variant-numeric: tabular-nums;
 }
 
-.online-player-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-/* --- Meteor banner --------------------------------------------------- */
-
-.meteor {
-  padding: var(--k-s-5) var(--k-s-6);
-  border-radius: var(--k-r-1);
-  border: var(--k-edge-w) solid var(--meteor-edge);
-  border-left: 3px solid var(--meteor);
-  background: linear-gradient(135deg, var(--meteor-wash), var(--k-surface));
-  box-shadow: var(--k-shadow-2);
-  backdrop-filter: blur(6px);
-}
-
-.meteor-clear {
-  border-color: var(--k-edge);
-  border-left-color: var(--k-brand);
-  background: var(--card);
-}
-
-.meteor-count {
-  margin: 0;
-  font-family: var(--k-font-display);
-  font-size: clamp(1.4rem, 3.5vw, 2rem);
-  font-weight: 700;
-  color: var(--meteor);
-}
-
-.meteor-clear .meteor-count {
-  color: var(--leaf);
-}
-
-.meteor-track {
-  margin-top: 1rem;
-  height: 0.6rem;
-  border-radius: 999px;
-  background: var(--k-ground);
-  overflow: hidden;
-}
-
-.meteor-fill {
-  height: 100%;
-  border-radius: 999px;
-  background: linear-gradient(90deg, var(--meteor-deep), var(--meteor));
-  transition: width 600ms ease;
-}
-
-.meteor-caption {
-  margin: 0.75rem 0 0;
-  font-size: var(--k-t-body);
-  color: var(--ink-faint);
-}
-
 /* --- Stat grid -------------------------------------------------------- */
 
 .stats {
@@ -1124,7 +1064,6 @@ a.k-card:visited {
   padding: 0.5rem;
 }
 
-
 .price-history-states,
 .price-history-columns {
   margin-top: 0.8rem;
@@ -1139,7 +1078,6 @@ a.k-card:visited {
   border-radius: var(--k-r-1);
   background: var(--k-content);
 }
-
 
 .price-range-line {
   stroke: var(--ink-faint);
@@ -1268,7 +1206,6 @@ a.k-card:visited {
   padding: 0.5rem;
 }
 
-
 .mutation-timeline .axis-grid {
   stroke: var(--card-border);
   stroke-width: 1;
@@ -1369,7 +1306,6 @@ a.k-card:visited {
   margin-top: 0.4rem;
 }
 
-
 .prog-trend-single {
   margin: 0.6rem 0 0.2rem;
   color: var(--ink-faint);
@@ -1433,36 +1369,6 @@ a.k-card:visited {
   font-size: var(--k-t-body);
   color: var(--ink-faint);
   max-width: 60ch;
-}
-
-.rep-layout {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1.5rem;
-  align-items: flex-start;
-}
-
-.rep-graph {
-  width: 100%;
-  max-width: 460px;
-  height: auto;
-  border: 1px solid var(--card-border);
-  border-radius: var(--k-r-1);
-  background: var(--k-ground);
-  padding: 0.5rem;
-}
-
-.rep-graph .rep-label {
-  fill: var(--ink-soft);
-  font-size: calc(16px * var(--svg-px, 1));
-  font-variant-numeric: tabular-nums;
-}
-
-.rep-lists {
-  flex: 1 1 260px;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
 }
 
 .section-title-sm {
@@ -2133,36 +2039,7 @@ a.k-card:visited {
   font-weight: 700;
 }
 
-/* --- /info on the kit (eco-app#8314) ----------------------------------- */
-
-.info-hero .k-display,
-.info-h2 {
-  margin: 0;
-  text-wrap: balance;
-}
-
-.info-sub {
-  margin: 0;
-  max-width: 68ch;
-  color: var(--k-dim);
-}
-
-.info-pill {
-  width: fit-content;
-  font-size: var(--k-t-body);
-}
-
-.info-inspect {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--k-s-3);
-  align-items: center;
-}
-
-.info-inspect .k-input {
-  flex: 1 1 280px;
-  min-width: 0;
-}
+/* --- Stat grid on the homepage, from the retired /info (eco-app#8314, #8385) */
 
 .info-facts {
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -2176,14 +2053,6 @@ a.k-card:visited {
 
 .info-fact-detail {
   color: var(--k-dim);
-}
-
-.info-player {
-  padding: var(--k-s-1) var(--k-s-3);
-  border: var(--k-edge-w) solid var(--k-edge);
-  border-radius: var(--k-r-1);
-  background: var(--k-surface);
-  font-weight: 600;
 }
 
 /* --- /mods from the server brief ----------------------------------------- */

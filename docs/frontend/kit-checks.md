@@ -47,9 +47,6 @@ just frontend-kit-check --base http://localhost:5173      # a dev server
 just frontend-kit-check --only /map,/trade
 ```
 
-Against `vite preview` or `vite dev`, `/info` reports two false failures:
-the dev proxy sends `/info` to the backend, so the page is not the SPA.
-
 Budgets are eco-app's, not the kit's 150K. eco-app is a data app, and a route's
 weight is its API payloads. They sit just above what each route moved on
 2026-09-27, so a regression fails while today's pages pass.

@@ -1,4 +1,3 @@
-import { Link } from "react-router-dom"
 import ChartFrame from "../components/ChartFrame"
 import FreshnessNote from "../components/FreshnessNote"
 import Layout from "../components/Layout"
@@ -322,13 +321,6 @@ export default function Civics() {
               </ul>
             </section>
           )}
-
-          <section className="k-card-grid k-card-grid--condensed dir-cards">
-            <Link className="k-card dir-card" to="/info" data-testid="link-info">
-              <h2>Info →</h2>
-              <p>The live snapshot — elected titles, active laws, and the world at a glance.</p>
-            </Link>
-          </section>
         </>
       )}
     </Layout>
