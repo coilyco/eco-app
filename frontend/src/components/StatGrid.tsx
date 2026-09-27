@@ -29,7 +29,7 @@ export default function StatGrid({ status }: { status: EcoStatus }) {
       // (eco-app#237).
       detail:
         status.world.totalCultureSource === "milestones"
-          ? "At least this much, counted from milestones. The server reported 0."
+          ? "At least this much, counted from milestones. The server's own count says 0."
           : undefined,
     },
     {
@@ -37,12 +37,12 @@ export default function StatGrid({ status }: { status: EcoStatus }) {
       value: status.economy.description.split(",")[0] ?? status.economy.description,
       detail: status.economy.description.split(",").slice(1).join(",").trim() || undefined,
     },
-    { label: "World", value: status.world.size, detail: status.cycle.gameSpeed.toLowerCase() + " speed" },
+    { label: "World", value: status.world.size, detail: status.cycle.gameSpeed.toLowerCase() + " game speed" },
     { label: "Server", value: status.server.version.split(" ")[0] ?? "", detail: status.server.category },
   ]
 
   return (
-    <section aria-label="world snapshot">
+    <section aria-label="world at a glance">
       <div className="k-facts info-facts" data-testid="world-facts">
         {stats.map((s) => (
           <div className="k-fact" key={s.label}>

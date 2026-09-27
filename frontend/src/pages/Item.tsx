@@ -237,7 +237,7 @@ export default function Item() {
           <p className="hero-pill" data-testid="item-pill">
             <span className="pulse-dot" aria-hidden="true" />
             {formatCount(pivot.tradeCount)} trades · {formatCount(pivot.craftQuantity)} made
-            {pivot.tradeVolume ? ` · ${formatCount(pivot.tradeVolume)} currency moved` : ""}
+            {pivot.tradeVolume ? ` · ${formatCount(pivot.tradeVolume)} spent on it` : ""}
           </p>
         )}
         {id && !pivot && error && (
@@ -286,7 +286,7 @@ export default function Item() {
           <div>
             <h2 className="section-title">Who can make it</h2>
             {summary.crafters.length === 0 ? (
-              <p className="empty-note">No recorded crafters.</p>
+              <p className="empty-note">Nobody has been seen crafting it yet.</p>
             ) : (
               <ul className="rank-rows" data-testid="item-crafters">
                 {summary.crafters.map((c) => {
@@ -298,8 +298,8 @@ export default function Item() {
                         <span className="rank-count">
                           {/* Confirmed floor - older history rolls up server-side
                               without item detail (eco-app#131). */}
-                          {formatCount(c.quantity)}+ iteration{c.quantity === 1 ? "" : "s"} ·{" "}
-                          {formatCount(c.events)} craft
+                          crafted {formatCount(c.quantity)}+ time{c.quantity === 1 ? "" : "s"} ·{" "}
+                          {formatCount(c.events)} logged craft
                           {c.events === 1 ? "" : "s"}
                         </span>
                         <span className="rank-bar" style={{ width: `${(c.quantity / max) * 100}%` }} />
@@ -312,13 +312,13 @@ export default function Item() {
           </div>
           <div>
             <h2 className="section-title">
-              Available now{" "}
+              Where to buy it{" "}
               <span className="section-sub">
-                ({summary.live ? "live shelf" : "history-derived"})
+                ({summary.live ? "on sale now" : "from past sales"})
               </span>
             </h2>
             {summary.supply.offers.length === 0 ? (
-              <p className="empty-note">No open sell offers.</p>
+              <p className="empty-note">Nobody is selling it right now.</p>
             ) : (
               <>
                 <p className="hero-pill" data-testid="item-supply-total">
@@ -351,7 +351,7 @@ export default function Item() {
           <div>
             <h2 className="section-title">Who is buying</h2>
             {summary.demand.offers.length === 0 ? (
-              <p className="empty-note">No open buy orders.</p>
+              <p className="empty-note">Nobody is asking to buy it right now.</p>
             ) : (
               <>
                 <p className="hero-pill" data-testid="item-demand-total">
@@ -457,7 +457,7 @@ export default function Item() {
             <input
               className="filter-input"
               type="search"
-              placeholder="Search the feed by name, station, currency… (deep-linkable as ?q=)"
+              placeholder="Search the timeline by name, station, or currency…"
               value={q}
               onChange={(e) => update({ q: e.target.value })}
               data-testid="item-filter"
@@ -467,7 +467,7 @@ export default function Item() {
               value={actor}
               onChange={(e) => update({ actor: e.target.value })}
               data-testid="item-actor-filter"
-              aria-label="Filter by actor"
+              aria-label="Filter by player"
             >
               <option value="">Anyone</option>
               {actors.map((a) => (
@@ -481,7 +481,7 @@ export default function Item() {
               value={type}
               onChange={(e) => update({ type: e.target.value })}
               data-testid="item-type-filter"
-              aria-label="Filter by event type"
+              aria-label="Filter by kind of event"
             >
               <option value="all">All events</option>
               <option value="craft">Crafts</option>
@@ -502,7 +502,7 @@ export default function Item() {
             Timeline{" "}
             <span className="section-sub">
               ({formatCount(filtered.length)} event{filtered.length === 1 ? "" : "s"}
-              {pivot.feedTruncated ? "+, compressed" : ", compressed"})
+              {pivot.feedTruncated ? "+, repeats grouped" : ", repeats grouped"})
             </span>
           </h2>
 

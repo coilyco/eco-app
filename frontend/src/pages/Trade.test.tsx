@@ -383,7 +383,7 @@ describe("Trade", () => {
     // Newest-first row-level trades.
     expect(screen.getAllByTestId("trade-row").length).toBeGreaterThan(0)
     expect(screen.getByTestId("trades-table")).toHaveTextContent("ekans")
-    expect(screen.getByText("Detailed trades ledger")).toBeInTheDocument()
+    expect(screen.getByText("All trades")).toBeInTheDocument()
   })
 
   it("deep-links a drill target via ?q=", async () => {
@@ -407,7 +407,7 @@ describe("Trade", () => {
     })
     const list = within(screen.getByTestId("most-traded"))
     expect(list.getByRole("link", { name: "Wheat" })).toHaveAttribute("href", "/item?id=Wheat")
-    fireEvent.click(list.getByRole("button", { name: "Filter trade ledger by Wheat" }))
+    fireEvent.click(list.getByRole("button", { name: "Filter trades by Wheat" }))
     expect(screen.getByTestId("trade-filter")).toHaveValue("Wheat")
   })
 
@@ -434,7 +434,7 @@ describe("Trade", () => {
     // Supply gap now names the reason and WHO needs it, not a prose note.
     const gaps = screen.getByTestId("gaps-list")
     expect(gaps).toHaveTextContent("Board")
-    expect(gaps).toHaveTextContent("no supply")
+    expect(gaps).toHaveTextContent("out of stock")
     expect(within(gaps).getByTestId("gap-who")).toHaveTextContent("geodude")
     expect(within(gaps).getByTestId("gap-who")).toHaveTextContent("onix")
   })

@@ -13,9 +13,9 @@ import { useFreshData } from "../lib/useFreshData"
 
 const SIGNALS: Record<FoodSignalKind, { label: string; tone: string }> = {
   restock: { label: "restock", tone: "var(--meteor)" },
-  balanced: { label: "balanced", tone: "var(--moss)" },
-  potential_overstock: { label: "potential overstock", tone: "var(--meteor-deep)" },
-  insufficient: { label: "insufficient data", tone: "var(--ink-faint)" },
+  balanced: { label: "about right", tone: "var(--moss)" },
+  potential_overstock: { label: "maybe too much", tone: "var(--meteor-deep)" },
+  insufficient: { label: "not enough data", tone: "var(--ink-faint)" },
 }
 
 function FoodRow({ row }: { row: FoodSignal }) {
@@ -33,12 +33,12 @@ function FoodRow({ row }: { row: FoodSignal }) {
       </div>
       <p className="gap-summary">{row.reason}</p>
       <p className="gap-who">
-        shelf supply {formatCount(row.supplyQty)} · demand {formatCount(row.demandQty)} · {formatCount(row.tradeCount)} trades · {formatCount(row.craftCount)} crafted
+        {formatCount(row.supplyQty)} for sale · {formatCount(row.demandQty)} wanted · {formatCount(row.tradeCount)} trades · {formatCount(row.craftCount)} made
       </p>
       <p className="gap-who">
         <Link className="linklike" to={`/trade?q=${query}`}>trade</Link>{" · "}
         <Link className="linklike" to={`/recipes?q=${query}`}>recipe</Link>{" · "}
-        <Link className="linklike" to={`/uses/price?item=${query}`}>pricing</Link>
+        <Link className="linklike" to={`/uses/price?item=${query}`}>price it</Link>
       </p>
     </li>
   )
@@ -56,9 +56,9 @@ export default function UsesFood() {
     <Layout fetchedAtISO={report?.fetchedAtISO}>
       <section className="hero hero-compact">
         <p className="hero-kicker"><Link to="/uses" className="linklike">← Use cases</Link></p>
-        <h1 className="hero-title">Food <span className="accent">restock signals</span></h1>
+        <h1 className="hero-title">Food <span className="accent">to restock or watch</span></h1>
         <p className="hero-tagline">
-          Confirmed cooking, baking, and chef recipe products only. Unknown item classes are excluded.
+          Only food from cooking, baking, and chef recipes. Items we can't confirm as food are left out.
         </p>
         <FreshnessNote
           plane="food"
@@ -68,12 +68,12 @@ export default function UsesFood() {
           onRefresh={foodPlane.refresh}
         />
       </section>
-      {!loaded && <p className="empty-note">Reading food shelves and production…</p>}
-      {loaded && !report && <p className="empty-note" data-testid="food-unavailable">Food data is unavailable right now.</p>}
-      {report && rows.length === 0 && <p className="empty-note" data-testid="food-empty">No confirmed food products have matching market evidence yet.</p>}
+      {!loaded && <p className="empty-note">Loading food in shops and what people have made…</p>}
+      {loaded && !report && <p className="empty-note" data-testid="food-unavailable">Food data is not available right now.</p>}
+      {report && rows.length === 0 && <p className="empty-note" data-testid="food-empty">None of the known foods have been listed in shops or sold yet.</p>}
       {rows.length > 0 && (
         <section data-testid="food-list">
-          <h2 className="section-title">Food decisions <span className="section-sub">({formatCount(rows.length)} confirmed products)</span></h2>
+          <h2 className="section-title">Food to check <span className="section-sub">({formatCount(rows.length)} foods)</span></h2>
           <ul className="gap-list">{rows.map((row) => <FoodRow key={row.item} row={row} />)}</ul>
         </section>
       )}

@@ -127,7 +127,7 @@ describe("UsesShopCheck", () => {
     expect(within(rows[0]).getByTestId("shop-verdict")).toHaveTextContent("over market")
     expect(within(rows[1]).getByTestId("shop-verdict")).toHaveTextContent("at market")
     expect(within(rows[2]).getByTestId("shop-verdict")).toHaveTextContent("under market")
-    expect(screen.getByTestId("shop-pill")).toHaveTextContent("2 off market")
+    expect(screen.getByTestId("shop-pill")).toHaveTextContent("2 priced far from the market")
   })
 
   it("degrades to a clear note when the market plane is unavailable", async () => {
@@ -138,7 +138,7 @@ describe("UsesShopCheck", () => {
       expect(screen.getByTestId("shop-no-market")).toBeInTheDocument()
     })
     // Store prices still render, just without a comparison verdict.
-    expect(screen.getAllByTestId("shop-verdict")[0]).toHaveTextContent("no market data")
+    expect(screen.getAllByTestId("shop-verdict")[0]).toHaveTextContent("no market price yet")
   })
 
   it("degrades to a clear note when the store directory is unavailable", async () => {

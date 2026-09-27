@@ -48,9 +48,9 @@ export default function Replay() {
     <Layout>
       {mockData && (
         <div className="mock-banner" data-testid="mock-banner">
-          ⚠️ MOCK DATA — every event on this page is fabricated. Set the{" "}
-          <code>ECO_REPLAY_FILE</code> or <code>ECO_REPLAY_UPSTREAM_URL</code> env var on the service
-          to pull the real Chronicle. ⚠️
+          ⚠️ FAKE DATA. Every event on this page is made up. To show the real Chronicle, the site
+          admin sets <code>ECO_REPLAY_FILE</code> or <code>ECO_REPLAY_UPSTREAM_URL</code> on the
+          service. ⚠️
         </div>
       )}
 
@@ -100,7 +100,7 @@ export default function Replay() {
             <input
               className="filter-input"
               type="search"
-              placeholder="Filter by citizen, action type, or body… (deep-linkable as ?q=)"
+              placeholder="Filter by citizen, action, or details…"
               value={q}
               onChange={(e) => setQuery(e.target.value)}
               data-testid="replay-filter"
@@ -116,9 +116,9 @@ export default function Replay() {
             <h2 className="section-title">
               Timeline{" "}
               <span className="section-sub">
-                (newest {visible.length}
+                (showing the newest {visible.length}
                 {(events?.length ?? 0) > visible.length
-                  ? ` of ${formatCount(events?.length ?? 0)} loaded`
+                  ? ` of ${formatCount(events?.length ?? 0)}`
                   : ""}
                 )
               </span>
@@ -133,8 +133,8 @@ export default function Replay() {
                   <tr>
                     <th>Time (UTC)</th>
                     <th>Citizen</th>
-                    <th>Type</th>
-                    <th>Body</th>
+                    <th>Action</th>
+                    <th>Details</th>
                   </tr>
                 </thead>
                 <tbody>

@@ -14,10 +14,10 @@ const LIST_ROWS = 200
 type SortKey = "activity" | "trades" | "volume" | "crafted"
 
 const SORTS: Array<{ key: SortKey; label: string }> = [
-  { key: "activity", label: "Activity" },
-  { key: "trades", label: "Trades" },
-  { key: "volume", label: "Trade volume" },
-  { key: "crafted", label: "Crafted" },
+  { key: "activity", label: "Most activity" },
+  { key: "trades", label: "Most trades" },
+  { key: "volume", label: "Most money spent" },
+  { key: "crafted", label: "Most crafted" },
 ]
 
 function sortItems(items: ItemStat[], key: SortKey): ItemStat[] {
@@ -94,7 +94,7 @@ export default function Items() {
             <input
               className="filter-input"
               type="search"
-              placeholder="Filter items by name… (deep-linkable as ?q=)"
+              placeholder="Filter items by name…"
               value={q}
               onChange={(e) => update({ q: e.target.value })}
               data-testid="items-filter"
@@ -108,7 +108,7 @@ export default function Items() {
 
           <section className="controls-row" data-testid="items-controls">
             <div className="sort-buttons" role="group" aria-label="Sort items">
-              <span className="sort-label">Sort:</span>
+              <span className="sort-label">Sort by:</span>
               {SORTS.map((s) => (
                 <button
                   key={s.key}
@@ -144,7 +144,7 @@ export default function Items() {
                   <tr>
                     <th>Item</th>
                     <th className="num">Trades</th>
-                    <th className="num">Trade volume</th>
+                    <th className="num">Money spent</th>
                     <th className="num">Crafted</th>
                   </tr>
                 </thead>
@@ -181,11 +181,11 @@ export default function Items() {
           <section className="k-card-grid k-card-grid--condensed dir-cards">
             <Link className="k-card dir-card" to="/trade" data-testid="link-trade">
               <h2>Trade →</h2>
-              <p>The market and the full ledger — every individual trade, with price over time.</p>
+              <p>The market, and every single trade with its price over time.</p>
             </Link>
             <Link className="k-card dir-card" to="/crafting" data-testid="link-crafting">
               <h2>Crafting atlas →</h2>
-              <p>What the world is making — top items and stations.</p>
+              <p>What the world is making: the top items and stations.</p>
             </Link>
           </section>
         </>

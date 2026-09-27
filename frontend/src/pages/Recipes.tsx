@@ -116,8 +116,8 @@ export default function Recipes() {
       {index && total === 0 && (
         <section>
           <p className="empty-note" data-testid="recipes-empty">
-            No recipe data bundled. The recipe graph ships as vendored data (eco-app#100) — if
-            this persists the bundle is missing from the build.
+            No recipes to show. The recipe list is built into the site, so if this keeps happening,
+            the site was built without it.
           </p>
           {index.warnings.length > 0 && (
             <ul className="warn-list" data-testid="recipes-warnings">
@@ -135,7 +135,7 @@ export default function Recipes() {
             <input
               className="filter-input"
               type="search"
-              placeholder="Filter by product or ingredient name… (deep-linkable as ?q=)"
+              placeholder="Filter by product or ingredient name…"
               value={q}
               onChange={(e) => update({ q: e.target.value })}
               data-testid="recipes-filter"
@@ -229,7 +229,7 @@ export default function Recipes() {
                       <td>{r.station ? prettifyEcoName(r.station) : "—"}</td>
                       <td>
                         {r.skill
-                          ? `${prettifyEcoName(r.skill.name.replace(/Skill$/, ""))} ${r.skill.level > 0 ? `L${r.skill.level}` : ""}`.trim()
+                          ? `${prettifyEcoName(r.skill.name.replace(/Skill$/, ""))} ${r.skill.level > 0 ? `level ${r.skill.level}` : ""}`.trim()
                           : "—"}
                       </td>
                       <td>{ingredientSummary(r)}</td>
@@ -255,11 +255,11 @@ export default function Recipes() {
           <section className="k-card-grid k-card-grid--condensed dir-cards">
             <Link className="k-card dir-card" to="/items" data-testid="link-items">
               <h2>Item directory →</h2>
-              <p>Every item's market history — trades, price, who's making it, and shelves.</p>
+              <p>Every item's market history: trades, prices, who makes it, and who sells it.</p>
             </Link>
             <Link className="k-card dir-card" to="/crafting" data-testid="link-crafting">
               <h2>Crafting atlas →</h2>
-              <p>What the world is actually making — top items and stations.</p>
+              <p>What the world is actually making: the top items and stations.</p>
             </Link>
           </section>
         </>

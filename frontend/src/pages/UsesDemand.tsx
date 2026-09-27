@@ -16,9 +16,9 @@ const GAP_ROWS = 40
 // the loudest (meteor amber), a lone monopolist is thin supply, a merely
 // over-priced shelf stays muted ink.
 const GAP: Record<GapReason, { glyph: string; label: string; color: string }> = {
-  no_supply: { glyph: "✖", label: "no supply", color: "var(--meteor)" },
-  thin_supply: { glyph: "◐", label: "thin supply", color: "var(--meteor-deep)" },
-  overpriced: { glyph: "▲", label: "over-priced", color: "var(--ink-faint)" },
+  no_supply: { glyph: "✖", label: "out of stock", color: "var(--meteor)" },
+  thin_supply: { glyph: "◐", label: "low stock", color: "var(--meteor-deep)" },
+  overpriced: { glyph: "▲", label: "overpriced", color: "var(--ink-faint)" },
 }
 
 function DemandRow({ gap }: { gap: SupplyGap }) {
@@ -45,7 +45,7 @@ function DemandRow({ gap }: { gap: SupplyGap }) {
           <span className="gap-who-label">Who needs it:</span>{" "}
           {gap.buyers.map((b, i) => (
             <span key={`${b.owner}-${b.store}-${i}`} className="gap-buyer">
-              <EcoRichText text={b.owner || b.store} />{" "}
+              <EcoRichText text={b.owner || b.store} /> wants{" "}
               <span className="gap-buyer-qty">{formatCount(b.quantity)}</span>
               {b.price ? (
                 <>
@@ -55,7 +55,7 @@ function DemandRow({ gap }: { gap: SupplyGap }) {
                     norm={b.norm ?? gap.norm}
                     currency={gap.currency}
                     showCurrency
-                    prefix="@ "
+                    prefix="at "
                     layout="inline"
                   />
                 </>
@@ -101,13 +101,13 @@ export default function UsesDemand() {
         {gaps.length > 0 && (
           <p className="hero-pill" data-testid="demand-pill">
             <span className="pulse-dot" aria-hidden="true" />
-            {formatCount(gaps.length)} item{gaps.length === 1 ? "" : "s"} with unmet demand
+            {formatCount(gaps.length)} item{gaps.length === 1 ? "" : "s"} wanted but not for sale
           </p>
         )}
         {loaded && gaps.length === 0 && (
           <p className="hero-pill hero-pill-muted" data-testid="demand-empty">
-            no supply gaps right now — either every buy order is being met, or the shelf data hasn't
-            landed yet
+            nothing wanted but not for sale right now (every buy order is being met, or store
+            shelves haven't come in yet)
           </p>
         )}
         <FreshnessNote
@@ -121,14 +121,14 @@ export default function UsesDemand() {
 
       {!loaded && (
         <p className="empty-note" data-testid="demand-loading">
-          Loading demand…
+          Loading what people want…
         </p>
       )}
 
       {gaps.length > 0 && (
         <section data-testid="demand-list">
           <h2 className="section-title">
-            Supply gaps <span className="section-sub">(ranked by quantity wanted)</span>
+            Wanted but not for sale <span className="section-sub">(most wanted first)</span>
           </h2>
           <ul className="gap-list">
             {gaps.slice(0, GAP_ROWS).map((g) => (

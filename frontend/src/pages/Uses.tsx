@@ -22,55 +22,55 @@ const LIVE: UseCard[] = [
     to: "/uses/food",
     testid: "use-food",
     title: "Which food should we restock or watch?",
-    blurb: "Confirmed food recipes only, with live shelf, trade, and production evidence.",
+    blurb: "Food only, with what is in shops now, what has sold, and what people have made.",
   },
   {
     to: "/uses/demand",
     testid: "use-demand",
-    title: "What's in demand right now",
-    blurb: "The items buyers want that nobody is stocking — ranked, with who needs each.",
+    title: "What people want to buy right now",
+    blurb: "Items wanted but not for sale, low in stock, or overpriced, ranked, with who wants each.",
   },
   {
     to: "/uses/buy-sell",
     testid: "use-buy-sell",
     title: "Where to buy X cheapest / sell X highest",
-    blurb: "Pick an item, see the cheapest shelves to buy from and the best shelves to sell into.",
+    blurb: "Pick an item, see the cheapest shops to buy from and the shops that pay the most.",
   },
   {
     to: "/uses/arbitrage",
     testid: "use-arbitrage",
     title: "Buy low here, sell high there",
-    blurb: "Cross-store spreads: buy at one shop, sell at another, ranked by the opportunity.",
+    blurb: "Items to buy low at one shop and sell high at another, biggest total profit first.",
   },
   {
     to: "/uses/resolve",
     testid: "use-resolve",
     title: "Should I make X, buy it, or find a crafter?",
-    blurb: "Compare known recipes, current offers, and observed specialty holders without guessing availability.",
+    blurb: "See the recipes, what shops charge, and who has the specialty to craft it.",
   },
   {
     to: "/uses/price",
     testid: "use-price",
     title: "How should I price X?",
-    blurb: "Compare the market band, shelf comparison, and craft cost before you post an ask.",
+    blurb: "See the typical price range, what shops charge, and your craft cost before you set a price.",
   },
   {
     to: "/uses/shop-check",
     testid: "use-shop-check",
     title: "Is my shop priced right?",
-    blurb: "Pick your store, compare every item's price against the market median.",
+    blurb: "Pick your shop and see which prices are above or below market.",
   },
   {
     to: "/recipes",
     testid: "use-recipe-graph",
     title: "What's X made from / used in",
-    blurb: "Search the recipe graph by product or ingredient, then open the complete craft.",
+    blurb: "Search recipes by what they make or what goes in, then open the full recipe.",
   },
   {
     to: "/jobs",
     testid: "use-profession-value",
-    title: "Value per profession",
-    blurb: "See which liquid supply-gap crafts offer the best margin for each profession.",
+    title: "Most profitable crafts per profession",
+    blurb: "For each profession, crafts that people want, can't easily buy, and already sell well, ranked by profit × how many people want it.",
   },
 ]
 
@@ -82,7 +82,7 @@ export default function Uses() {
           What is eco-app <span className="accent">useful for</span>?
         </h1>
         <p className="hero-tagline">
-          Task-framed pages that turn the live economy into a decision — pick the job you're doing.
+          Each page answers one question about the server's economy. Pick the one you need.
         </p>
       </section>
 

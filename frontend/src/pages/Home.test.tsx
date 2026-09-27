@@ -38,7 +38,7 @@ describe("Home", () => {
     renderHome()
 
     expect(
-      screen.getByText(/intelligence and companionship for serious Eco servers/i),
+      screen.getByText(/Tools for playing Eco on this server/i),
     ).toHaveTextContent("what happened while you were away")
     // /info folded into this page (eco-app#8385), so it has no card.
     expect(screen.queryByTestId("dir-info")).not.toBeInTheDocument()
@@ -115,9 +115,9 @@ describe("Home", () => {
     await waitFor(() => {
       expect(screen.getByTestId("trade-badges")).toHaveTextContent("1,341 trades")
     })
-    expect(screen.getByTestId("trade-badges")).toHaveTextContent("4,907 volume")
-    expect(screen.getByTestId("trade-badges")).toHaveTextContent("0 markets")
-    expect(screen.getByTestId("trade-badges")).toHaveTextContent("top: Bun Wulf Raw Meat")
+    expect(screen.getByTestId("trade-badges")).toHaveTextContent("4,907 spent")
+    expect(screen.getByTestId("trade-badges")).toHaveTextContent("0 priced items")
+    expect(screen.getByTestId("trade-badges")).toHaveTextContent("top seller: Bun Wulf Raw Meat")
     expect(screen.getByTestId("crafting-badges")).toHaveTextContent("512 crafts")
     expect(screen.getByTestId("crafting-badges")).toHaveTextContent("top: Wooden Chair")
     // World + ecoregion merged into the one /map card (eco-app#82) and climate
@@ -127,7 +127,7 @@ describe("Home", () => {
     expect(screen.getByTestId("world-badges")).toHaveTextContent("Construction")
     expect(screen.getByTestId("world-badges")).toHaveTextContent("Grassland")
     expect(screen.getByTestId("world-badges")).toHaveTextContent("warming")
-    expect(screen.getByTestId("world-badges")).toHaveTextContent("620 ppm CO₂")
+    expect(screen.getByTestId("world-badges")).toHaveTextContent("CO₂ 620 parts per million")
   })
 
   it("renders the full directory even when the snapshot fetch fails", async () => {
@@ -147,7 +147,7 @@ describe("Home", () => {
     renderHome()
 
     await waitFor(() => {
-      expect(screen.getByTestId("home-live")).toHaveTextContent("Live status is unavailable")
+      expect(screen.getByTestId("home-live")).toHaveTextContent("Can't reach the server right now")
     })
     expect(screen.getByRole("heading", { level: 1, name: "Eco via Sirens" })).toBeInTheDocument()
     // The reviewed copy carries the invite, so the CTA survives an outage.
@@ -194,7 +194,7 @@ describe("Home", () => {
     const facts = screen.getByTestId("home-facts")
     expect(facts).toHaveTextContent("Cycle14")
     expect(facts).toHaveTextContent("World size100 × 100")
-    expect(facts).toHaveTextContent("Meteor60 days")
+    expect(facts).toHaveTextContent("Meteor timer60 days")
     expect(facts).toHaveTextContent("CollaborationHigh")
   })
 })

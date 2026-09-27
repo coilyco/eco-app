@@ -44,7 +44,7 @@ function LivePill({ status, error }: { status: EcoStatus | null; error: string |
     return (
       <p className="hero-pill" data-testid="home-live">
         <span className="pulse-dot" aria-hidden="true" />
-        {online === null ? "Players online unknown" : `${formatCount(online)} online now`}
+        {online === null ? "Can't tell how many players are online" : `${formatCount(online)} online now`}
         {status.players.total !== null && ` // ${formatCount(status.players.total)} settlers this cycle`}
       </p>
     )
@@ -52,7 +52,7 @@ function LivePill({ status, error }: { status: EcoStatus | null; error: string |
   if (error) {
     return (
       <p className="hero-pill hero-pill-muted" data-testid="home-live">
-        Live status is unavailable right now. The server brief below still holds.
+        Can't reach the server right now. The server info below is still correct.
       </p>
     )
   }
@@ -185,7 +185,7 @@ export default function Home() {
           <div className="k-facts" data-testid="home-facts">
             <Fact label="Cycle" value={cycle !== null ? String(cycle) : null} />
             <Fact label="World size" value={parseWorldSize(status?.server.description)} />
-            <Fact label="Meteor" value={meteorDays !== null ? `${meteorDays} days` : null} />
+            <Fact label="Meteor timer" value={meteorDays !== null ? `${meteorDays} days` : null} />
             <Fact
               label="Collaboration"
               value={humanizeEnum(status?.cycle.collaboration?.replace(/Collaboration$/, ""))}
@@ -209,15 +209,14 @@ export default function Home() {
             Explore the live world
           </h2>
           <p className="home-sub">
-            Intelligence and companionship for serious Eco servers. See what the world needs,
-            where to trade, who can craft it, how civics changed, and what happened while you
-            were away.
+            Tools for playing Eco on this server. See what the world needs, where to trade, who
+            can craft it, how laws and elections changed, and what happened while you were away.
           </p>
         </div>
         <section className="k-card-grid k-card-grid--condensed dir-cards" aria-label="site directory">
           <Link className="k-card dir-card" to="/jobs" data-testid="dir-jobs">
             <h3 className="k-card__name">Jobs</h3>
-            <p>Who can make what — professions, specialties, and every player's skills.</p>
+            <p>Who can make what: professions, specialties, and every player's skills.</p>
             {status && (
               <p className="dir-badges">
                 <span className="mini-pill">{formatCount(status.players.total)} settlers</span>
@@ -227,7 +226,7 @@ export default function Home() {
 
           <Link className="k-card dir-card" to="/wiki" data-testid="dir-wiki">
             <h3 className="k-card__name">Eco Wiki</h3>
-            <p>Stable official guides for getting started, skills, economy, civics, and modding.</p>
+            <p>Official Eco wiki guides for getting started, skills, the economy, government, and modding.</p>
           </Link>
 
           {/* Trade + the trades ledger are one surface now (eco-app#90). The
@@ -238,20 +237,20 @@ export default function Home() {
           <Link className="k-card dir-card" to="/trade" data-testid="dir-trade">
             <h3 className="k-card__name">Trade &amp; logistics</h3>
             <p>
-              Movers, price history, the full trade ledger, stores, and what to buy, sell, and ship
-              next.
+              Biggest price changes, price history, every trade, shops, and what to buy, sell, and
+              move next.
             </p>
             {(tradePulse || tradesPulse) && (
               <p className="dir-badges" data-testid="trade-badges">
-                <span className="mini-pill">{formatCount(tradePulse?.markets ?? 0)} markets</span>
+                <span className="mini-pill">{formatCount(tradePulse?.markets ?? 0)} priced items</span>
                 {tradesPulse && (
                   <>
-                    <span className="mini-pill">{formatCount(tradesPulse.volume)} volume</span>
+                    <span className="mini-pill">{formatCount(tradesPulse.volume)} spent</span>
                     <span className="mini-pill">{formatCount(tradesPulse.trades)} trades</span>
                   </>
                 )}
                 {tradesPulse?.topItem && (
-                  <span className="mini-pill">top: {prettifyEcoName(tradesPulse.topItem)}</span>
+                  <span className="mini-pill">top seller: {prettifyEcoName(tradesPulse.topItem)}</span>
                 )}
               </p>
             )}
@@ -259,7 +258,7 @@ export default function Home() {
 
           <Link className="k-card dir-card" to="/crafting" data-testid="dir-crafting">
             <h3 className="k-card__name">Crafting atlas</h3>
-            <p>What the world is making — top items and stations, deep-linkable.</p>
+            <p>What the world is making: the most-crafted items and stations.</p>
             {craftingPulse && (
               <p className="dir-badges" data-testid="crafting-badges">
                 <span className="mini-pill">{formatCount(craftingPulse.crafts)} crafts</span>
@@ -272,7 +271,7 @@ export default function Home() {
 
           <Link className="k-card dir-card" to="/items" data-testid="dir-items">
             <h3 className="k-card__name">Item directory</h3>
-            <p>Every item ever bought, sold, or crafted — click through to its full history.</p>
+            <p>Every item ever bought, sold, or crafted. Click one to see its full history.</p>
           </Link>
 
           {/* The recipe browse surface (eco-app#101): the bill-of-materials for
@@ -280,7 +279,7 @@ export default function Home() {
               ingredient. /recipe details are URL-only, reached from here. */}
           <Link className="k-card dir-card" to="/recipes" data-testid="dir-recipes">
             <h3 className="k-card__name">Recipes</h3>
-            <p>How everything is made — ingredients, station, profession, labor, and craft time.</p>
+            <p>How everything is made: ingredients, station, profession, labor, and craft time.</p>
           </Link>
 
           {/* The /uses hub is the ONLY homepage card the whole use-case family
@@ -288,17 +287,17 @@ export default function Home() {
               arbitrage, shop-check) are URL-only, reached from the hub. */}
           <Link className="k-card dir-card" to="/uses" data-testid="dir-uses">
             <h3 className="k-card__name">Use cases</h3>
-            <p>Task-framed answers — what's in demand, where to buy or sell, arbitrage, shop pricing.</p>
+            <p>Quick answers: what people want to buy, where to buy or sell, buying low and selling high, and pricing your shop.</p>
           </Link>
 
           <Link className="k-card dir-card" to="/civics" data-testid="dir-civics">
             <h3 className="k-card__name">Civics &amp; governance</h3>
-            <p>Elections, turnout, demographics, and new settlements over time.</p>
+            <p>Elections, how many people vote, who lives here, and new settlements over time.</p>
             {civicsPulse && (
               <p className="dir-badges" data-testid="civics-badges">
-                <span className="mini-pill">{formatCount(civicsPulse.events)} civic events</span>
+                <span className="mini-pill">{formatCount(civicsPulse.events)} law and election events</span>
                 {civicsPulse.turnoutPct !== null && (
-                  <span className="mini-pill">{civicsPulse.turnoutPct}% turnout</span>
+                  <span className="mini-pill">{civicsPulse.turnoutPct}% voted</span>
                 )}
               </p>
             )}
@@ -309,8 +308,8 @@ export default function Home() {
           <Link className="k-card dir-card" to="/map" data-testid="dir-map">
             <h3 className="k-card__name">World</h3>
             <p>
-              The live map, biome &amp; water mix, closest real-world ecoregions, species risk,
-              and the climate — CO₂, temperature, and sea level.
+              The live map, biomes and water, the real-world places most like this world, which
+              species are at risk, and the climate (CO₂, temperature, and sea level).
             </p>
             {(worldPulse || ecoregionPulse || climatePulse) && (
               <p className="dir-badges" data-testid="world-badges">
@@ -325,7 +324,7 @@ export default function Home() {
                 )}
                 {climatePulse && <span className="mini-pill">{climatePulse.status}</span>}
                 {climatePulse?.co2Ppm != null && (
-                  <span className="mini-pill">{formatCount(climatePulse.co2Ppm)} ppm CO₂</span>
+                  <span className="mini-pill">CO₂ {formatCount(climatePulse.co2Ppm)} parts per million</span>
                 )}
               </p>
             )}
@@ -340,8 +339,8 @@ export default function Home() {
           >
             <h3 className="k-card__name">Crafting calculator ↗</h3>
             <p>
-              Price your craft with Eco Gnome (MIT) — optimal buy and sell prices from your
-              professions and recipes. Opens the gnome service.
+              Price your crafts with Eco Gnome, a free open-source tool that works out the best
+              buy and sell prices from your professions and recipes. Opens on its own site.
             </p>
           </a>
         </section>

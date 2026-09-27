@@ -12,10 +12,10 @@ describe("SPA routes", () => {
     expect(screen.getByRole("heading", { name: "Every mod on the server" })).toBeInTheDocument()
   })
 
-  it("serves the official Wiki snapshot on a direct /wiki route", () => {
+  it("serves the official Wiki shortcuts on a direct /wiki route", () => {
     window.history.pushState({}, "", "/wiki")
     render(<App />)
 
-    expect(screen.getByRole("heading", { name: "Official Eco Wiki snapshot" })).toBeInTheDocument()
+    expect(screen.getByRole("heading", { name: "Official Eco Wiki shortcuts" })).toBeInTheDocument()
   })
 })

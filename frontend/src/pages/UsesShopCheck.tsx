@@ -26,7 +26,7 @@ const VERDICT: Record<Verdict, { glyph: string; label: string; color: string }> 
   over: { glyph: "▲", label: "over market", color: "var(--meteor)" },
   under: { glyph: "▼", label: "under market", color: "var(--leaf)" },
   at: { glyph: "▬", label: "at market", color: "var(--ink-faint)" },
-  unknown: { glyph: "·", label: "no market data", color: "var(--ink-faint)" },
+  unknown: { glyph: "·", label: "no market price yet", color: "var(--ink-faint)" },
 }
 
 interface CheckRow {
@@ -152,13 +152,13 @@ export default function UsesShopCheck() {
         {store && (
           <p className="hero-pill" data-testid="shop-pill">
             <span className="pulse-dot" aria-hidden="true" />
-            {formatCount(rows.length)} item{rows.length === 1 ? "" : "s"} · {formatCount(flagged)}{" "}
-            off market
+            {formatCount(rows.length)} item{rows.length === 1 ? "" : "s"}, {formatCount(flagged)}{" "}
+            priced far from the market
           </p>
         )}
         {loaded && !stores && (
           <p className="hero-pill hero-pill-muted" data-testid="shop-error">
-            store directory unavailable right now — check back once the shops have exported
+            store list isn't available right now (check back once the game server sends store data)
           </p>
         )}
         <FreshnessNote
@@ -179,8 +179,8 @@ export default function UsesShopCheck() {
       {store && !market && (
         <section>
           <p className="empty-note" data-testid="shop-no-market">
-            Market medians are unavailable right now, so this shows <EcoRichText text={store.label} />'s own prices
-            without a comparison — check back once the market plane has landed.
+            Market prices aren't available right now, so this shows <EcoRichText text={store.label} />'s own prices
+            with nothing to compare them to. Check back once market prices come in.
           </p>
         </section>
       )}
@@ -206,7 +206,7 @@ export default function UsesShopCheck() {
             <ul className="rank-rows" data-testid="shop-picker">
               {visibleOptions.length === 0 ? (
                 <li>
-                  <p className="empty-note">No stores recorded yet.</p>
+                  <p className="empty-note">No stores found yet.</p>
                 </li>
               ) : (
                 visibleOptions.map((s) => (
@@ -220,7 +220,7 @@ export default function UsesShopCheck() {
                         <EcoRichText text={s.label} />
                         <span className="section-sub"> · <EcoRichText text={s.owner} /></span>
                       </span>
-                      <span className="rank-count">{formatCount(s.totalVolume)} volume</span>
+                      <span className="rank-count">{formatCount(s.totalVolume)} in trades</span>
                     </button>
                   </li>
                 ))
@@ -235,12 +235,12 @@ export default function UsesShopCheck() {
           <h2 className="section-title">
             <EcoRichText text={store.label} /> vs market{" "}
             <span className="section-sub">
-              (flagged past ±{NOTABLE_PCT}% of the market median)
+              (marked when more than {NOTABLE_PCT}% above or below the middle price)
             </span>
           </h2>
           {rows.length === 0 ? (
             <p className="empty-note" data-testid="shop-empty">
-              No priced items recorded for this store yet.
+              No prices for this store's items yet.
             </p>
           ) : (
             <table tabIndex={0} className="ledger-table" data-testid="shop-table">
@@ -248,9 +248,9 @@ export default function UsesShopCheck() {
                 <tr>
                   <th>Item</th>
                   <th className="num">Your price</th>
-                  <th className="num">Market median</th>
-                  <th className="num">Delta</th>
-                  <th>Verdict</th>
+                  <th className="num">Middle price</th>
+                  <th className="num">Above or below market</th>
+                  <th>Price check</th>
                 </tr>
               </thead>
               <tbody>

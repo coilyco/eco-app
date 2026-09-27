@@ -17,7 +17,7 @@ describe("Eco Wiki snapshot", () => {
     expect(topics).toHaveLength(14)
     expect(screen.getByRole("heading", { name: "Getting started" })).toBeInTheDocument()
     expect(screen.getByRole("heading", { name: "Modding" })).toBeInTheDocument()
-    expect(screen.getAllByRole("link", { name: "Open stable wiki page ↗" })[0]).toHaveAttribute(
+    expect(screen.getAllByRole("link", { name: "Open wiki page ↗" })[0]).toHaveAttribute(
       "href",
       "https://wiki.play.eco/en/index.php?stable=1&title=Getting_Started",
     )

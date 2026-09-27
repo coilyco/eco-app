@@ -41,9 +41,9 @@ describe("UsesResolve", () => {
     renderPage()
     await waitFor(() => expect(screen.getByTestId("resolve-recipe")).toBeInTheDocument())
     expect(screen.getByTestId("resolve-recipe")).toHaveTextContent("Bloomery")
-    expect(screen.getByTestId("resolve-recipe")).toHaveTextContent("Unpriced inputs: CoalItem")
+    expect(screen.getByTestId("resolve-recipe")).toHaveTextContent("Ingredients with no price: CoalItem")
     expect(screen.getByTestId("resolve-offers")).toHaveTextContent("Buy from Forge")
-    expect(screen.getByTestId("resolve-market")).toHaveTextContent("9 Credit median")
+    expect(screen.getByTestId("resolve-market")).toHaveTextContent("middle price 9 Credit")
     expect(screen.getByTestId("resolve-crafter")).toHaveTextContent("Ava")
   })
 

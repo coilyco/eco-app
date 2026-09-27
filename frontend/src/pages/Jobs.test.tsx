@@ -402,10 +402,10 @@ describe("Jobs", () => {
     expect(carpentryRows[0]).toHaveTextContent("Plank")
     expect(carpentryRows[1]).toHaveTextContent("Beam")
     expect(valueBoards[0].querySelector('[data-testid="value-tag"]')).toHaveTextContent(
-      "no supply",
+      "out of stock",
     )
     expect(valueBoards[0]).not.toHaveTextContent("Needle")
-    expect(valueBoards[0]).toHaveTextContent("incomplete cost inputs, low confidence")
+    expect(valueBoards[0]).toHaveTextContent("some ingredient costs are unknown, so this is a rough guess")
     expect(screen.getByRole("link", { name: "Plank" })).toHaveAttribute(
       "href",
       "/uses/price?item=PlankItem&source=jobs&demandQty=20&demandReason=no_supply&confidence=complete&margin=4",
@@ -462,7 +462,7 @@ describe("Jobs", () => {
       expect(screen.getByTestId("jobs-skill-trees")).toBeInTheDocument()
     })
     expect(screen.getAllByTestId("skill-tree")).toHaveLength(2)
-    expect(screen.getAllByText("No talent branches recorded for this specialty.").length).toBeGreaterThan(0)
+    expect(screen.getAllByText("No talents listed for this specialty.").length).toBeGreaterThan(0)
   })
 
   it("asks the recipe plane for the whole graph, not the MCP slice", async () => {

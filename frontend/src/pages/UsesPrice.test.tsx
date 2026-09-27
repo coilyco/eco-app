@@ -290,12 +290,12 @@ describe("UsesPrice", () => {
     await waitFor(() => {
       expect(screen.getByTestId("price-band-table")).toBeInTheDocument()
     })
-    expect(screen.getByTestId("price-pill")).toHaveTextContent("9 Credit median")
-    expect(screen.getByTestId("price-band-pill")).toHaveTextContent("IQR")
+    expect(screen.getByTestId("price-pill")).toHaveTextContent("Middle price 9 Credit")
+    expect(screen.getByTestId("price-band-pill")).toHaveTextContent(/give or take \S+ Credit/)
     expect(screen.getByTestId("price-trend")).toHaveTextContent("rising")
     expect(screen.getByTestId("price-comparison-table")).toBeInTheDocument()
     expect(screen.getByTestId("price-cost-table")).toBeInTheDocument()
-    expect(screen.getByTestId("price-suggestion-list")).toHaveTextContent("Target ask")
+    expect(screen.getByTestId("price-suggestion-list")).toHaveTextContent("Price to ask")
     expect(within(screen.getByTestId("price-comparison-table")).getAllByTestId("price-sell-row")).toHaveLength(1)
   })
 
@@ -306,11 +306,11 @@ describe("UsesPrice", () => {
     )
 
     await waitFor(() => expect(screen.getByTestId("opportunity-context")).toBeInTheDocument())
-    expect(screen.getByTestId("opportunity-context")).toHaveTextContent("20 observed demand")
-    expect(screen.getByTestId("opportunity-context")).toHaveTextContent("no supply")
-    expect(screen.getByTestId("opportunity-context")).toHaveTextContent("estimated margin 4.5 per unit")
+    expect(screen.getByTestId("opportunity-context")).toHaveTextContent("20 wanted by buyers")
+    expect(screen.getByTestId("opportunity-context")).toHaveTextContent("out of stock")
+    expect(screen.getByTestId("opportunity-context")).toHaveTextContent("estimated profit 4.5 each")
     expect(screen.getByTestId("opportunity-confidence")).toHaveTextContent(
-      "discovery signal for coordination, not a production command",
+      "tip to talk over with other players, not an order to craft it",
     )
   })
 
@@ -321,9 +321,9 @@ describe("UsesPrice", () => {
     )
 
     await waitFor(() => expect(screen.getByTestId("opportunity-context")).toBeInTheDocument())
-    expect(screen.getByTestId("opportunity-context")).toHaveTextContent("estimated margin unavailable")
+    expect(screen.getByTestId("opportunity-context")).toHaveTextContent("estimated profit unknown")
     expect(screen.getByTestId("opportunity-confidence")).toHaveTextContent(
-      "Low confidence: recipe-cost inputs were incomplete",
+      "Rough guess: some ingredients have no price",
     )
   })
 
@@ -341,16 +341,16 @@ describe("UsesPrice", () => {
     })
     expect(screen.getByTestId("price-history-scope")).toHaveTextContent("Older cycles are excluded")
     expect(screen.getByTestId("price-histogram")).toHaveAccessibleName(
-      "Histogram of 8 observed unit prices",
+      "Chart of 8 sale prices, grouped by price",
     )
     expect(screen.getByTestId("price-distribution-evidence")).toHaveTextContent(
-      "8 trades · representative · current",
+      "8 trades, enough to go on, recent",
     )
     expect(screen.getByTestId("price-history-chart")).toBeInTheDocument()
     expect(screen.getAllByTestId("specialty-marker")).toHaveLength(2)
     expect(screen.getByTestId("price-unlocks")).toHaveTextContent("Smelting")
     expect(screen.getByTestId("price-unlocks")).toHaveTextContent("Advanced Smelting")
-    expect(screen.getByTestId("price-unlocks")).toHaveTextContent("first observed day 3")
+    expect(screen.getByTestId("price-unlocks")).toHaveTextContent("first learned on day 3")
     expect(screen.getByTestId("price-unlocks")).toHaveTextContent("Iron Ingot Blast Recipe")
   })
 
@@ -384,8 +384,8 @@ describe("UsesPrice", () => {
     await waitFor(() => {
       expect(screen.getByTestId("price-history-states")).toBeInTheDocument()
     })
-    expect(screen.getByTestId("price-history-states")).toHaveTextContent("Thin sample")
-    expect(screen.getByTestId("price-history-states")).toHaveTextContent("Stale sample")
+    expect(screen.getByTestId("price-history-states")).toHaveTextContent("Only a few sales so far")
+    expect(screen.getByTestId("price-history-states")).toHaveTextContent("Out of date")
   })
 
   it("labels a multimodal distribution instead of collapsing it to one curve", async () => {
@@ -414,7 +414,7 @@ describe("UsesPrice", () => {
       expect(screen.getByTestId("price-history-states")).toBeInTheDocument()
     })
     expect(screen.getByTestId("price-history-states")).toHaveTextContent(
-      "Multiple price clusters are visible",
+      "Sales bunch up at a few different prices",
     )
     expect(screen.getByTestId("price-histogram")).toBeInTheDocument()
   })
@@ -450,13 +450,13 @@ describe("UsesPrice", () => {
       expect(screen.getByTestId("price-history-states")).toBeInTheDocument()
     })
     expect(screen.getByTestId("price-history-states")).toHaveTextContent(
-      "No unit-price observations",
+      "No sales of this item in this currency yet this cycle",
     )
     expect(screen.getByTestId("price-history-states")).toHaveTextContent(
-      "No known recipe produces this item",
+      "No known recipe makes this item",
     )
     expect(screen.getByTestId("price-history-states")).toHaveTextContent(
-      "progression export is unavailable",
+      "record of when players learned specialties is not available",
     )
     expect(screen.getByTestId("price-unlocks-empty")).toBeInTheDocument()
     expect(screen.queryByTestId("specialty-marker")).not.toBeInTheDocument()
@@ -487,10 +487,10 @@ describe("UsesPrice", () => {
       expect(screen.getByTestId("price-unlocks")).toBeInTheDocument()
     })
     expect(screen.getByTestId("price-unlocks")).toHaveTextContent(
-      "no observed current-cycle gain",
+      "nobody seen learning it this cycle",
     )
     expect(screen.getByTestId("price-history-states")).toHaveTextContent(
-      "not evidence that the specialty was never available",
+      "That does not prove nobody has it",
     )
   })
 
@@ -523,8 +523,8 @@ describe("UsesPrice", () => {
     await waitFor(() => {
       expect(screen.getByTestId("price-distribution-evidence")).toBeInTheDocument()
     })
-    expect(screen.getByTestId("price-distribution-evidence")).toHaveTextContent("10–100")
-    expect(screen.getByTestId("price-distribution-evidence")).toHaveTextContent("p90 21")
+    expect(screen.getByTestId("price-distribution-evidence")).toHaveTextContent("10 to 100")
+    expect(screen.getByTestId("price-distribution-evidence")).toHaveTextContent("10% for 21 or more")
     expect(screen.queryByText(/normal curve/i)).not.toBeInTheDocument()
   })
 

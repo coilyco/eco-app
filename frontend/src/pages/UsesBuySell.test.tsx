@@ -92,7 +92,7 @@ describe("UsesBuySell", () => {
     expect(buys[0]).toHaveTextContent("HighBuy") // 15 before 9
     // Source provenance renders a label, not colour alone.
     expect(within(screen.getByTestId("buy-offers")).getAllByTestId("source-tag")[1]).toHaveTextContent(
-      "history",
+      "from past sales",
     )
   })
 

@@ -28,9 +28,9 @@ const VALUE_ROWS = 5
 const LIQUIDITY_FLOOR = 100
 
 const GAP: Record<GapReason, { glyph: string; label: string; color: string }> = {
-  no_supply: { glyph: "✖", label: "no supply", color: "var(--meteor)" },
-  thin_supply: { glyph: "◐", label: "thin supply", color: "var(--meteor-deep)" },
-  overpriced: { glyph: "▲", label: "over-priced", color: "var(--ink-faint)" },
+  no_supply: { glyph: "✖", label: "out of stock", color: "var(--meteor)" },
+  thin_supply: { glyph: "◐", label: "low stock", color: "var(--meteor-deep)" },
+  overpriced: { glyph: "▲", label: "overpriced", color: "var(--ink-faint)" },
 }
 
 function opportunityHref(
@@ -94,12 +94,12 @@ function SkillTreeCard({ tree }: { tree: SkillTree }) {
               <summary>
                 <span>{skill.displayName}</span>
                 <span className="section-sub">
-                  level {skill.maxLevel}
+                  up to level {skill.maxLevel}
                   {talents.length > 0 && ` // ${formatCount(talents.length)} talents`}
                 </span>
               </summary>
               {talents.length === 0 ? (
-                <p className="empty-note">No talent branches recorded for this specialty.</p>
+                <p className="empty-note">No talents listed for this specialty.</p>
               ) : (
                 <ul className="skill-tree-talents">
                   {talents.map((talent) => (
@@ -155,7 +155,7 @@ function ProfessionCard({
       <button className="prof-btn" onClick={() => setOpen((v) => !v)} aria-expanded={open}>
         <span>{stat.profession}</span>
         <span className="count">
-          ( {stat.covered} / {stat.total} covered )
+          ( {stat.covered} of {stat.total} Active or Long Term )
         </span>
       </button>
       {open && (
@@ -172,9 +172,9 @@ function ProfessionCard({
               ))}
             </ul>
           ) : stat.players.length > 0 ? (
-            <p className="empty-note">People outside Active and Long Term are hidden.</p>
+            <p className="empty-note">Only players in the Active or Long Term group are shown.</p>
           ) : (
-            <p className="empty-note">No players with specialties in this profession.</p>
+            <p className="empty-note">No players have a specialty in this profession yet.</p>
           )}
         </div>
       )}
@@ -189,7 +189,7 @@ function SpecialtyCard({ stat }: { stat: SpecialtyStat }) {
       <h3 className="card-title">
         {stat.specialty}
         <span className="count">
-          ( {stat.covered} / {stat.total} covered )
+          ( {stat.covered} of {stat.total} Active or Long Term )
         </span>
       </h3>
       <p className="kicker">{stat.profession}</p>
@@ -199,13 +199,13 @@ function SpecialtyCard({ stat }: { stat: SpecialtyStat }) {
             <span><EcoRichText text={h.player} /></span>
             <span className="role-badges">
               <RoleBadges roles={h.roles} />
-              <span className="lvl">lvl {h.level}</span>
+              <span className="lvl">level {h.level}</span>
             </span>
           </li>
         ))}
       </ul>
       {visibleHolders.length === 0 && stat.holders.length > 0 && (
-        <p className="empty-note">People outside Active and Long Term are hidden.</p>
+        <p className="empty-note">Only players in the Active or Long Term group are shown.</p>
       )}
     </li>
   )
@@ -318,10 +318,10 @@ export default function Jobs() {
             <>
               <ValueTag reason={gap.reason} />{" "}
               <span>
-                {margin !== null ? `estimated margin ${formatMoney(margin)}` : "margin unavailable"} ·{" "}
-                {formatCount(gap.demandQty)} observed demand ·{" "}
-                {formatCount(traded)} traded volume
-                {!complete && " · incomplete cost inputs, low confidence"}
+                {margin !== null ? `estimated profit ${formatMoney(margin)}` : "profit unknown"} ·{" "}
+                {formatCount(gap.demandQty)} wanted by buyers ·{" "}
+                {formatCount(traded)} spent on it in past trades
+                {!complete && " · some ingredient costs are unknown, so this is a rough guess"}
               </span>
             </>
           )
@@ -392,8 +392,8 @@ export default function Jobs() {
     <Layout>
       {data?.mockData && (
         <div className="mock-banner" data-testid="mock-banner">
-          ⚠️ MOCK DATA — every player, skill, and count on this page is fabricated. Set the{" "}
-          <code>UPSTREAM_URL</code> env var on the service to pull real data. ⚠️
+          ⚠️ FAKE DATA. Every player, skill, and count on this page is made up. To show real
+          data, the site admin sets <code>UPSTREAM_URL</code> on the service. ⚠️
         </div>
       )}
 
@@ -427,20 +427,20 @@ export default function Jobs() {
         <>
           <section data-testid="jobs-value">
             <h2 className="section-title">
-              Most valuable to craft{" "}
-              <span className="section-sub">(per profession, true margin × demand)</span>
+              Most profitable crafts{" "}
+              <span className="section-sub">(profit × how many people want it)</span>
             </h2>
             {!valueLoaded ? (
               <p className="empty-note" data-testid="jobs-value-loading">
-                tallying craft margins…
+                adding up craft profits…
               </p>
             ) : valueBoards === null ? (
               <p className="empty-note" data-testid="jobs-value-empty">
-                Need recipes, market medians, logistics gaps, and trade volume to rank crafts.
+                No ranking right now. It needs recipes, middle prices, the list of wanted items, and past trades, and one of them did not load.
               </p>
             ) : valueBoards.length === 0 ? (
               <p className="empty-note" data-testid="jobs-value-empty">
-                No liquid supply-gap crafts yet.
+                Nothing here yet. A craft shows up when its item is wanted, hard to buy, and already sells well.
               </p>
             ) : (
               <div className="value-boards" data-testid="jobs-value-boards">
@@ -449,7 +449,7 @@ export default function Jobs() {
                     <h3 className="subsection-title">{board.label}</h3>
                     <RankList
                       rows={board.rows}
-                      emptyNote={`No liquid supply-gap crafts for ${board.label} yet.`}
+                      emptyNote={`No ${board.label} crafts yet for items that are wanted, hard to buy, and already sell well.`}
                       formatValue={formatMoney}
                     />
                   </section>
@@ -472,7 +472,7 @@ export default function Jobs() {
               <h2 className="section-title">
                 Skill trees{" "}
                 <span className="section-sub">
-                  (profession → specialty → level-gated talents)
+                  (each profession, its specialties, and the talents they unlock by level)
                 </span>
               </h2>
               <div className="skill-tree-grid">

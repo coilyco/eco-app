@@ -84,7 +84,7 @@ describe("UsesArbitrage", () => {
     renderPage()
 
     await waitFor(() => {
-      expect(screen.getByTestId("arb-pill")).toHaveTextContent("2 arbitrage spreads")
+      expect(screen.getByTestId("arb-pill")).toHaveTextContent("2 items to buy low and sell high")
     })
     const rows = screen.getAllByTestId("arb-row")
     expect(rows).toHaveLength(2)

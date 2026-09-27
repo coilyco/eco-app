@@ -35,7 +35,7 @@ export default function Civics() {
           <p className="hero-pill" data-testid="civics-pill">
             <span className="pulse-dot" aria-hidden="true" />
             {formatCount(report.totalEvents)} civic events
-            {turnoutPct !== null ? ` · ${turnoutPct}% turnout` : ""}
+            {turnoutPct !== null ? ` · ${turnoutPct}% voter turnout` : ""}
           </p>
         )}
         {!report && error && (
@@ -55,8 +55,8 @@ export default function Civics() {
       {report && !report.adminAvailable && (
         <section>
           <p className="empty-note" data-testid="civics-unmeasured">
-            No civic exporter on this server could be read, so nothing below was measured.
-            This is not the same as a quiet server — the counts are unknown, not zero.
+            This site couldn't read the server's civics data, so nothing here was counted. That
+            doesn't mean nothing happened. The numbers are unknown, not zero.
           </p>
         </section>
       )}
@@ -75,15 +75,15 @@ export default function Civics() {
           <section className="stats" aria-label="civic snapshot" data-testid="civics-stats">
             <div className="stat">
               <p className="stat-value">{turnoutPct !== null ? `${turnoutPct}%` : "—"}</p>
-              <p className="stat-label">Turnout</p>
+              <p className="stat-label">Voter turnout</p>
               <p className="stat-detail">
-                {formatCount(report.votesCast)} cast · {formatCount(report.abstentions)} abstained
+                {formatCount(report.votesCast)} votes cast · {formatCount(report.abstentions)} chose not to vote
               </p>
             </div>
             <div className="stat">
               <p className="stat-value">{formatCount(report.electionsStarted)}</p>
               <p className="stat-label">Elections</p>
-              <p className="stat-detail">{formatCount(report.electionsWon)} won</p>
+              <p className="stat-detail">{formatCount(report.electionsWon)} had a winner</p>
             </div>
             <div className="stat">
               {/* Distinct people, not repeated exporter events (eco-app#224). */}
@@ -93,28 +93,28 @@ export default function Civics() {
                   : ""}
                 {formatCount(report.netDistinctCitizens)}
               </p>
-              <p className="stat-label">Net citizens</p>
+              <p className="stat-label">Citizens gained or lost</p>
               <p className="stat-detail">
-                +{formatCount(report.distinctCitizensGained)} / -
-                {formatCount(report.distinctCitizensLost)} people ·{" "}
+                +{formatCount(report.distinctCitizensGained)} joined / -
+                {formatCount(report.distinctCitizensLost)} left ·{" "}
                 {formatCount(
                   report.citizensGained === null || report.citizensLost === null
                     ? null
                     : report.citizensGained + report.citizensLost,
                 )}{" "}
-                events
+                citizenship changes logged
               </p>
             </div>
             <div className="stat">
               <p className="stat-value">{formatCount(report.residencyMoves)}</p>
-              <p className="stat-label">Residency moves</p>
+              <p className="stat-label">Residency changes</p>
             </div>
             <div className="stat">
               <p className="stat-value">{formatCount(report.settlementsFounded)}</p>
-              <p className="stat-label">Settlements</p>
+              <p className="stat-label">Settlements founded</p>
               <p className="stat-detail">
-                {formatCount(report.settlementFoundationsPlaced)} foundations staked ·{" "}
-                {formatCount(report.homesteadsStarted)} homesteads
+                {formatCount(report.settlementFoundationsPlaced)} foundations placed ·{" "}
+                {formatCount(report.homesteadsStarted)} homesteads started
               </p>
             </div>
           </section>

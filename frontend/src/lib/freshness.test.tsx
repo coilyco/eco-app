@@ -85,8 +85,8 @@ describe("describeFreshness", () => {
       t0,
       t0 + 60_000,
     )
-    expect(text).toContain("cadence unknown")
-    expect(text).toContain("reload to be certain")
+    expect(text).toContain("not sure how often this updates")
+    expect(text).toContain("reload to be sure")
   })
 
   it("reports nothing loaded before the first fetch lands", () => {
@@ -104,10 +104,10 @@ function describeFreshnessFor(
 ): string {
   const age = formatAge(now - loadedAt)
   if (contract.mode === "static") {
-    return `loaded ${age} ago · this data does not change while the page is open`
+    return `loaded ${age} ago (this data does not change while the page is open)`
   }
   if (contract.staleAfterMs === undefined) {
-    return `loaded ${age} ago · update cadence unknown, reload to be certain`
+    return `loaded ${age} ago (not sure how often this updates, reload to be sure)`
   }
   return `loaded ${age} ago`
 }

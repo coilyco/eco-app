@@ -84,8 +84,8 @@ export default function Species() {
         {profile?.populationLatest !== null && profile?.populationLatest !== undefined && (
           <p className="hero-pill">
             <span className="pulse-dot" aria-hidden="true" />
-            {formatCount(profile.populationLatest)} current · {profile.populationDelta !== null && profile.populationDelta >= 0 ? "+" : ""}
-            {profile.populationDelta === null ? "n/a" : formatCount(profile.populationDelta)} this cycle
+            {formatCount(profile.populationLatest)} alive now · {profile.populationDelta !== null && profile.populationDelta >= 0 ? "+" : ""}
+            {profile.populationDelta === null ? "change unknown" : formatCount(profile.populationDelta)} this cycle
           </p>
         )}
         <FreshnessNote plane="species" loadedAt={speciesPlane.loadedAt} />

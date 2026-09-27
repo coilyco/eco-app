@@ -22,7 +22,7 @@ export function ConfigsSection({ brief }: { brief: ServerBrief }) {
       <SectionHeading
         id="home-configs"
         title="Server settings"
-        sub={`What differs from vanilla Eco. Reviewed ${brief.reviewedOn}.`}
+        sub={`How this server differs from normal Eco. Last checked ${brief.reviewedOn}.`}
       />
       <div className="home-grid" data-testid="home-configs">
         {brief.configs.map((group) => (

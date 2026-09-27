@@ -41,13 +41,13 @@ export default function UsesArbitrage() {
         {spreads.length > 0 && (
           <p className="hero-pill" data-testid="arb-pill">
             <span className="pulse-dot" aria-hidden="true" />
-            {formatCount(spreads.length)} arbitrage spread{spreads.length === 1 ? "" : "s"} open
+            {formatCount(spreads.length)} item{spreads.length === 1 ? "" : "s"} to buy low and sell high
           </p>
         )}
         {loaded && spreads.length === 0 && (
           <p className="hero-pill hero-pill-muted" data-testid="arb-empty">
-            no arbitrage spreads right now — either prices are level across stores, or the shelf data
-            hasn't landed yet
+            nothing to buy low and sell high right now (every store charges about the same, or store
+            prices haven't come in yet)
           </p>
         )}
         <FreshnessNote
@@ -61,14 +61,14 @@ export default function UsesArbitrage() {
 
       {!loaded && (
         <p className="empty-note" data-testid="arb-loading">
-          Loading spreads…
+          Loading store prices…
         </p>
       )}
 
       {spreads.length > 0 && (
         <section data-testid="arb-list">
           <h2 className="section-title">
-            Arbitrage spreads <span className="section-sub">(ranked by opportunity)</span>
+            Buy here, sell there <span className="section-sub">(biggest total profit first)</span>
           </h2>
           <table tabIndex={0} className="ledger-table" data-testid="arb-table">
             <thead>
@@ -76,9 +76,9 @@ export default function UsesArbitrage() {
                 <th>Item</th>
                 <th>Buy at</th>
                 <th>Sell at</th>
-                <th className="num">Spread</th>
-                <th className="num">Volume</th>
-                <th className="num">Opportunity</th>
+                <th className="num">Profit each</th>
+                <th className="num">How many you can move</th>
+                <th className="num">Profit if you move them all</th>
               </tr>
             </thead>
             <tbody>
@@ -94,11 +94,11 @@ export default function UsesArbitrage() {
                   </td>
                   <td>
                     <ItemPrice price={a.buyFrom.price} norm={a.buyFrom.norm ?? a.norm} currency={a.currency} layout="inline" />{" "}
-                    — <EcoRichText text={a.buyFrom.store} />
+                    at <EcoRichText text={a.buyFrom.store} />
                   </td>
                   <td>
                     <ItemPrice price={a.sellTo.price} norm={a.sellTo.norm ?? a.norm} currency={a.currency} layout="inline" />{" "}
-                    — <EcoRichText text={a.sellTo.store} />
+                    at <EcoRichText text={a.sellTo.store} />
                   </td>
                   <td className="num">
                     +{formatMoney(a.spread)} {a.currency} ({Math.round(a.spreadPct)}%)

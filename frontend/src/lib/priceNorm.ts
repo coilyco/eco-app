@@ -80,9 +80,22 @@ function money(v: number): string {
   return v.toLocaleString("en-US", { maximumFractionDigits: v < 10 ? 2 : 0 })
 }
 
-function trades(n: number, cycles: number): string {
-  const t = `${n.toLocaleString("en-US")} trade${n === 1 ? "" : "s"}`
+function sales(n: number, cycles: number): string {
+  const t = `${n.toLocaleString("en-US")} sale${n === 1 ? "" : "s"}`
   return cycles > 1 ? `${t} over ${cycles} cycles` : cycles === 1 ? `${t} in 1 cycle` : t
+}
+
+function saleCount(n: number): string {
+  return `${n.toLocaleString("en-US")} sale${n === 1 ? "" : "s"}`
+}
+
+// The multiple in words. A rounded gap under 5% reads as "about the usual", and
+// 2x or more reads as "N times", because "1,160% over" is harder to take in.
+export function compareToUsual(m: number, usual: string): string {
+  if (m >= 2) return `${m < 10 ? Number(m.toFixed(1)) : Math.round(m)} times ${usual}`
+  const pct = Math.round(Math.abs(m - 1) * 100)
+  if (pct < 5) return `about ${usual}`
+  return `${m > 0 ? Math.min(pct, 99) : pct}% ${m > 1 ? "over" : "under"} ${usual}`
 }
 
 function stageName(norm: PriceNorm): string {
@@ -118,58 +131,57 @@ export function describeNorm(
   if (!norm) {
     return { state: "missing", short: "no norm sent", full: "The server sent no price norm with this price." }
   }
-  const count = trades(norm.n, norm.cycles ?? 0)
+  const count = sales(norm.n, norm.cycles ?? 0)
+  const n = saleCount(norm.n)
   if (norm.basis === null || norm.n === 0) {
-    return { state: "none", short: "no history yet", full: "No trades of this item in past cycles yet." }
+    return { state: "none", short: "no past sales yet", full: "No sales of this item in past cycles yet." }
   }
   const fallback = norm.fallback ? ` ${norm.fallback.charAt(0).toUpperCase()}${norm.fallback.slice(1)}.` : ""
   const multiple = multipleFor(norm, price, currency)
   if (multiple !== null) {
-    const m = formatMultiple(multiple)
     if (norm.basis === "all" || norm.fallback) {
       return {
         state: "fallback",
-        short: `${m} usual (all stages), ${norm.n.toLocaleString("en-US")} trades`,
-        full: `${m} the usual price across all upgrade stages, from ${count}.${fallback}`,
+        short: `${compareToUsual(multiple, "the usual price across all stages")} (${n})`,
+        full: `This is ${compareToUsual(multiple, "the usual price across all upgrade stages")}, based on ${count}.${fallback}`,
       }
     }
     return {
       state: "ok",
-      short: `${m} usual${norm.stage ? ` ${norm.stage}` : ""}, ${norm.n.toLocaleString("en-US")} trades`,
-      full: `${m} the usual ${stageName(norm)}price, from ${count}.`,
+      short: `${compareToUsual(multiple, `the usual ${norm.stage ? `${norm.stage} ` : ""}price`)} (${n})`,
+      full: `This is ${compareToUsual(multiple, `the usual ${stageName(norm)}price`)}, based on ${count}.`,
     }
   }
   if (isBareCurrencyId(currency)) {
     return {
       state: "unidentified",
-      short: `currency not identified, ${norm.n.toLocaleString("en-US")} trades`,
-      full: `${reference(norm)}This price's currency (${currency}) is not identified yet, so there is no multiple. From ${count}.`,
+      short: `can't compare currencies (${n})`,
+      full: `${reference(norm)}This price's currency (${currency}) has no name yet, so it can't be compared with past sales. Based on ${count}.`,
     }
   }
   if (norm.median != null) {
     const cur = norm.currency ? ` ${norm.currency}` : ""
     return {
       state: "median",
-      short: `usual ${money(norm.median)}${cur}, ${norm.n.toLocaleString("en-US")} trades`,
-      full: `Usually ${money(norm.median)}${cur} in cycle ${norm.cycle ?? "?"}. ${reference(norm)}From ${count}.${fallback}`,
+      short: `usually ${money(norm.median)}${cur} (${n})`,
+      full: `In cycle ${norm.cycle ?? "?"} the middle price was ${money(norm.median)}${cur}. ${reference(norm)}Based on ${count}.${fallback}`,
     }
   }
   // No multiple is possible here, so the usual price in the live currency is the comparison.
   const usual =
     norm.referencePrice != null
-      ? `usual ${money(norm.referencePrice)}${norm.referenceCurrency ? ` ${norm.referenceCurrency}` : ""}, `
+      ? `usually ${money(norm.referencePrice)}${norm.referenceCurrency ? ` ${norm.referenceCurrency}` : ""}`
       : ""
-  const n = `${norm.n.toLocaleString("en-US")} trades`
   if (!currency?.trim()) {
     return {
       state: "reference",
-      short: `${usual}${n}`,
-      full: `${reference(norm)}This price's currency is not known here, so there is no multiple. From ${count}.`,
+      short: usual ? `${usual} (${n})` : n,
+      full: `${reference(norm)}This price's currency isn't known here, so it can't be compared with past sales. Based on ${count}.`,
     }
   }
   return {
     state: "elsewhere",
-    short: usual ? `${usual}${n}` : `no history in ${currency}, ${n} in others`,
-    full: `No past trades of this item in ${currency}. ${reference(norm)}From ${count}.`,
+    short: usual ? `${usual} (${n})` : `no past sales in ${currency}, ${n} in other currencies`,
+    full: `No past sales of this item in ${currency}. ${reference(norm)}Based on ${count}.`,
   }
 }

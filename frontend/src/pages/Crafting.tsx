@@ -154,11 +154,11 @@ export default function Crafting() {
           <section className="k-card-grid k-card-grid--condensed dir-cards">
             <Link className="k-card dir-card" to="/trade" data-testid="link-trade">
               <h2>Trade →</h2>
-              <p>Where this production goes — the market and every individual trade, with price over time.</p>
+              <p>Where all this crafting ends up: the market, and every single trade with its price over time.</p>
             </Link>
             <Link className="k-card dir-card" to="/items" data-testid="link-items">
               <h2>Item directory →</h2>
-              <p>Every item this production touches — click through to its full history.</p>
+              <p>Every item bought, sold, or crafted. Click one to see its full history.</p>
             </Link>
           </section>
         </>

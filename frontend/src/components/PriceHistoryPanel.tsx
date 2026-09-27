@@ -5,13 +5,25 @@ import { useSvgTextScale } from "../hooks/useSvgTextScale"
 import type { ItemPriceHistory, PriceHistoryState } from "../lib/priceHistoryApi"
 
 const STATE_TEXT: Record<PriceHistoryState, string> = {
-  no_data: "No unit-price observations exist for this item and currency in the current cycle.",
-  thin: "Thin sample: treat the distribution and price range as individual observations, not a stable market pattern.",
-  stale: "Stale sample: this item's latest trade predates newer current-cycle market evidence.",
-  multimodal: "Multiple price clusters are visible. One median would hide distinct trading regimes, so the histogram stays discrete.",
-  missing_recipes: "No known recipe produces this item, so required-specialty markers cannot be resolved.",
-  missing_progression: "The GainSpecialty progression export is unavailable, so recipe requirements are known but unlock timing is not.",
-  unobserved_unlocks: "At least one required specialty has no observed current-cycle gain. That is not evidence that the specialty was never available.",
+  no_data: "No sales of this item in this currency yet this cycle.",
+  thin: "Only a few sales so far. Read the prices below as single sales, not a steady market price.",
+  stale: "Out of date: this item has not sold for a while, but other trading has carried on since.",
+  multimodal: "Sales bunch up at a few different prices. One middle price would hide that, so the chart keeps each group separate.",
+  missing_recipes: "No known recipe makes this item, so there are no specialties to mark.",
+  missing_progression: "The record of when players learned specialties is not available, so the recipes' specialties are known but not when players got them.",
+  unobserved_unlocks: "Nobody has been seen learning at least one needed specialty this cycle. That does not prove nobody has it.",
+}
+
+// The server sends these as codes. The words are shown after the trade count.
+const SAMPLE_TEXT: Record<string, string> = {
+  no_data: "none yet",
+  thin: "only a few",
+  representative: "enough to go on",
+}
+const FRESHNESS_TEXT: Record<string, string> = {
+  current: "recent",
+  stale: "out of date",
+  unknown: "age unknown",
 }
 
 function PriceTimeline({ history }: { history: ItemPriceHistory }) {
@@ -24,7 +36,7 @@ function PriceTimeline({ history }: { history: ItemPriceHistory }) {
     ...observedMarkers.map((marker) => marker.day as number),
   ]
   if (history.daily.length === 0) {
-    return <p className="empty-note">No price timeline can be drawn without priced trades.</p>
+    return <p className="empty-note">No priced sales yet, so there is no price chart.</p>
   }
 
   const width = 720
@@ -52,7 +64,7 @@ function PriceTimeline({ history }: { history: ItemPriceHistory }) {
 
   return (
     <ChartFrame
-      above={[`high ${formatMoney(maxPrice)}`, `low ${formatMoney(minPrice)}`, "bars show volume"]}
+      above={[`high ${formatMoney(maxPrice)}`, `low ${formatMoney(minPrice)}`, "bars show how many sold each day"]}
       start={`Day ${minDay}`}
       end={`Day ${maxDay}`}
     >
@@ -61,7 +73,7 @@ function PriceTimeline({ history }: { history: ItemPriceHistory }) {
       className="price-history-chart"
       viewBox={`0 0 ${width} ${height}`}
       role="img"
-      aria-label={`Current-cycle ${history.itemPretty} median price, range, volume, and required specialty unlocks`}
+      aria-label={`${history.itemPretty} prices this cycle: middle price, range, amount sold, and when needed specialties were learned`}
       data-testid="price-history-chart"
     >
       {history.daily.map((bucket) => (
@@ -109,7 +121,7 @@ function PriceTimeline({ history }: { history: ItemPriceHistory }) {
 function Distribution({ history }: { history: ItemPriceHistory }) {
   const distribution = history.distribution
   if (distribution.sampleCount === 0) {
-    return <p className="empty-note">No observed prices fall inside this current-cycle window.</p>
+    return <p className="empty-note">No sale prices yet this cycle.</p>
   }
   const maxCount = Math.max(...distribution.histogram.map((bucket) => bucket.count), 1)
   return (
@@ -117,7 +129,7 @@ function Distribution({ history }: { history: ItemPriceHistory }) {
       <div
         className="price-histogram"
         role="img"
-        aria-label={`Histogram of ${distribution.sampleCount} observed unit prices`}
+        aria-label={`Chart of ${distribution.sampleCount} sale prices, grouped by price`}
         data-testid="price-histogram"
       >
         {distribution.histogram.map((bucket, index) => (
@@ -136,23 +148,24 @@ function Distribution({ history }: { history: ItemPriceHistory }) {
       <ul className="rank-rows" data-testid="price-distribution-evidence">
         <li>
           <div className="rank-row">
-            <span className="rank-name">Sample and freshness</span>
+            <span className="rank-name">How many trades, and how recent</span>
             <span className="rank-count">
-              {formatCount(distribution.sampleCount)} trades · {distribution.sampleState} ·{" "}
-              {distribution.freshnessState}
+              {formatCount(distribution.sampleCount)} trades,{" "}
+              {SAMPLE_TEXT[distribution.sampleState] ?? distribution.sampleState},{" "}
+              {FRESHNESS_TEXT[distribution.freshnessState] ?? distribution.freshnessState}
             </span>
           </div>
         </li>
         <li>
           <div className="rank-row">
-            <span className="rank-name">Median and range</span>
+            <span className="rank-name">Middle price and range</span>
             <span className="rank-count">
               <ItemPrice
                 price={distribution.median}
                 norm={history.norm}
                 currency={history.currency}
                 showCurrency
-                suffix={`, range ${formatMoney(distribution.min!)}–${formatMoney(distribution.max!)}`}
+                suffix={`, range ${formatMoney(distribution.min!)} to ${formatMoney(distribution.max!)}`}
               />
             </span>
           </div>
@@ -160,12 +173,12 @@ function Distribution({ history }: { history: ItemPriceHistory }) {
         {distribution.percentiles && (
           <li>
             <div className="rank-row">
-              <span className="rank-name">Percentiles</span>
+              <span className="rank-name">Cheap and pricey ends</span>
               <span className="rank-count">
-                p10 {formatMoney(distribution.percentiles.p10)}, p25{" "}
-                {formatMoney(distribution.percentiles.p25)}, p75{" "}
-                {formatMoney(distribution.percentiles.p75)}, p90{" "}
-                {formatMoney(distribution.percentiles.p90)}
+                10% sold for {formatMoney(distribution.percentiles.p10)} or less, 25% for{" "}
+                {formatMoney(distribution.percentiles.p25)} or less, 25% for{" "}
+                {formatMoney(distribution.percentiles.p75)} or more, 10% for{" "}
+                {formatMoney(distribution.percentiles.p90)} or more
               </span>
             </div>
           </li>
@@ -179,12 +192,12 @@ export default function PriceHistoryPanel({ history }: { history: ItemPriceHisto
   return (
     <section data-testid="price-history">
       <h2 className="section-title">
-        Current-cycle price history{" "}
-        <span className="section-sub">(distribution + production capability)</span>
+        Price history this cycle{" "}
+        <span className="section-sub">(what it sold for, and when players could craft it)</span>
       </h2>
       <p className="empty-note" data-testid="price-history-scope">
-        {history.scope.label}. Older cycles are excluded because their star and progression rules
-        may not be comparable ({history.scope.progressionRulesVersion}).
+        {history.scope.label}. Older cycles are excluded because their star and skill rules
+        may be different ({history.scope.progressionRulesVersion}).
       </p>
       {history.states.length > 0 && (
         <ul className="warn-list price-history-states" data-testid="price-history-states">
@@ -196,15 +209,15 @@ export default function PriceHistoryPanel({ history }: { history: ItemPriceHisto
 
       <div className="atlas-columns price-history-columns">
         <div>
-          <h3 className="subsection-title">Observed unit-price distribution</h3>
+          <h3 className="subsection-title">How many sold at each price</h3>
           <Distribution history={history} />
         </div>
         <div>
-          <h3 className="subsection-title">Price, volume, and specialty arrivals</h3>
+          <h3 className="subsection-title">Price by day, amount sold, and specialties learned</h3>
           <PriceTimeline history={history} />
           {history.specialtyUnlocks.length === 0 ? (
             <p className="empty-note" data-testid="price-unlocks-empty">
-              No required specialties can be resolved from the known recipe graph.
+              No needed specialties found in the known recipes.
             </p>
           ) : (
             <ul className="rank-rows" data-testid="price-unlocks">
@@ -214,14 +227,14 @@ export default function PriceHistoryPanel({ history }: { history: ItemPriceHisto
                     <span className="rank-name">{marker.skillPretty}</span>
                     <span className="rank-count">
                       {marker.status === "observed"
-                        ? `first observed day ${marker.day}`
+                        ? `first learned on day ${marker.day}`
                         : marker.status === "unobserved"
-                          ? "no observed current-cycle gain"
-                          : "progression export unavailable"}
+                          ? "nobody seen learning it this cycle"
+                          : "learning record not available"}
                     </span>
                   </div>
                   <p className="section-sub">
-                    Required by {marker.recipeVariants.map(prettifyEcoName).join(", ")}
+                    Needed for {marker.recipeVariants.map(prettifyEcoName).join(", ")}
                   </p>
                 </li>
               ))}

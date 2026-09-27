@@ -300,9 +300,9 @@ describe("Map page", () => {
     expect(screen.getByTestId("species-risk-at_risk")).toHaveTextContent("at risk")
     expect(screen.getByTestId("species-risk-stable")).toHaveTextContent("stable")
     expect(screen.getByTestId("species-risk-recovering")).toHaveTextContent("recovering")
-    expect(screen.getByTestId("species-risk-naturally_sparse")).toHaveTextContent("naturally sparse")
-    expect(screen.getByTestId("species-risk-missing")).toHaveTextContent("missing")
-    expect(screen.getByTestId("species-risk-stale")).toHaveTextContent("stale")
+    expect(screen.getByTestId("species-risk-naturally_sparse")).toHaveTextContent("naturally rare")
+    expect(screen.getByTestId("species-risk-missing")).toHaveTextContent("no data")
+    expect(screen.getByTestId("species-risk-stale")).toHaveTextContent("out of date")
     expect(screen.getByRole("link", { name: "Wolf" })).toHaveAttribute(
       "href",
       "/species?name=WolfSpecies",
@@ -326,7 +326,7 @@ describe("Map page", () => {
       expect(screen.getByTestId("species-risk-unavailable")).toBeInTheDocument()
     })
     expect(screen.getByTestId("species-risk-unavailable")).toHaveTextContent(
-      "No health claim is made without it",
+      "so this page doesn't guess",
     )
     expect(screen.queryByTestId("species-risk")).not.toBeInTheDocument()
   })
@@ -339,11 +339,11 @@ describe("Map page", () => {
     expect(screen.getByTestId("climate-pill")).toHaveTextContent("warming")
     expect(screen.getByTestId("climate")).toHaveTextContent("325 ppm")
     expect(screen.getByTestId("climate")).toHaveTextContent("437.5 PPM")
-    expect(screen.getByTestId("climate-freshness")).toHaveTextContent("Snapshot fetched")
+    expect(screen.getByTestId("climate-freshness")).toHaveTextContent("Climate data fetched")
     expect(screen.getByTestId("pollution-source-freshness")).toHaveTextContent(
-      "current for game time Day 59, 00:00",
+      "up to date for game time Day 59, 00:00",
     )
-    expect(screen.getByTestId("climate-coordination")).toHaveTextContent("Observed risk")
+    expect(screen.getByTestId("climate-coordination")).toHaveTextContent("Risk right now")
     // The former standalone /climate cross-link card is gone — it's folded in.
     expect(screen.queryByTestId("link-climate")).not.toBeInTheDocument()
   })
@@ -367,7 +367,7 @@ describe("Map page", () => {
 
     const freshness = await screen.findByTestId("pollution-source-freshness")
     expect(freshness).toHaveClass("hero-pill-warn")
-    expect(freshness).toHaveTextContent("Ground pollution data is stale")
+    expect(freshness).toHaveTextContent("Ground pollution data is out of date")
     expect(freshness).toHaveTextContent("Day 58, 00:00")
     expect(freshness).toHaveTextContent("Day 59, 00:00")
   })
@@ -389,7 +389,7 @@ describe("Map page", () => {
     renderPage()
 
     expect(await screen.findByTestId("pollution-source-freshness")).toHaveTextContent(
-      "source cadence is unavailable, so source freshness is unknown",
+      "How often it updates is unknown, so there is no way to tell if it is up to date",
     )
   })
 
@@ -419,7 +419,7 @@ describe("Map page", () => {
 
     expect(await screen.findByTestId("climate")).toHaveTextContent("4.0%")
     expect(screen.getByTestId("pollution-source-freshness")).toHaveTextContent(
-      "world-layer percentage fallback",
+      "backup number: the percentage from the world map's pollution layer",
     )
   })
 })

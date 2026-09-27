@@ -53,9 +53,9 @@ function TrendTag({ trend, delta }: { trend: MarketTrend; delta: number | null }
 // amber), a lone monopolist is thin supply (bark), a merely over-priced shelf
 // stays muted ink.
 const GAP: Record<GapReason, { glyph: string; label: string; color: string }> = {
-  no_supply: { glyph: "✖", label: "no supply", color: "var(--meteor)" },
-  thin_supply: { glyph: "◐", label: "thin supply", color: "var(--meteor-deep)" },
-  overpriced: { glyph: "▲", label: "over-priced", color: "var(--ink-faint)" },
+  no_supply: { glyph: "✖", label: "out of stock", color: "var(--meteor)" },
+  thin_supply: { glyph: "◐", label: "low stock", color: "var(--meteor-deep)" },
+  overpriced: { glyph: "▲", label: "overpriced", color: "var(--ink-faint)" },
 }
 
 // One supply gap: the item, a reason tag, and — the point of eco-app#77 — WHO
@@ -69,8 +69,8 @@ function SupplyGapRow({ gap }: { gap: SupplyGap }) {
       <>
         cheapest{" "}
         <ItemPrice price={gap.cheapestSell} norm={gap.norm} currency={gap.currency} layout="inline" /> vs
-        median <ItemPrice price={gap.median} norm={gap.norm} currency={gap.currency} layout="inline" />
-        {gap.overMedianPct !== null ? ` (+${Math.round(gap.overMedianPct)}%)` : ""}
+        a middle price of <ItemPrice price={gap.median} norm={gap.norm} currency={gap.currency} layout="inline" />
+        {gap.overMedianPct !== null ? ` (${Math.round(gap.overMedianPct)}% more)` : ""}
       </>
     ) : (
       `${formatCount(gap.demandQty)} wanted · ${formatCount(gap.buyerCount)} buyer${
@@ -93,7 +93,7 @@ function SupplyGapRow({ gap }: { gap: SupplyGap }) {
           <span className="gap-who-label">Who needs it:</span>{" "}
           {gap.buyers.map((b, i) => (
             <span key={`${b.owner}-${b.store}-${i}`} className="gap-buyer">
-              <EcoRichText text={b.owner || b.store} />{" "}
+              <EcoRichText text={b.owner || b.store} /> wants{" "}
               <span className="gap-buyer-qty">{formatCount(b.quantity)}</span>
               {i < gap.buyers.length - 1 ? ", " : ""}
             </span>
@@ -112,7 +112,7 @@ function PriceChart({ points }: { points: Array<[number, number]> }) {
   const height = 160
   const pad = 28
   if (points.length < 2) {
-    return <p className="empty-note">Not enough price history to chart this item yet.</p>
+    return <p className="empty-note">Not enough past sales to draw a chart for this item yet.</p>
   }
   const days = points.map(([d]) => d)
   const prices = points.map(([, p]) => p)
@@ -129,7 +129,7 @@ function PriceChart({ points }: { points: Array<[number, number]> }) {
 
   return (
     <ChartFrame
-      above={[`high ${formatMoney(maxPrice)}`, `low ${formatMoney(minPrice)}`]}
+      above={[`highest ${formatMoney(maxPrice)}`, `lowest ${formatMoney(minPrice)}`]}
       start={`day ${minDay}`}
       end={`day ${maxDay}`}
     >
@@ -138,7 +138,7 @@ function PriceChart({ points }: { points: Array<[number, number]> }) {
       viewBox={`0 0 ${width} ${height}`}
       preserveAspectRatio="xMidYMid meet"
       role="img"
-      aria-label="Median unit price by in-game day"
+      aria-label="Middle price for one, by in-game day"
       data-testid="price-chart"
     >
       <polyline points={line} fill="none" stroke="var(--leaf)" strokeWidth="2" />
@@ -184,7 +184,7 @@ function MarketList({
             <button
               className="linklike"
               onClick={() => onPick(m.itemPretty)}
-              aria-label={`Filter trade ledger by ${m.itemPretty}`}
+              aria-label={`Filter trades by ${m.itemPretty}`}
             >
               Filter
             </button>
@@ -344,7 +344,7 @@ export default function Trade() {
 
           <section>
             <h2 className="section-title">
-              Most traded <span className="section-sub">(by volume — click to drill in)</span>
+              Most traded <span className="section-sub">(most trades first, press Filter to see one up close)</span>
             </h2>
             <MarketList rows={mostTraded} onPick={setQuery} testid="most-traded" />
           </section>
@@ -375,7 +375,7 @@ export default function Trade() {
             <input
               className="filter-input"
               type="search"
-              placeholder="Drill into an item… (deep-linkable as ?q=)"
+              placeholder="Look up an item…"
               value={q}
               onChange={(e) => setQuery(e.target.value)}
               data-testid="trade-filter"
@@ -398,15 +398,15 @@ export default function Trade() {
               <p className="stat-value">
                 <ItemPrice price={drill.medianPrice} norm={drill.norm} currency={drill.currency} />
               </p>
-              <p className="stat-label">Median price</p>
+              <p className="stat-label">Middle price</p>
             </div>
             <div className="stat">
               <p className="stat-value">{formatCount(drill.totalVolume)}</p>
-              <p className="stat-label">Units traded</p>
+              <p className="stat-label">Units sold</p>
             </div>
             <div className="stat">
               <p className="stat-value">{formatCount(drill.totalTrades)}</p>
-              <p className="stat-label">Trades</p>
+              <p className="stat-label">Sales</p>
             </div>
           </div>
           <PriceChart points={drillPoints} />
@@ -426,7 +426,7 @@ export default function Trade() {
           )}
           <p className="section-sub">
             <button className="linklike" onClick={() => setQuery(drill.itemPretty)}>
-              Filter this item's trades in the ledger below →
+              Show only this item's trades below →
             </button>
           </p>
         </section>
@@ -443,14 +443,14 @@ export default function Trade() {
             </h2>
             {logistics.arbitrage.length > 0 && (
               <>
-                <h3 className="card-title">Arbitrage spreads</h3>
+                <h3 className="card-title">Buy here, sell there</h3>
                 <table tabIndex={0} className="ledger-table" data-testid="arbitrage-table">
                   <thead>
                     <tr>
                       <th>Item</th>
                       <th>Buy at</th>
                       <th>Sell at</th>
-                      <th className="num">Spread</th>
+                      <th className="num">Profit each</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -466,11 +466,11 @@ export default function Trade() {
                         </td>
                         <td>
                           <ItemPrice price={a.buyFrom.price} norm={a.buyFrom.norm ?? a.norm} currency={a.currency} layout="inline" />{" "}
-                          — <EcoRichText text={a.buyFrom.store} />
+                          at <EcoRichText text={a.buyFrom.store} />
                         </td>
                         <td>
                           <ItemPrice price={a.sellTo.price} norm={a.sellTo.norm ?? a.norm} currency={a.currency} layout="inline" />{" "}
-                          — <EcoRichText text={a.sellTo.store} />
+                          at <EcoRichText text={a.sellTo.store} />
                         </td>
                         <td className="num">
                           +{formatMoney(a.spread)} {a.currency} ({Math.round(a.spreadPct)}%)
@@ -484,7 +484,7 @@ export default function Trade() {
             {logistics.supplyGaps.length > 0 && (
               <>
                 <h3 className="card-title">
-                  Supply gaps <span className="section-sub">(what to stock — and who needs it)</span>
+                  Wanted but not for sale <span className="section-sub">(what to stock, and who needs it)</span>
                 </h3>
                 <ul className="gap-list" data-testid="gaps-list">
                   {logistics.supplyGaps.slice(0, GAP_ROWS).map((g) => (
@@ -504,7 +504,7 @@ export default function Trade() {
               Stores <span className="section-sub">({formatCount(stores.totalStores)})</span>
             </h2>
             {topStores.length === 0 ? (
-              <p className="empty-note">No stores recorded yet.</p>
+              <p className="empty-note">No stores found yet.</p>
             ) : (
               <ul className="rank-rows" data-testid="store-list">
                 {topStores.map((st) => {
@@ -516,7 +516,7 @@ export default function Trade() {
                           <EcoRichText text={st.label} />
                           <span className="section-sub"> · <EcoRichText text={st.owner} /></span>
                         </span>
-                        <span className="rank-count">{formatCount(st.totalVolume)}</span>
+                        <span className="rank-count">{formatCount(st.totalVolume)} in trades</span>
                         <span className="rank-bar" style={{ width: `${(st.totalVolume / max) * 100}%` }} />
                       </div>
                     </li>
@@ -535,7 +535,7 @@ export default function Trade() {
       {ledger && ledger.totalTrades > 0 && (
         <section id="trade-ledger" data-testid="ledger">
           <h2 className="section-title">
-            Detailed trades ledger {q ? `matching "${q}"` : ""}{" "}
+            All trades {q ? `matching "${q}"` : ""}{" "}
             <span className="section-sub">
               (newest {visibleTrades.length}
               {ledger.trades.length > visibleTrades.length
@@ -554,23 +554,23 @@ export default function Trade() {
                   <th>Seller</th>
                   <th>Buyer</th>
                   <th>Item</th>
-                  <th className="num">Qty</th>
-                  <th className="num">Amount</th>
+                  <th className="num">How many</th>
+                  <th className="num">Paid</th>
                 </tr>
               </thead>
               <tbody>
                 {visibleTrades.map((t, i) => (
                   <tr key={`${t.time}-${i}`} data-testid="trade-row">
                     <td>{Math.floor(t.day)}</td>
-                    <td>{t.seller ? <EcoRichText text={t.seller} /> : "—"}</td>
-                    <td>{t.buyer ? <EcoRichText text={t.buyer} /> : "—"}</td>
+                    <td>{t.seller ? <EcoRichText text={t.seller} /> : "unknown"}</td>
+                    <td>{t.buyer ? <EcoRichText text={t.buyer} /> : "unknown"}</td>
                     <td>
                       {t.item ? (
                         <ItemLink className="linklike" item={t.item}>
                           {prettifyEcoName(t.item)}
                         </ItemLink>
                       ) : (
-                        "—"
+                        "unknown"
                       )}
                     </td>
                     <td className="num">{formatCount(t.quantity)}</td>
@@ -578,8 +578,8 @@ export default function Trade() {
                       {t.currencyAmount
                         ? `${formatCount(t.currencyAmount)} ${t.currency}`.trim()
                         : t.tradeType === "BarterTrade"
-                          ? "barter"
-                          : "—"}
+                          ? "item swap"
+                          : "unknown"}
                     </td>
                   </tr>
                 ))}

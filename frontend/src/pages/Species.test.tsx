@@ -55,6 +55,6 @@ describe("Species page", () => {
       expect.objectContaining({ signal: expect.any(AbortSignal) }),
     )
     expect(screen.getByRole("heading", { name: "Wolf" })).toBeInTheDocument()
-    expect(screen.getByText(/40 current/)).toHaveTextContent("-60 this cycle")
+    expect(screen.getByText(/40 alive now/)).toHaveTextContent("-60 this cycle")
   })
 })

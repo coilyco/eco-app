@@ -10,7 +10,7 @@ import { contractFor, describeFreshness, isStale, type PlaneName } from "../lib/
 //
 //   live    "updated 40s ago"                     (and re-renders as it ages)
 //   manual  "loaded 3m ago · Refresh"
-//   static  "loaded 5m ago · this data does not change while the page is open"
+//   static  "loaded 5m ago (this data does not change while the page is open)"
 //
 // A `live` plane that has aged past its stale window says so plainly rather
 // than continuing to look current — that is the exact failure eco-app#184
@@ -78,13 +78,13 @@ export default function FreshnessNote({
       )}
       {observedAtISO && (
         <span className="freshness-observed" data-testid={`freshness-observed-${plane}`}>
-          {" · server observed "}
+          {" · server data from "}
           {observedAtISO}
         </span>
       )}
       {refreshError && (
         <span className="freshness-error" data-testid={`freshness-error-${plane}`}>
-          {" · refresh failed, showing the last good data"}
+          {" · could not refresh, still showing the last data that loaded"}
         </span>
       )}
     </p>

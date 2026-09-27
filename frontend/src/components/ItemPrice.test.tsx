@@ -21,14 +21,14 @@ describe("ItemPrice", () => {
     render(<ItemPrice price={1.2} norm={NORM} currency="Spectres" showCurrency data-testid="p" />)
     const el = screen.getByTestId("p")
     expect(el).toHaveTextContent("1.2 Spectres")
-    expect(el).toHaveTextContent("1.5x usual Modern 4, 134 trades")
-    expect(el.querySelector(".k-sr-only")).toHaveTextContent("1.5x the usual Modern 4 price, from 134 trades over 11 cycles.")
+    expect(el).toHaveTextContent("50% over the usual Modern 4 price (134 sales)")
+    expect(el.querySelector(".k-sr-only")).toHaveTextContent("This is 50% over the usual Modern 4 price, based on 134 sales over 11 cycles.")
     expect(el.querySelector("[data-norm-state]")).toHaveClass("item-price__norm--far")
   })
 
   it("keeps a sentence intact inline", () => {
     render(<ItemPrice price={0.8} norm={NORM} currency="Spectres" prefix="@ " layout="inline" data-testid="p" />)
-    expect(screen.getByTestId("p")).toHaveTextContent("@ 0.8 (1.0x usual Modern 4, 134 trades)")
+    expect(screen.getByTestId("p")).toHaveTextContent("@ 0.8, about the usual Modern 4 price (134 sales)")
   })
 
   it("shows nothing for a missing norm but still marks it for the check", () => {

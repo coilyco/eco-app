@@ -95,8 +95,8 @@ describe("Civics", () => {
     await waitFor(() => {
       expect(screen.getByTestId("civics-pill")).toHaveTextContent("12 civic events")
     })
-    expect(screen.getByTestId("civics-pill")).toHaveTextContent("75% turnout")
-    expect(screen.getByTestId("civics-stats")).toHaveTextContent("Turnout")
+    expect(screen.getByTestId("civics-pill")).toHaveTextContent("75% voter turnout")
+    expect(screen.getByTestId("civics-stats")).toHaveTextContent("Voter turnout")
   })
 
   it("lists recent elections with proposer names", async () => {

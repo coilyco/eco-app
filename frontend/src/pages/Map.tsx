@@ -50,7 +50,7 @@ function buildSlices(snap: EcoregionSnapshot): Slice[] {
     cursor += percent
   }
   for (const b of snap.biomes) push(b.name, b.display, b.color, b.percent)
-  push("__unclassified", "Unclassified / mixed terrain", UNCLASSIFIED_COLOR, snap.unclassifiedPercent)
+  push("__unclassified", "Mountains and in-between land", UNCLASSIFIED_COLOR, snap.unclassifiedPercent)
   return slices
 }
 
@@ -63,7 +63,7 @@ function Donut({ snap }: { snap: EcoregionSnapshot }) {
       width="200"
       height="200"
       role="img"
-      aria-label="Biome and water composition of the world"
+      aria-label="How much of the world each biome and water covers"
     >
       {slices.map((s) => (
         <circle
@@ -87,7 +87,7 @@ function Donut({ snap }: { snap: EcoregionSnapshot }) {
         {Math.round(snap.classifiedPercent)}%
       </text>
       <text x="0" y="12" textAnchor="middle" className="eco-donut-sub">
-        classified
+        identified
       </text>
     </svg>
   )
@@ -143,10 +143,16 @@ const RISK_STATE_LABEL: Record<SpeciesRiskState, string> = {
   recovering: "recovering",
   growing: "growing",
   stable: "stable",
-  naturally_sparse: "naturally sparse",
-  insufficient: "insufficient data",
-  stale: "stale",
-  missing: "missing",
+  naturally_sparse: "naturally rare",
+  insufficient: "not enough data",
+  stale: "out of date",
+  missing: "no data",
+}
+
+const FRESHNESS_LABEL: Record<SpeciesRisk["species"][number]["freshness"], string> = {
+  current: "up to date",
+  stale: "out of date",
+  missing: "no data",
 }
 
 function pct(value: number | null): string {
@@ -155,24 +161,24 @@ function pct(value: number | null): string {
 }
 
 function observationWindow(seconds: number | null, samples: number): string {
-  if (seconds === null) return `${samples} sample${samples === 1 ? "" : "s"}`
+  if (seconds === null) return `${samples} count${samples === 1 ? "" : "s"}`
   const hours = seconds / 3600
   const span = hours >= 24 ? `${(hours / 24).toFixed(1)} days` : `${hours.toFixed(1)} hours`
-  return `${span} · ${samples} samples`
+  return `${span} · ${samples} counts`
 }
 
 function SpeciesRiskSection({ risk }: { risk: SpeciesRisk }) {
   if (risk.sourceState === "unavailable") {
     return (
       <p className="empty-note" data-testid="species-risk-unavailable">
-        At-risk species need the admin population exporter. No health claim is made without it.
+        Species at risk can't be shown. It needs species counts from the server's admin data, which isn't connected, so this page doesn't guess.
       </p>
     )
   }
   if (risk.species.length === 0) {
     return (
       <p className="empty-note" data-testid="species-risk-insufficient">
-        Population evidence is unavailable or too thin to classify species risk.
+        There aren't enough species counts yet to tell which species are at risk.
       </p>
     )
   }
@@ -181,13 +187,14 @@ function SpeciesRiskSection({ risk }: { risk: SpeciesRisk }) {
     <div data-testid="species-risk">
       <p className="intro">
         <span>
-          {risk.threshold.description} Missing, stale, and thin series remain explicitly
-          insufficient. This is read-only coordination evidence, not an ecological control.
+          {risk.threshold.description} A species with no counts, old counts, or too few counts is
+          marked as not enough data. This table only shows counts. It can't change anything in the
+          game.
         </span>
       </p>
       <p className={`hero-pill${risk.atRiskCount > 0 ? " hero-pill-warn" : ""}`}>
         <span className="pulse-dot" aria-hidden="true" />
-        {formatCount(risk.atRiskCount)} at-risk species · {formatCount(risk.species.length)} tracked
+        {formatCount(risk.atRiskCount)} species at risk · {formatCount(risk.species.length)} watched
       </p>
       <div className="ledger-scroll">
         <table tabIndex={0} className="ledger-table species-risk-table">
@@ -195,11 +202,11 @@ function SpeciesRiskSection({ risk }: { risk: SpeciesRisk }) {
             <tr>
               <th>Species</th>
               <th>Status</th>
-              <th className="num">Current</th>
-              <th className="num">Cycle change</th>
-              <th className="num">Recent</th>
-              <th>Observation</th>
-              <th>Freshness</th>
+              <th className="num">Count now</th>
+              <th className="num">Change this cycle</th>
+              <th className="num">Recent change</th>
+              <th>Counted over</th>
+              <th>How recent</th>
             </tr>
           </thead>
           <tbody>
@@ -224,7 +231,7 @@ function SpeciesRiskSection({ risk }: { risk: SpeciesRisk }) {
                 </td>
                 <td className="num">{pct(row.recentChangePct)}</td>
                 <td>{observationWindow(row.observationSeconds, row.sampleCount)}</td>
-                <td>{row.freshness}</td>
+                <td>{FRESHNESS_LABEL[row.freshness] ?? row.freshness}</td>
               </tr>
             ))}
           </tbody>
@@ -265,28 +272,28 @@ function formatSourceCadence(intervalSeconds: number): string {
   }
   const hours = intervalSeconds / 3600
   if (Number.isInteger(hours) && hours >= 1) {
-    return `${hours} source hour${hours === 1 ? "" : "s"}`
+    return `${hours} game hour${hours === 1 ? "" : "s"}`
   }
-  return `${Math.round(intervalSeconds)} source seconds`
+  return `${Math.round(intervalSeconds)} game seconds`
 }
 
 function pollutionFreshness(snap: ClimateSnapshot): string {
   const observation = snap.pollution.observation
   if (snap.pollution.source === "worldlayers") {
-    return "Ground pollution uses the world-layer percentage fallback. A source-series observation and cadence are unavailable."
+    return "Ground pollution here is a backup number: the percentage from the world map's pollution layer. There is no reading time or update schedule for it."
   }
   if (observation.latest_game_day === null) {
-    return "No ground-pollution source observation is available, so source freshness is unknown."
+    return "There is no ground pollution reading yet, so there is no way to tell how recent it is."
   }
   const latest = formatEventDay(observation.latest_game_day)
   if (observation.freshness_state === "stale") {
     const lag = observation.lag_intervals ?? 1
-    return `Ground pollution data is stale. The source was last observed at ${latest}, ${lag} cadence${lag === 1 ? "" : "s"} behind current game time ${formatEventDay(observation.current_game_day)}.`
+    return `Ground pollution data is out of date. The last reading was at ${latest}, and ${lag} update${lag === 1 ? " was" : "s were"} missed since then. Game time is now ${formatEventDay(observation.current_game_day)}.`
   }
   if (observation.freshness_state === "current" && observation.interval_seconds !== null) {
-    return `Ground pollution was observed at ${latest} on a ${formatSourceCadence(observation.interval_seconds)} cadence. It is current for game time ${formatEventDay(observation.current_game_day)}.`
+    return `Ground pollution was read at ${latest}. It updates every ${formatSourceCadence(observation.interval_seconds)}, so it is up to date for game time ${formatEventDay(observation.current_game_day)}.`
   }
-  return `Ground pollution was observed at ${latest}. The source cadence is unavailable, so source freshness is unknown.`
+  return `Ground pollution was read at ${latest}. How often it updates is unknown, so there is no way to tell if it is up to date.`
 }
 
 interface ClimateStat {
@@ -300,24 +307,24 @@ function ClimateCoordination({ snap }: { snap: ClimateSnapshot }) {
   const net = snap.breakdown.net_per_day
   const risk =
     snap.status === "critical"
-      ? "Climate risk is elevated. Current measurements warrant a shared check before changing major production plans."
+      ? "Climate risk is high. Talk it over together before making big changes to what gets produced."
       : snap.status === "warming"
-        ? "Climate is trending warmer. Coordinate around the observed direction, not assumed machine-level attribution."
+        ? "The climate is getting warmer. Plan around that trend, and don't guess which machines are causing it."
         : snap.status === "stable"
-          ? "Current readings are stable. Continue watching the observed trend rather than treating this as a permanent all-clear."
-          : "Climate risk is unknown because the available readings are incomplete."
+          ? "Readings are steady for now. Keep watching them, since this is not an all-clear for good."
+          : "Climate risk is unknown because some readings are missing."
   const guidance =
     net == null
-      ? "No net CO₂ direction is available, so this surface cannot recommend a production change."
+      ? "It's not clear yet whether CO₂ is going up or down, so there is no advice on changing production."
       : net > 0
-        ? "The observed CO₂ balance is rising. Compare active production and trade needs before coordinating voluntary reductions."
-        : "The observed CO₂ balance is falling or steady. Keep watching the next snapshots before changing production plans."
+        ? "CO₂ is going up overall. Before agreeing together to cut back, weigh what is being produced now against what people need to trade."
+        : "CO₂ is going down or holding steady. Watch the next few readings before changing production plans."
 
   return (
     <section data-testid="climate-coordination">
-      <h2 className="section-title">Climate coordination</h2>
-      <p className="intro"><span><strong>Observed risk:</strong> {risk}</span></p>
-      <p className="intro"><span><strong>Guidance:</strong> {guidance} This is read-only decision context, not a control panel.</span></p>
+      <h2 className="section-title">Climate: what to do</h2>
+      <p className="intro"><span><strong>Risk right now:</strong> {risk}</span></p>
+      <p className="intro"><span><strong>What to do:</strong> {guidance} This page only shows information. It can't change anything in the game.</span></p>
       <p className="gap-who">
         <Link className="linklike" to="/crafting">Crafting activity</Link>{" · "}
         <Link className="linklike" to="/trade">Trade and supply</Link>{" · "}
@@ -333,10 +340,10 @@ function ClimateSection({ snap, pageLoadedAt }: { snap: ClimateSnapshot; pageLoa
       label: "CO₂",
       value: snap.co2.current != null ? `${Math.round(snap.co2.current)} ppm` : "—",
       detail:
-        snap.co2.change_pct != null ? `${signed(snap.co2.change_pct)}% since cycle start` : undefined,
+        snap.co2.change_pct != null ? `${signed(snap.co2.change_pct)}% since this cycle began` : undefined,
     },
     {
-      label: "Avg temperature",
+      label: "Average temperature",
       value: snap.temperature.current != null ? `${snap.temperature.current.toFixed(1)} °C` : "—",
       detail:
         snap.temperature.risen != null && snap.temperature.risen !== 0
@@ -357,7 +364,7 @@ function ClimateSection({ snap, pageLoadedAt }: { snap: ClimateSnapshot; pageLoa
         snap.pollution.current != null
           ? formatClimateValue(snap.pollution.current, snap.pollution.unit)
           : "—",
-      detail: snap.pollution.source !== "none" ? `source: ${snap.pollution.source}` : undefined,
+      detail: snap.pollution.source !== "none" ? `data from: ${snap.pollution.source}` : undefined,
     },
   ]
 
@@ -368,24 +375,24 @@ function ClimateSection({ snap, pageLoadedAt }: { snap: ClimateSnapshot; pageLoa
           {
             label: "From pollution",
             value: `${signedPpm(b.pollution.lifetime)} ppm`,
-            detail: `${signed(b.pollution.per_day)} ppm/day`,
+            detail: `${signed(b.pollution.per_day)} ppm a day`,
             tone: "add",
           },
           {
             label: "From animals",
             value: `${signedPpm(b.animals.lifetime)} ppm`,
-            detail: `${signed(b.animals.per_day)} ppm/day`,
+            detail: `${signed(b.animals.per_day)} ppm a day`,
             tone: "add",
           },
           {
             label: "From plants",
             value: `${signedPpm(b.plants.lifetime)} ppm`,
-            detail: `${signed(b.plants.per_day)} ppm/day`,
+            detail: `${signed(b.plants.per_day)} ppm a day`,
             tone: "remove",
           },
           {
-            label: "Net change",
-            value: `${signed(b.net_per_day)} ppm/day`,
+            label: "Overall change",
+            value: `${signed(b.net_per_day)} ppm a day`,
             detail: b.net_per_day < 0 ? "CO₂ falling" : b.net_per_day > 0 ? "CO₂ rising" : "steady",
             tone: b.net_per_day <= 0 ? "remove" : "add",
           },
@@ -402,7 +409,7 @@ function ClimateSection({ snap, pageLoadedAt }: { snap: ClimateSnapshot; pageLoa
         {snap.narrative}
       </p>
       <p className="gap-who" data-testid="climate-freshness" title={snap.fetched_at_iso}>
-        Snapshot fetched {formatFetchedAt(snap.fetched_at_iso)}. The backend may reuse it for up to 60 seconds.
+        Climate data fetched {formatFetchedAt(snap.fetched_at_iso)}. The server may reuse it for up to 60 seconds.
         This page loaded at {pageLoadedAt.toLocaleTimeString("en-US", { timeZone: "UTC", hour: "2-digit", minute: "2-digit" })} UTC.
       </p>
       <p
@@ -428,8 +435,9 @@ function ClimateSection({ snap, pageLoadedAt }: { snap: ClimateSnapshot; pageLoa
         <>
           <p className="intro">
             <span>
-              Where the atmosphere's CO₂ comes from and goes — lifetime totals with each source's
-              current daily push. Pollution and animals add CO₂, plants remove it.
+              Where the air's CO₂ comes from and where it goes. The big number is the total so far,
+              the small one is how much it adds or takes away each day. Pollution and animals add
+              CO₂, plants take it away. ppm means parts per million.
             </span>
           </p>
           <div className="stats">
@@ -470,7 +478,7 @@ function WorldMap({
   return (
     <div className="map-figure">
       <div className="map-frame" data-testid="map-frame" style={{ aspectRatio: "1 / 1" }}>
-        <img className="map-base" src={map.gifDataUri} alt="Eco world preview" draggable={false} />
+        <img className="map-base" src={map.gifDataUri} alt="Map of the Eco world" draggable={false} />
         {map.pollutionDataUri && (
           <img className="map-pollution" src={map.pollutionDataUri} alt="" aria-hidden="true" />
         )}
@@ -489,7 +497,7 @@ function WorldMap({
       </div>
       <p className="map-meta" data-testid="map-meta">
         {map.deedCount} deed{map.deedCount === 1 ? "" : "s"} // {map.ownerCount} owner
-        {map.ownerCount === 1 ? "" : "s"} // {map.worldDim.x} × {map.worldDim.z}
+        {map.ownerCount === 1 ? "" : "s"} // world size {map.worldDim.x} × {map.worldDim.z}
       </p>
     </div>
   )
@@ -529,13 +537,13 @@ export default function MapPage() {
           <p className="hero-pill" data-testid="map-pill">
             <span className="pulse-dot" aria-hidden="true" />
             {topMatch
-              ? `Closest to ${topMatch.name} · ${Math.round(snap.classifiedPercent)}% classified`
-              : `${Math.round(snap.classifiedPercent)}% of the map is classified`}
+              ? `Most like ${topMatch.name} · ${Math.round(snap.classifiedPercent)}% of the map identified`
+              : `${Math.round(snap.classifiedPercent)}% of the map is identified`}
           </p>
         )}
         {!snap && !loading && (
           <p className="hero-pill hero-pill-muted" data-testid="map-error">
-            world snapshot unavailable right now
+            world info unavailable right now
           </p>
         )}
             <FreshnessNote
@@ -563,7 +571,7 @@ export default function MapPage() {
             <section>
               <h2 className="section-title">World map</h2>
               <p className="intro">
-                <span>Hover a biome below to light up where it sits.</span>
+                <span>Point at a biome name below, or tab to it, to light it up on the map.</span>
               </p>
               <WorldMap map={map} hoveredBiome={hoveredBiome} />
             </section>
@@ -571,19 +579,18 @@ export default function MapPage() {
             <section>
               <h2 className="section-title">World map</h2>
               <p className="empty-note" data-testid="map-unavailable">
-                The world preview is unavailable right now.
+                The world map picture isn't available right now.
               </p>
             </section>
           )}
 
           {snap && (
             <section>
-              <h2 className="section-title">Biome &amp; water composition</h2>
+              <h2 className="section-title">Biomes and water</h2>
               <p className="intro">
                 <span>
-                  Share of the whole map covered by each biome and by water — only genuine mountain
-                  and transitional terrain ({Math.round(snap.unclassifiedPercent)}%) is left
-                  unclassified.
+                  How much of the map each biome and water covers. Only mountains and in-between
+                  land ({Math.round(snap.unclassifiedPercent)}%) are left unidentified.
                 </span>
               </p>
               <div className="eco-donut-row">
@@ -612,7 +619,7 @@ export default function MapPage() {
                     })}
                   <li>
                     <span className="eco-swatch" style={{ background: UNCLASSIFIED_COLOR }} />
-                    <span className="eco-legend-label">Unclassified / mixed terrain</span>
+                    <span className="eco-legend-label">Mountains and in-between land</span>
                     <span className="eco-legend-pct">{Math.round(snap.unclassifiedPercent)}%</span>
                   </li>
                 </ul>
@@ -634,16 +641,16 @@ export default function MapPage() {
             <section>
               <h2 className="section-title">Biodiversity status</h2>
               <SpeciesRiskSection risk={snap.speciesRisk} />
-              <h3 className="subsection-title">Cycle drift</h3>
+              <h3 className="subsection-title">Change this cycle</h3>
               {!snap.adminAvailable ? (
                 <p className="empty-note" data-testid="eco-drift-admin">
-                  Population drift needs the server's admin exporter — configure the API key to see
-                  which species are booming and busting.
+                  Species changes need the server's admin data. Once a site admin sets the API key,
+                  this shows which species are booming and which are crashing.
                 </p>
               ) : snap.drift.speciesWithDrift === 0 ? (
                 <p className="empty-note" data-testid="eco-drift-minimal">
-                  Drift minimal so far — tracked {snap.drift.speciesSeen} species with no net change
-                  yet this cycle.
+                  Little change so far. {snap.drift.speciesSeen} species watched, and none is up or
+                  down overall yet this cycle.
                 </p>
               ) : (
                 <div className="eco-drift" data-testid="eco-drift">

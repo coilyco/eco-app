@@ -26,9 +26,9 @@ const PICK_ROWS = 200
 const TARGET_MARKUP = 1.25
 
 const DEMAND_REASON: Record<GapReason, string> = {
-  no_supply: "no supply",
-  thin_supply: "thin supply",
-  overpriced: "over-priced supply",
+  no_supply: "out of stock",
+  thin_supply: "low stock",
+  overpriced: "overpriced",
 }
 
 type RecipeCostLine = {
@@ -87,7 +87,7 @@ const TREND: Record<MarketTrend, TrendMeta> = {
   rising: { glyph: "▲", label: "rising", color: "var(--leaf)" },
   falling: { glyph: "▼", label: "falling", color: "var(--meteor)" },
   flat: { glyph: "▬", label: "flat", color: "var(--ink-faint)" },
-  insufficient: { glyph: "·", label: "thin", color: "var(--ink-faint)" },
+  insufficient: { glyph: "·", label: "too few sales", color: "var(--ink-faint)" },
 }
 
 function signedPrice(n: number, currency: string): string {
@@ -113,7 +113,7 @@ function SourceTag({ source }: { source: string }) {
   const live = source === "live"
   return (
     <span className="source-tag" style={{ color: live ? "var(--leaf)" : "var(--ink-faint)" }}>
-      {live ? "● live" : "○ history"}
+      {live ? "● listed now" : "○ from past sales"}
     </span>
   )
 }
@@ -149,9 +149,9 @@ function bandFor(market: ItemMarket) {
 }
 
 function bandFit(price: number, low: number, high: number): string {
-  if (price < low) return "below band"
-  if (price > high) return "above band"
-  return "inside band"
+  if (price < low) return "below the range"
+  if (price > high) return "above the range"
+  return "inside the range"
 }
 
 function MarketSummary({ row }: { row: ItemMarket }) {
@@ -162,10 +162,10 @@ function MarketSummary({ row }: { row: ItemMarket }) {
         norm={row.norm}
         currency={row.currency}
         showCurrency
-        suffix=" median"
+        prefix="Middle price "
         layout="inline"
       />
-      , {formatCount(row.totalTrades)} trades, {formatCount(row.totalVolume)} volume
+      , {formatCount(row.totalTrades)} trades, {formatCount(row.totalVolume)} units traded
     </>
   )
 }
@@ -309,7 +309,7 @@ export default function UsesPrice() {
         const prev = byItem.get(row.item)
         const offers = row.offers.length
         const score = (prev?.score ?? 0) + offers * 10
-        const detail = prev?.detail ?? `${formatCount(offers)} offers on shelves`
+        const detail = prev?.detail ?? `${formatCount(offers)} shop listings`
         byItem.set(row.item, {
           item: row.item,
           pretty: row.itemPretty,
@@ -376,7 +376,7 @@ export default function UsesPrice() {
   const priceVsCraft =
     suggestedAsk !== null && craftedPrice !== null ? suggestedAsk - craftedPrice : null
   const bandFitLabel =
-    suggestedAsk !== null && band ? bandFit(suggestedAsk, band.low, band.high) : "band unavailable"
+    suggestedAsk !== null && band ? bandFit(suggestedAsk, band.low, band.high) : "no range yet"
   const bandWidth = band ? band.iqr : null
   const currentCount = marketRow ? marketRow.totalTrades : (cheapest?.offers.length ?? 0) + (resale?.offers.length ?? 0)
 
@@ -410,7 +410,7 @@ export default function UsesPrice() {
           </p>
         )}
         <p className="hero-tagline">
-          Pick an item, compare the shelf, and let the craft cost tell you where the margin lives.
+          Pick an item, see what shops charge, and use the craft cost to find your profit.
         </p>
         <FreshnessNote
           plane="shopCheck"
@@ -423,27 +423,27 @@ export default function UsesPrice() {
 
       {item && opportunityContext && (
         <section className="opportunity-context" data-testid="opportunity-context">
-          <h2 className="section-title">Production opportunity context</h2>
+          <h2 className="section-title">Why the jobs page sent you here</h2>
           <p className="hero-pill">
             <span className="pulse-dot" aria-hidden="true" />
-            {formatCount(opportunityContext.demandQty)} observed demand ·{" "}
+            {formatCount(opportunityContext.demandQty)} wanted by buyers ·{" "}
             {DEMAND_REASON[opportunityContext.demandReason]} ·{" "}
             {opportunityContext.margin !== null
-              ? `estimated margin ${formatMoney(opportunityContext.margin)} per unit`
-              : "estimated margin unavailable"}
+              ? `estimated profit ${formatMoney(opportunityContext.margin)} each`
+              : "estimated profit unknown"}
           </p>
           <p className="empty-note" data-testid="opportunity-confidence">
             {opportunityContext.confidence === "complete"
-              ? "Complete recipe-cost inputs supported the originating estimate."
-              : "Low confidence: recipe-cost inputs were incomplete, so demand is observed but margin is unresolved."}{" "}
-            This is a discovery signal for coordination, not a production command.
+              ? "Every ingredient had a price, so the profit estimate is complete."
+              : "Rough guess: some ingredients have no price, so buyers want it but the profit is unknown."}{" "}
+            This is a tip to talk over with other players, not an order to craft it.
           </p>
         </section>
       )}
 
       {!loaded && (
         <p className="empty-note" data-testid="price-loading">
-          Loading market and shelf data…
+          Loading prices and shop listings…
         </p>
       )}
 
@@ -468,7 +468,8 @@ export default function UsesPrice() {
                         norm={o.market.norm}
                         currency={o.market.currency}
                         showCurrency
-                        suffix={` median, ${formatCount(o.market.totalTrades)} trades`}
+                        prefix="middle price "
+                        suffix={`, ${formatCount(o.market.totalTrades)} trades`}
                       />
                     ) : (
                       o.detail
@@ -491,8 +492,7 @@ export default function UsesPrice() {
       {loaded && options.length === 0 && !item && (
         <section>
           <p className="empty-note" data-testid="price-no-options">
-            No priced items recorded yet. Once the market plane lands, pick one here or deep-link
-            the page with <code>?item=</code>.
+            No items have prices yet. Once sales data loads, you can pick one here.
           </p>
         </section>
       )}
@@ -502,14 +502,14 @@ export default function UsesPrice() {
           {!selectedCurrency ? (
             <section>
               <p className="empty-note" data-testid="price-history-no-currency">
-                No currency market is known for this item yet, so its price distribution cannot be
-                separated honestly.
+                We don't know which currency this item sells for yet, so its price history can't be
+                shown.
               </p>
             </section>
           ) : !priceHistoryReady ? (
             <section>
               <p className="empty-note" data-testid="price-history-loading">
-                Loading current-cycle price distribution and specialty markers…
+                Loading this cycle's prices and specialty unlocks…
               </p>
             </section>
           ) : currentPriceHistory ? (
@@ -517,8 +517,8 @@ export default function UsesPrice() {
           ) : (
             <section>
               <p className="empty-note" data-testid="price-history-unavailable">
-                Current-cycle price interpretation is unavailable right now. The market and cost
-                evidence below remain independent.
+                This cycle's price history is not available right now. The prices and costs below
+                still work.
               </p>
             </section>
           )}
@@ -526,25 +526,25 @@ export default function UsesPrice() {
           <section className="atlas-columns">
             <div data-testid="price-market-band">
               <h2 className="section-title">
-                Fair-price band{" "}
-                <span className="section-sub">(market median ± IQR from daily buckets)</span>
+                Typical price range{" "}
+                <span className="section-sub">(the middle price, give or take its usual daily swing)</span>
               </h2>
               {!marketRow ? (
                 <p className="empty-note" data-testid="price-market-empty">
-                  Market history is unavailable for this item right now.
+                  Past sales for this item are not available right now.
                 </p>
               ) : (
                 <>
                   <p className="hero-pill" data-testid="price-band-pill">
                     <span className="pulse-dot" aria-hidden="true" />
                     <MarketSummary row={marketRow} />
-                    {bandWidth !== null ? `, IQR ${formatMoney(bandWidth)} ${moneyUnit}` : ""}
+                    {bandWidth !== null ? `, give or take ${formatMoney(bandWidth)} ${moneyUnit}` : ""}
                   </p>
                   <table tabIndex={0} className="ledger-table" data-testid="price-band-table">
                     <thead>
                       <tr>
                         <th>Day</th>
-                        <th className="num">Median</th>
+                        <th className="num">Middle price</th>
                         <th className="num">Low</th>
                         <th className="num">High</th>
                         <th className="num">Units</th>
@@ -575,12 +575,12 @@ export default function UsesPrice() {
             </div>
             <div>
               <h2 className="section-title">
-                Current market comparison{" "}
-                <span className="section-sub">(cheapest sell, best buy, and direction)</span>
+                What shops charge now{" "}
+                <span className="section-sub">(cheapest to buy from, best to sell to, and price trend)</span>
               </h2>
               {!cheapest && !resale ? (
                 <p className="empty-note" data-testid="price-comparison-empty">
-                  Shelf comparison is unavailable right now.
+                  Shop prices are not available right now.
                 </p>
               ) : (
                 <>
@@ -592,7 +592,7 @@ export default function UsesPrice() {
                   <table tabIndex={0} className="ledger-table" data-testid="price-comparison-table">
                     <thead>
                       <tr>
-                        <th>Side</th>
+                        <th>Shop is</th>
                         <th>Store</th>
                         <th>Owner</th>
                         <th className="num">Price</th>
@@ -603,7 +603,7 @@ export default function UsesPrice() {
                     <tbody>
                       {offerRows(cheapest, "sell").slice(0, 5).map((o, i) => (
                         <tr key={`sell-${o.storeKey}-${i}`} data-testid="price-sell-row">
-                          <td>Sell</td>
+                          <td>Selling</td>
                           <td><EcoRichText text={o.store} /></td>
                           <td>{o.owner ? <EcoRichText text={o.owner} /> : "—"}</td>
                           <td className="num">
@@ -617,7 +617,7 @@ export default function UsesPrice() {
                       ))}
                       {offerRows(resale, "buy").slice(0, 5).map((o, i) => (
                         <tr key={`buy-${o.storeKey}-${i}`} data-testid="price-buy-row">
-                          <td>Buy</td>
+                          <td>Buying</td>
                           <td><EcoRichText text={o.store} /></td>
                           <td>{o.owner ? <EcoRichText text={o.owner} /> : "—"}</td>
                           <td className="num">
@@ -634,7 +634,7 @@ export default function UsesPrice() {
                   <p className="section-sub" data-testid="price-comparison-summary">
                     {marketRow
                       ? <><MarketSummary row={marketRow} />.</>
-                      : `${formatCount(currentCount)} open shelf offers on the item.`}
+                      : `${formatCount(currentCount)} shop listings for this item.`}
                   </p>
                 </>
               )}
@@ -645,20 +645,19 @@ export default function UsesPrice() {
             <div>
               <h2 className="section-title">
                 Cost breakdown{" "}
-                <span className="section-sub">(recursive ingredients + labor + calories)</span>
+                <span className="section-sub">(every ingredient down the chain, plus labor)</span>
               </h2>
               {!detailReady ? (
                 <p className="empty-note" data-testid="price-cost-loading">
-                  Loading cost model…
+                  Loading craft costs…
                 </p>
               ) : !currentRecipes ? (
                 <p className="empty-note" data-testid="price-cost-pending">
-                  Cost model pending — this page will show the craft roll-up once the recipe plane
-                  lands.
+                  Craft costs are not available yet. They will show here once recipe data loads.
                 </p>
               ) : !bestRecipe ? (
                 <p className="empty-note" data-testid="price-no-recipe">
-                  No craft recipe recorded for this item yet.
+                  We have no recipe for this item yet.
                 </p>
               ) : (
                 <>
@@ -670,17 +669,17 @@ export default function UsesPrice() {
                     ·{" "}
                     {bestRecipe.cost?.perUnitCost !== null && bestRecipe.cost?.perUnitCost !== undefined
                       ? <ItemPrice price={bestRecipe.cost.perUnitCost} norm={bestRecipe.cost.norm} currency={moneyUnit} showCurrency suffix="/unit" />
-                      : "unpriced"}
-                    {bestRecipe.cost?.complete ? "" : " · partial"}
+                      : "no price"}
+                    {bestRecipe.cost?.complete ? "" : " · some prices missing"}
                   </p>
                   <table tabIndex={0} className="ledger-table" data-testid="price-cost-table">
                     <thead>
                       <tr>
                         <th>Ingredient</th>
                         <th className="num">Qty</th>
-                        <th className="num">Unit</th>
-                        <th className="num">Subtotal</th>
-                        <th>Source</th>
+                        <th className="num">Price each</th>
+                        <th className="num">Total</th>
+                        <th>Price from</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -690,7 +689,7 @@ export default function UsesPrice() {
                             <ItemLink className="linklike" item={line.isTag ? null : line.item}>
                               {line.displayName}
                             </ItemLink>
-                            {line.isTag ? <span className="section-sub"> (tag)</span> : null}
+                            {line.isTag ? <span className="section-sub"> (any of this kind)</span> : null}
                           </td>
                           <td className="num">{formatCount(line.quantity)}</td>
                           <td className="num">
@@ -734,7 +733,7 @@ export default function UsesPrice() {
                     {bestRecipe.cost && !bestRecipe.cost.complete && (
                       <li>
                         <div className="rank-row">
-                          <span className="rank-name">Unpriced inputs</span>
+                          <span className="rank-name">Ingredients with no price</span>
                           <span className="rank-count">{bestRecipe.cost.unpricedInputs.join(", ")}</span>
                         </div>
                       </li>
@@ -745,19 +744,19 @@ export default function UsesPrice() {
             </div>
             <div>
               <h2 className="section-title">
-                Suggested price + margin{" "}
-                <span className="section-sub">(phase 1: market median, phase 2: cost markup)</span>
+                Suggested price and profit{" "}
+                <span className="section-sub">(craft cost plus a markup when we know it, otherwise the middle price)</span>
               </h2>
               {suggestedAsk === null || !marketRow ? (
                 <p className="empty-note" data-testid="price-suggestion-empty">
-                  No market median yet, so there is nothing honest to suggest.
+                  No middle price yet, so there is no fair price to suggest.
                 </p>
               ) : (
                 <>
                   <ul className="rank-rows" data-testid="price-suggestion-list">
                     <li>
                       <div className="rank-row">
-                        <span className="rank-name">Target ask</span>
+                        <span className="rank-name">Price to ask</span>
                         <span className="rank-count">
                           <ItemPrice
                             price={suggestedAsk}
@@ -770,17 +769,17 @@ export default function UsesPrice() {
                     </li>
                     <li>
                       <div className="rank-row">
-                        <span className="rank-name">Vs craft cost</span>
+                        <span className="rank-name">Compared to craft cost</span>
                         <span className="rank-count">
                           {priceVsCraft !== null
                             ? signedPrice(priceVsCraft, moneyUnit)
-                            : <ItemPrice price={marketRow.medianPrice} norm={marketRow.norm} currency={moneyUnit} showCurrency prefix="median " layout="inline" />}
+                            : <ItemPrice price={marketRow.medianPrice} norm={marketRow.norm} currency={moneyUnit} showCurrency prefix="middle price " layout="inline" />}
                         </span>
                       </div>
                     </li>
                     <li>
                       <div className="rank-row">
-                        <span className="rank-name">Vs market median</span>
+                        <span className="rank-name">Compared to the middle price</span>
                         <span className="rank-count">
                           {priceVsMedian !== null ? signedPrice(priceVsMedian, moneyUnit) : "—"}
                         </span>
@@ -788,18 +787,18 @@ export default function UsesPrice() {
                     </li>
                     <li>
                       <div className="rank-row">
-                        <span className="rank-name">Band fit</span>
+                        <span className="rank-name">In the typical range?</span>
                         <span className="rank-count">{bandFitLabel}</span>
                       </div>
                     </li>
                   </ul>
                   <p className="section-sub" data-testid="price-suggestion-note">
                     {craftedPrice !== null
-                      ? `${TARGET_MARKUP.toFixed(2)}x markup over craft cost.`
-                      : "Phase 1 falls back to the market median and liquidity."}
+                      ? `Craft cost plus ${Math.round((TARGET_MARKUP - 1) * 100)}%.`
+                      : "No craft cost yet, so this is the middle price."}
                     {band ? (
                       <>
-                        {" "}The current band spans{" "}
+                        {" "}The typical range is{" "}
                         <ItemPrice price={band.low} norm={marketRow?.norm} currency={moneyUnit} layout="inline" /> to{" "}
                         <ItemPrice price={band.high} norm={marketRow?.norm} currency={moneyUnit} showCurrency layout="inline" />.
                       </>

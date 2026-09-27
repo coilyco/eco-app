@@ -27,7 +27,7 @@ function SourceTag({ source }: { source: string }) {
       style={{ color: live ? "var(--leaf)" : "var(--ink-faint)" }}
       data-testid="source-tag"
     >
-      {live ? "● live" : "○ history"}
+      {live ? "● in stores now" : "○ from past sales"}
     </span>
   )
 }
@@ -166,7 +166,7 @@ export default function UsesBuySell() {
         </h1>
         {loaded && !logistics && (
           <p className="hero-pill hero-pill-muted" data-testid="buy-sell-error">
-            shelf data unavailable right now — check back once the store shelves have exported
+            store prices aren't available right now (check back once the game server sends store shelves)
           </p>
         )}
         <FreshnessNote
@@ -180,7 +180,7 @@ export default function UsesBuySell() {
 
       {!loaded && (
         <p className="empty-note" data-testid="buy-sell-loading">
-          Loading shelves…
+          Loading store prices…
         </p>
       )}
 
@@ -205,7 +205,7 @@ export default function UsesBuySell() {
             <ul className="rank-rows" data-testid="buy-sell-picker">
               {visibleOptions.length === 0 ? (
                 <li>
-                  <p className="empty-note">No priced items on the shelves yet.</p>
+                  <p className="empty-note">No items with store prices yet.</p>
                 </li>
               ) : (
                 visibleOptions.map((o) => (
@@ -220,9 +220,9 @@ export default function UsesBuySell() {
                       <button
                         className="linklike"
                         onClick={() => pickItem(o.item)}
-                        aria-label={`Compare shelves for ${o.pretty}`}
+                        aria-label={`Compare store prices for ${o.pretty}`}
                       >
-                        Compare
+                        Compare stores
                       </button>
                     </div>
                   </li>
@@ -238,11 +238,11 @@ export default function UsesBuySell() {
           {!sellRow && !buyRow && (
             <section>
               <p className="empty-note" data-testid="buy-sell-none">
-                No live or history offers for{" "}
+                No store prices for{" "}
                 <ItemLink className="linklike" item={item}>
                   {pretty}
-                </ItemLink>{" "}
-                on either side right now.
+                </ItemLink>
+                , either in stores now or from past sales.
               </p>
             </section>
           )}

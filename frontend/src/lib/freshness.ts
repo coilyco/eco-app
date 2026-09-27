@@ -205,15 +205,15 @@ export function describeFreshness(
   const ageMs = Math.max(0, now - loadedAt)
   const age = formatAge(ageMs)
   if (contract.mode === "static") {
-    return `loaded ${age} ago · this data does not change while the page is open`
+    return `loaded ${age} ago (this data does not change while the page is open)`
   }
   if (contract.staleAfterMs === undefined) {
-    return `loaded ${age} ago · update cadence unknown, reload to be certain`
+    return `loaded ${age} ago (not sure how often this updates, reload to be sure)`
   }
   if (ageMs > contract.staleAfterMs) {
     return contract.mode === "live"
-      ? `last updated ${age} ago · not refreshing, reload the page`
-      : `loaded ${age} ago · may be out of date, refresh to update`
+      ? `last updated ${age} ago (it stopped updating, reload the page)`
+      : `loaded ${age} ago (may be out of date, refresh to update)`
   }
   return contract.mode === "live" ? `updated ${age} ago` : `loaded ${age} ago`
 }

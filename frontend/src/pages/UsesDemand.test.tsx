@@ -85,7 +85,7 @@ describe("UsesDemand", () => {
     expect(rows[0]).toHaveTextContent("Wheat")
     expect(rows[1]).toHaveTextContent("Iron Ingot")
     // The reason tag carries a label, not colour alone.
-    expect(screen.getAllByTestId("demand-tag")[1]).toHaveTextContent("no supply")
+    expect(screen.getAllByTestId("demand-tag")[1]).toHaveTextContent("out of stock")
     // Who-needs-it names the buyers.
     expect(screen.getAllByTestId("demand-who")[1]).toHaveTextContent("ekans")
   })
