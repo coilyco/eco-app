@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react"
 import { Link } from "react-router-dom"
-import EcoRichText from "../components/EcoRichText"
 import FreshnessNote from "../components/FreshnessNote"
 import Layout from "../components/Layout"
 import Loading from "../components/Loading"
@@ -18,7 +17,6 @@ import {
   formatEventDay,
   formatFetchedAt,
   prettifyEcoName,
-  stripEcoMarkup,
 } from "../lib/format"
 import { type MapPayload, fetchMap } from "../lib/mapApi"
 
@@ -458,8 +456,9 @@ function ClimateSection({ snap, pageLoadedAt }: { snap: ClimateSnapshot; pageLoa
 }
 
 // ---------------------------------------------------------------------------
-// The map itself — base preview + per-biome highlight rasters + deed polygons
-// in one renderSize-space SVG frame (#82).
+// The map itself: base preview plus per-biome highlight rasters (#82). The
+// owner-coloured deed polygons were removed at Kai's request, since the overlay
+// never lined up (eco-app#8349). The payload still carries them for MCP.
 // ---------------------------------------------------------------------------
 function WorldMap({
   map,
@@ -468,8 +467,6 @@ function WorldMap({
   map: MapPayload
   hoveredBiome: string | null
 }) {
-  const size = map.renderSize
-
   return (
     <div className="map-figure">
       <div className="map-frame" data-testid="map-frame" style={{ aspectRatio: "1 / 1" }}>
@@ -489,53 +486,11 @@ function WorldMap({
             style={{ opacity: hoveredBiome === b.name ? 0.92 : 0 }}
           />
         ))}
-        <svg
-          className="map-overlay"
-          viewBox={`0 0 ${size} ${size}`}
-          preserveAspectRatio="xMidYMid meet"
-          xmlns="http://www.w3.org/2000/svg"
-          data-testid="map-overlay"
-        >
-          {map.polygons.map((p, i) => (
-            <polygon
-              key={`${p.deed}-${i}`}
-              points={p.points}
-              fill={map.ownerStyles[p.owner]?.fill}
-              stroke={map.ownerStyles[p.owner]?.stroke}
-              strokeWidth={1.5}
-            >
-              <title>
-                {stripEcoMarkup(p.deed)} - {stripEcoMarkup(p.owner)}
-              </title>
-            </polygon>
-          ))}
-        </svg>
       </div>
       <p className="map-meta" data-testid="map-meta">
-        {map.deedCount} deed{map.deedCount === 1 ? "" : "s"} · {map.ownerCount} owner
-        {map.ownerCount === 1 ? "" : "s"} · {map.worldDim.x} × {map.worldDim.z}
+        {map.deedCount} deed{map.deedCount === 1 ? "" : "s"} // {map.ownerCount} owner
+        {map.ownerCount === 1 ? "" : "s"} // {map.worldDim.x} × {map.worldDim.z}
       </p>
-      {map.owners.length > 0 && (
-        <ul className="map-legend" data-testid="map-owners">
-          {map.owners.slice(0, 16).map((o) => (
-            <li key={o}>
-              <span
-                className="eco-swatch"
-                style={{
-                  background: map.ownerStyles[o]?.fill,
-                  borderColor: map.ownerStyles[o]?.stroke,
-                }}
-              />
-              <span className="map-owner-name">
-                <EcoRichText text={o} />
-              </span>
-            </li>
-          ))}
-          {map.owners.length > 16 && (
-            <li className="map-legend-more">+{map.owners.length - 16} more</li>
-          )}
-        </ul>
-      )}
     </div>
   )
 }
@@ -608,10 +563,7 @@ export default function MapPage() {
             <section>
               <h2 className="section-title">World map</h2>
               <p className="intro">
-                <span>
-                  Deeds are drawn as owner-coloured polygons. Hover a biome below to light up where
-                  it sits.
-                </span>
+                <span>Hover a biome below to light up where it sits.</span>
               </p>
               <WorldMap map={map} hoveredBiome={hoveredBiome} />
             </section>

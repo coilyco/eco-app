@@ -248,13 +248,15 @@ describe("Map page", () => {
     expect(screen.getByTestId("loading")).toBeInTheDocument()
   })
 
-  it("renders deed polygons without activity circles", async () => {
+  it("draws the map without the deed overlay or its owner legend", async () => {
     stubFetch()
     renderPage()
     await waitFor(() => expect(screen.getByTestId("map-frame")).toBeInTheDocument())
-    expect(screen.getByTestId("map-overlay").querySelector("polygon")).toBeTruthy()
-    expect(screen.getByTestId("map-overlay").querySelector("circle")).toBeNull()
-    expect(screen.getByTestId("map-owners")).toHaveTextContent("alice")
+    // Removed at Kai's request (eco-app#8349): the overlay never lined up.
+    expect(screen.queryByTestId("map-overlay")).not.toBeInTheDocument()
+    expect(screen.getByTestId("map-frame").querySelector("polygon")).toBeNull()
+    expect(screen.queryByTestId("map-owners")).not.toBeInTheDocument()
+    expect(screen.getByTestId("map-meta")).toHaveTextContent("1 deed")
   })
 
   it("reclassifies water so unclassified is far below the old 61%", async () => {

@@ -1655,8 +1655,7 @@ a.k-card:visited {
 
 .map-base,
 .map-pollution,
-.map-biome,
-.map-overlay {
+.map-biome {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -1683,19 +1682,6 @@ a.k-card:visited {
   mix-blend-mode: screen;
 }
 
-.map-overlay {
-  pointer-events: auto;
-}
-
-.map-overlay polygon {
-  transition: fill-opacity 120ms ease;
-}
-
-.map-overlay polygon:hover {
-  fill-opacity: 0.85;
-  stroke-width: 2;
-}
-
 .map-hotspot {
   fill: color-mix(in srgb, var(--meteor) 22%, transparent);
   stroke: var(--meteor);
@@ -1709,33 +1695,6 @@ a.k-card:visited {
   font-size: var(--k-t-body);
   color: var(--ink-faint);
   font-variant-numeric: tabular-nums;
-}
-
-.map-legend {
-  margin: 0 auto;
-  padding: 0;
-  max-width: 720px;
-  list-style: none;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem 1rem;
-  justify-content: center;
-  font-size: var(--k-t-body);
-}
-
-.map-legend li {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-
-.map-owner-name {
-  color: var(--ink-soft);
-}
-
-.map-legend-more {
-  color: var(--ink-faint);
-  font-style: italic;
 }
 
 /* Biome-legend rows that can highlight the map get a hover affordance. */
