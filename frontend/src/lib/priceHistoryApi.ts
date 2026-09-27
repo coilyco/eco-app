@@ -1,5 +1,6 @@
 import { fetchJsonOrNull } from "./api"
 import type { PriceBucket } from "./marketApi"
+import type { PriceNorm } from "./priceNorm"
 
 export type PriceHistoryState =
   | "no_data"
@@ -44,6 +45,8 @@ export interface SpecialtyUnlock {
 }
 
 export interface ItemPriceHistory {
+  /** Historical price norm (eco-app#8368). Optional while payloads gain it. */
+  norm?: PriceNorm | null
   view: "item-price-history"
   fetchedAtISO: string
   item: string

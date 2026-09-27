@@ -8,7 +8,7 @@ import Layout from "../components/Layout"
 import { useJobsData } from "../hooks/useJobsData"
 import { fetchLogistics, type GapReason } from "../lib/logisticsApi"
 import { fetchMarket } from "../lib/marketApi"
-import { formatCount, prettifyEcoName } from "../lib/format"
+import { formatCount, formatMoney, prettifyEcoName } from "../lib/format"
 import {
   fetchRecipeIndexWithCost,
   type RecipeSkillDef,
@@ -37,10 +37,6 @@ const GAP: Record<GapReason, { glyph: string; label: string; color: string }> = 
   no_supply: { glyph: "✖", label: "no supply", color: "var(--meteor)" },
   thin_supply: { glyph: "◐", label: "thin supply", color: "var(--meteor-deep)" },
   overpriced: { glyph: "▲", label: "over-priced", color: "var(--ink-faint)" },
-}
-
-function fmtPrice(n: number): string {
-  return new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(n)
 }
 
 function opportunityHref(
@@ -452,7 +448,7 @@ export default function Jobs() {
             <>
               <ValueTag reason={gap.reason} />{" "}
               <span>
-                {margin !== null ? `estimated margin ${fmtPrice(margin)}` : "margin unavailable"} ·{" "}
+                {margin !== null ? `estimated margin ${formatMoney(margin)}` : "margin unavailable"} ·{" "}
                 {formatCount(gap.demandQty)} observed demand ·{" "}
                 {formatCount(traded)} traded volume
                 {!complete && " · incomplete cost inputs, low confidence"}
@@ -664,7 +660,7 @@ export default function Jobs() {
                       rows={board.rows}
                       emptyNote={`No liquid supply-gap crafts for ${board.label} yet.`}
                       pretty={false}
-                      formatValue={fmtPrice}
+                      formatValue={formatMoney}
                     />
                   </section>
                 ))}

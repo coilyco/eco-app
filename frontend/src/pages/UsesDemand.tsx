@@ -3,17 +3,13 @@ import { Link } from "react-router-dom"
 import EcoRichText from "../components/EcoRichText"
 import ItemLink from "../components/ItemLink"
 import FreshnessNote from "../components/FreshnessNote"
+import ItemPrice from "../components/ItemPrice"
 import Layout from "../components/Layout"
 import { fetchLogistics, type GapReason, type SupplyGap } from "../lib/logisticsApi"
 import { formatCount } from "../lib/format"
 import { useFreshData } from "../lib/useFreshData"
 
 const GAP_ROWS = 40
-
-// Prices carry fractional cents; formatCount rounds to whole units.
-function fmtPrice(n: number): string {
-  return new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(n)
-}
 
 // Supply-gap severity, encoded glyph + label + colour (never colour alone, per
 // the dataviz non-negotiables) — mirrors the /trade board: an unmet buy order is
@@ -51,7 +47,21 @@ function DemandRow({ gap }: { gap: SupplyGap }) {
             <span key={`${b.owner}-${b.store}-${i}`} className="gap-buyer">
               <EcoRichText text={b.owner || b.store} />{" "}
               <span className="gap-buyer-qty">{formatCount(b.quantity)}</span>
-              {b.price ? ` @ ${fmtPrice(b.price)} ${gap.currency}` : ""}
+              {b.price ? (
+                <>
+                  {" "}
+                  <ItemPrice
+                    price={b.price}
+                    norm={b.norm ?? gap.norm}
+                    currency={gap.currency}
+                    showCurrency
+                    prefix="@ "
+                    layout="inline"
+                  />
+                </>
+              ) : (
+                ""
+              )}
               {i < gap.buyers.length - 1 ? ", " : ""}
             </span>
           ))}

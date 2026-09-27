@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router-dom"
 import EcoRichText from "../components/EcoRichText"
 import ItemLink from "../components/ItemLink"
 import FreshnessNote from "../components/FreshnessNote"
+import ItemPrice from "../components/ItemPrice"
 import Layout from "../components/Layout"
 import {
   fetchLogistics,
@@ -10,14 +11,11 @@ import {
   type ShelfOffer,
 } from "../lib/logisticsApi"
 import { formatCount, prettifyEcoName } from "../lib/format"
+import type { PriceNorm } from "../lib/priceNorm"
 import { useFreshData } from "../lib/useFreshData"
 
 const PICK_ROWS = 200
 const OFFER_ROWS = 12
-
-function fmtPrice(n: number): string {
-  return new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(n)
-}
 
 // Source provenance, encoded label + colour (never colour alone): a live shelf
 // offer is the leaf green, a history-derived reconstruction stays muted ink.
@@ -38,10 +36,12 @@ function OfferTable({
   rows,
   currency,
   testid,
+  norm,
 }: {
   rows: ShelfOffer[]
   currency: string
   testid: string
+  norm?: PriceNorm | null
 }) {
   if (rows.length === 0) {
     return <p className="empty-note">No offers on this side right now.</p>
@@ -63,7 +63,7 @@ function OfferTable({
             <td><EcoRichText text={o.store} /></td>
             <td>{o.owner ? <EcoRichText text={o.owner} /> : "—"}</td>
             <td className="num">
-              {fmtPrice(o.price)} {o.currency || currency}
+              <ItemPrice price={o.price} norm={o.norm ?? norm} currency={o.currency || currency} showCurrency />
             </td>
             <td className="num">{formatCount(o.quantity)}</td>
             <td>
@@ -253,22 +253,40 @@ export default function UsesBuySell() {
                   Buy it cheapest{" "}
                   {sellRow?.cheapest != null && (
                     <span className="section-sub">
-                      (from {fmtPrice(sellRow.cheapest)} {currency})
+                      (
+                      <ItemPrice
+                        price={sellRow.cheapest}
+                        norm={sellRow.norm}
+                        currency={currency}
+                        showCurrency
+                        prefix="from "
+                        layout="clause"
+                      />
+                      )
                     </span>
                   )}
                 </h2>
-                <OfferTable rows={cheapestSells} currency={currency} testid="sell-offers" />
+                <OfferTable rows={cheapestSells} currency={currency} testid="sell-offers" norm={sellRow?.norm} />
               </div>
               <div>
                 <h2 className="section-title">
                   Sell it highest{" "}
                   {buyRow?.best != null && (
                     <span className="section-sub">
-                      (up to {fmtPrice(buyRow.best)} {currency})
+                      (
+                      <ItemPrice
+                        price={buyRow.best}
+                        norm={buyRow.norm}
+                        currency={currency}
+                        showCurrency
+                        prefix="up to "
+                        layout="clause"
+                      />
+                      )
                     </span>
                   )}
                 </h2>
-                <OfferTable rows={bestBuys} currency={currency} testid="buy-offers" />
+                <OfferTable rows={bestBuys} currency={currency} testid="buy-offers" norm={buyRow?.norm} />
               </div>
             </section>
           )}

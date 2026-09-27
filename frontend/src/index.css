@@ -1051,6 +1051,16 @@ a.k-card:visited {
   background: var(--leaf-wash);
 }
 
+/* A price column carries its norm line (eco-app#8368), so a dense table can
+   outgrow a phone. It scrolls in its own frame there, and the tables are
+   already focusable for keyboard scrolling. */
+@media (max-width: 600px) {
+  .ledger-table {
+    display: block;
+    overflow-x: auto;
+  }
+}
+
 .linklike {
   background: none;
   border: none;
@@ -2284,4 +2294,40 @@ html {
 
 .chart-axis--above {
   justify-content: flex-start;
+}
+
+/* The historical norm beside every item price (eco-app#8368). It stays dim so
+   the live price leads, and a price far from usual reads in full text weight
+   rather than a colour, because far can be good or bad depending on the side. */
+/* Contains the absolutely positioned screen-reader sentence, which would
+   otherwise escape a scrolling table and widen the whole page. */
+.item-price {
+  position: relative;
+}
+
+.item-price--stack {
+  display: inline-block;
+}
+
+/* Inline norms sit inside sentences and lists some of which never wrap
+   (the demand page's buyer chunks), so the norm itself may. */
+.item-price--inline,
+.item-price--clause {
+  white-space: normal;
+}
+
+.item-price--stack > .item-price__value,
+.item-price--stack > .item-price__norm {
+  display: block;
+}
+
+.item-price__norm {
+  color: var(--k-dim);
+  font-size: var(--k-t-body);
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+
+.item-price__norm--far {
+  color: var(--k-text);
 }

@@ -1,0 +1,241 @@
+{
+ "byCurrency": [
+  [
+   "redacted",
+   142282.49987949897
+  ],
+  [
+   "redacted",
+   33817.590150829004
+  ]
+ ],
+ "byItem": [
+  [
+   "PlasticItem",
+   6
+  ],
+  [
+   "RebarItem",
+   4
+  ]
+ ],
+ "counts": {
+  "detailedRows": 535,
+  "exporterRows": 3706,
+  "note": "perTypeCounts counts exporter rows, not trades: 3,706 rows = 535 detail rows (one trade each) + 3,171 hourly rollup rows covering 22,508 merged trades, so the ledger reports 23,043 trade events. Eco's own /info counter (get_economy.trades_total) counts a different population again and will not match.",
+  "rollupRows": 3171,
+  "rollupTrades": 22508,
+  "tradeEvents": 23043
+ },
+ "detailedTrades": 535,
+ "normContext": {
+  "caveat": "stage trails the tech level by the time from an upgrade's first craft to its first trade",
+  "cycle": 14,
+  "notes": [],
+  "referenceCurrency": "Spectres",
+  "referenceCurrencyId": "2533707",
+  "source": "#eco-trades 2024-11-09 to 2026-08-24, 202,368 trade lines",
+  "stage": "Modern 4"
+ },
+ "perTypeCounts": {
+  "BarterTrade": 4,
+  "CurrencyTrade": 3702
+ },
+ "priceSeries": {
+  "BrickItem": [
+   [
+    5.0,
+    1.0
+   ],
+   [
+    6.0,
+    1.0
+   ]
+  ],
+  "CementItem": [
+   [
+    13.0,
+    1.0
+   ],
+   [
+    15.0,
+    0.8
+   ]
+  ],
+  "CompositeCeibaLumberItem": [
+   [
+    31.0,
+    4.0
+   ]
+  ],
+  "CopperWiringItem": [
+   [
+    29.0,
+    1.31
+   ],
+   [
+    31.0,
+    1.31
+   ]
+  ],
+  "FramedGlassItem": [
+   [
+    21.0,
+    10.0
+   ],
+   [
+    32.0,
+    8.0
+   ]
+  ],
+  "LumberItem": [
+   [
+    10.0,
+    1.3
+   ],
+   [
+    12.0,
+    1.3
+   ]
+  ],
+  "PaperItem": [
+   [
+    15.0,
+    1.25
+   ],
+   [
+    16.0,
+    1.1
+   ]
+  ],
+  "PlasticItem": [
+   [
+    19.0,
+    2.0
+   ],
+   [
+    20.0,
+    2.0
+   ]
+  ],
+  "RebarItem": [
+   [
+    16.0,
+    2.96999992208156
+   ],
+   [
+    21.0,
+    3.0
+   ]
+  ],
+  "ReinforcedConcreteItem": [
+   [
+    16.0,
+    1.8
+   ],
+   [
+    23.0,
+    1.35
+   ]
+  ],
+  "ScholarsBasicUpgradeLvl4Item": [
+   [
+    5.0,
+    436.779998779
+   ],
+   [
+    9.0,
+    436.779998779
+   ]
+  ],
+  "Shipping_03Item": [
+   [
+    30.0,
+    375.0
+   ],
+   [
+    32.0,
+    375.0
+   ]
+  ]
+ },
+ "rollupRows": 3171,
+ "rollupTrades": 22508,
+ "topBuyers": [
+  [
+   "redacted",
+   4304.819992781
+  ],
+  [
+   "redacted",
+   4127.84004116
+  ]
+ ],
+ "topSellers": [
+  [
+   "redacted",
+   4722.639998615
+  ],
+  [
+   "redacted",
+   4384.369987963999
+  ]
+ ],
+ "totalCurrencyVolume": 203252.50011192475,
+ "totalTrades": 23043,
+ "trades": [
+  {
+   "aggregated": false,
+   "buyer": "redacted",
+   "currency": "2533707",
+   "currencyAmount": 0.0,
+   "day": 57.96427083333333,
+   "direction": "redacted",
+   "eventCount": 1,
+   "item": "ToppedPorridgeItem",
+   "location": "redacted",
+   "norm": {
+    "basis": "stage",
+    "currency": "Spectres",
+    "currencyN": 47,
+    "cycle": 14,
+    "cycles": 10,
+    "median": 0.3,
+    "n": 196,
+    "p25": 0.3,
+    "p75": 0.3,
+    "referencePrice": 0.3117
+   },
+   "quantity": 6.0,
+   "seller": "redacted",
+   "shopOwner": "redacted",
+   "store": "redacted",
+   "time": 5008113.0,
+   "tradeType": "CurrencyTrade",
+   "unitPrice": null
+  },
+  {
+   "aggregated": false,
+   "buyer": "redacted",
+   "currency": "2967954",
+   "currencyAmount": 34.720001221,
+   "day": 51.32798611111111,
+   "direction": "redacted",
+   "eventCount": 1,
+   "item": "CanItem",
+   "location": "redacted",
+   "norm": {
+    "basis": null,
+    "fallback": "no trade history for this item",
+    "n": 0
+   },
+   "quantity": 248.0,
+   "seller": "redacted",
+   "shopOwner": "redacted",
+   "store": "redacted",
+   "time": 4434738.0,
+   "tradeType": "CurrencyTrade",
+   "unitPrice": 0.14000000492338707
+  }
+ ]
+}

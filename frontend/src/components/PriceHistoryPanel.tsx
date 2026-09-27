@@ -1,5 +1,6 @@
-import { formatCount, prettifyEcoName } from "../lib/format"
+import { formatCount, formatMoney, prettifyEcoName } from "../lib/format"
 import ChartFrame from "./ChartFrame"
+import ItemPrice from "./ItemPrice"
 import { useSvgTextScale } from "../hooks/useSvgTextScale"
 import type { ItemPriceHistory, PriceHistoryState } from "../lib/priceHistoryApi"
 
@@ -11,10 +12,6 @@ const STATE_TEXT: Record<PriceHistoryState, string> = {
   missing_recipes: "No known recipe produces this item, so required-specialty markers cannot be resolved.",
   missing_progression: "The GainSpecialty progression export is unavailable, so recipe requirements are known but unlock timing is not.",
   unobserved_unlocks: "At least one required specialty has no observed current-cycle gain. That is not evidence that the specialty was never available.",
-}
-
-function fmtPrice(value: number): string {
-  return new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(value)
 }
 
 function PriceTimeline({ history }: { history: ItemPriceHistory }) {
@@ -55,7 +52,7 @@ function PriceTimeline({ history }: { history: ItemPriceHistory }) {
 
   return (
     <ChartFrame
-      above={[`high ${fmtPrice(maxPrice)}`, `low ${fmtPrice(minPrice)}`, "bars show volume"]}
+      above={[`high ${formatMoney(maxPrice)}`, `low ${formatMoney(minPrice)}`, "bars show volume"]}
       start={`Day ${minDay}`}
       end={`Day ${maxDay}`}
     >
@@ -131,7 +128,7 @@ function Distribution({ history }: { history: ItemPriceHistory }) {
               style={{ height: `${Math.max(6, (bucket.count / maxCount) * 100)}%` }}
             />
             <span className="price-histogram-range">
-              {fmtPrice(bucket.low)}–{fmtPrice(bucket.high)}
+              {formatMoney(bucket.low)}–{formatMoney(bucket.high)}
             </span>
           </div>
         ))}
@@ -150,8 +147,13 @@ function Distribution({ history }: { history: ItemPriceHistory }) {
           <div className="rank-row">
             <span className="rank-name">Median and range</span>
             <span className="rank-count">
-              {fmtPrice(distribution.median!)} {history.currency} · {fmtPrice(distribution.min!)}–
-              {fmtPrice(distribution.max!)}
+              <ItemPrice
+                price={distribution.median}
+                norm={history.norm}
+                currency={history.currency}
+                showCurrency
+                suffix={`, range ${formatMoney(distribution.min!)}–${formatMoney(distribution.max!)}`}
+              />
             </span>
           </div>
         </li>
@@ -160,10 +162,10 @@ function Distribution({ history }: { history: ItemPriceHistory }) {
             <div className="rank-row">
               <span className="rank-name">Percentiles</span>
               <span className="rank-count">
-                p10 {fmtPrice(distribution.percentiles.p10)} · p25{" "}
-                {fmtPrice(distribution.percentiles.p25)} · p75{" "}
-                {fmtPrice(distribution.percentiles.p75)} · p90{" "}
-                {fmtPrice(distribution.percentiles.p90)}
+                p10 {formatMoney(distribution.percentiles.p10)}, p25{" "}
+                {formatMoney(distribution.percentiles.p25)}, p75{" "}
+                {formatMoney(distribution.percentiles.p75)}, p90{" "}
+                {formatMoney(distribution.percentiles.p90)}
               </span>
             </div>
           </li>

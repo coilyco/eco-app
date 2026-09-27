@@ -17,6 +17,24 @@ export function stripEcoMarkup(text: string): string {
 // dash so a reader can tell "the server did not say" from a real zero.
 export const UNREPORTED = "—"
 
+const MONEY = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 })
+
+// An item's unit price. Only components/ItemPrice calls this, so every item
+// price carries its historical norm (eco-app#8368, enforced by test/priceNorms.test.ts).
+export function formatPrice(n: number): string {
+  return MONEY.format(n)
+}
+
+// Any other money: spreads, totals, margins, rates and chart axis labels.
+export function formatMoney(n: number): string {
+  return MONEY.format(n)
+}
+
+// A non-money quantity that can be fractional, such as craft minutes.
+export function formatDecimal(n: number): string {
+  return MONEY.format(n)
+}
+
 export function formatCount(n: number | null | undefined): string {
   if (n === null || n === undefined || !Number.isFinite(n)) return UNREPORTED
   return new Intl.NumberFormat("en-US").format(Math.round(n))

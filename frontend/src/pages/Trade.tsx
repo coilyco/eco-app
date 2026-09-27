@@ -3,6 +3,7 @@ import ChartFrame from "../components/ChartFrame"
 import { Link, useSearchParams } from "react-router-dom"
 import EcoRichText from "../components/EcoRichText"
 import ItemLink from "../components/ItemLink"
+import ItemPrice from "../components/ItemPrice"
 import FreshnessNote from "../components/FreshnessNote"
 import Layout from "../components/Layout"
 import { fetchMarket, type ItemMarket, type MarketTrend } from "../lib/marketApi"
@@ -11,7 +12,7 @@ import { fetchCurrency } from "../lib/currencyApi"
 import { fetchLogistics, type GapReason, type SupplyGap } from "../lib/logisticsApi"
 import { fetchTradesLedger, type Trade as TradeRow } from "../lib/tradesApi"
 import { fetchWatchers, type WatcherHit } from "../lib/watchersApi"
-import { formatCount, prettifyEcoName, stripEcoMarkup } from "../lib/format"
+import { formatMoney, formatCount, prettifyEcoName, stripEcoMarkup } from "../lib/format"
 import { useFreshData } from "../lib/useFreshData"
 
 const TOP_MOVERS = 6
@@ -27,10 +28,6 @@ const LEDGER_ROWS = 60
 
 // Prices carry fractional cents; formatCount rounds to whole units, so trade
 // surfaces get their own 2-dp formatter.
-function fmtPrice(n: number): string {
-  return new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(n)
-}
-
 // Trend is encoded glyph + label + colour (never colour alone, per the dataviz
 // non-negotiables): rising leans on the leaf green, falling on meteor amber,
 // flat/insufficient stay muted ink.
@@ -71,12 +68,18 @@ const GAP: Record<GapReason, { glyph: string; label: string; color: string }> = 
 function SupplyGapRow({ gap }: { gap: SupplyGap }) {
   const g = GAP[gap.reason]
   const summary =
-    gap.reason === "overpriced"
-      ? `cheapest ${fmtPrice(gap.cheapestSell ?? 0)} vs median ${fmtPrice(gap.median ?? 0)}` +
-        (gap.overMedianPct !== null ? ` (+${Math.round(gap.overMedianPct)}%)` : "")
-      : `${formatCount(gap.demandQty)} wanted · ${formatCount(gap.buyerCount)} buyer${
+    gap.reason === "overpriced" ? (
+      <>
+        cheapest{" "}
+        <ItemPrice price={gap.cheapestSell} norm={gap.norm} currency={gap.currency} layout="inline" /> vs
+        median <ItemPrice price={gap.median} norm={gap.norm} currency={gap.currency} layout="inline" />
+        {gap.overMedianPct !== null ? ` (+${Math.round(gap.overMedianPct)}%)` : ""}
+      </>
+    ) : (
+      `${formatCount(gap.demandQty)} wanted · ${formatCount(gap.buyerCount)} buyer${
           gap.buyerCount === 1 ? "" : "s"
         } · ${formatCount(gap.sellerCount)} seller${gap.sellerCount === 1 ? "" : "s"}`
+    )
   return (
     <li className="gap-row" data-testid="gap-row">
       <div className="gap-head">
@@ -129,7 +132,7 @@ function PriceChart({ points }: { points: Array<[number, number]> }) {
 
   return (
     <ChartFrame
-      above={[`high ${fmtPrice(maxPrice)}`, `low ${fmtPrice(minPrice)}`]}
+      above={[`high ${formatMoney(maxPrice)}`, `low ${formatMoney(minPrice)}`]}
       start={`day ${minDay}`}
       end={`day ${maxDay}`}
     >
@@ -145,7 +148,7 @@ function PriceChart({ points }: { points: Array<[number, number]> }) {
       {points.map(([d, p]) => (
         <circle key={d} cx={x(d)} cy={y(p)} r="3" fill="var(--meteor)">
           <title>
-            Day {d}: {fmtPrice(p)}
+            Day {d}: {formatMoney(p)}
           </title>
         </circle>
       ))}
@@ -178,7 +181,8 @@ function MarketList({
               {m.itemPretty}
             </ItemLink>
             <span className="rank-count">
-              {fmtPrice(m.latestPrice)} {m.currency} · <TrendTag trend={m.trend} delta={m.trendDeltaPct} />
+              <ItemPrice price={m.latestPrice} norm={m.norm} currency={m.currency} showCurrency layout="inline" />{" "}
+              <TrendTag trend={m.trend} delta={m.trendDeltaPct} />
             </span>
             <button
               className="linklike"
@@ -215,7 +219,14 @@ function WatcherList({ hits }: { hits: WatcherHit[] }) {
             </span>
             <span className="rank-count">
               {formatCount(h.display.matchCount)} match
-              {h.display.bestUnitPrice !== null ? ` · cheapest ${fmtPrice(h.display.bestUnitPrice)}` : ""}
+              {h.display.bestUnitPrice !== null ? (
+                <>
+                  , cheapest{" "}
+                  <ItemPrice price={h.display.bestUnitPrice} norm={h.display.norm} layout="inline" />
+                </>
+              ) : (
+                ""
+              )}
             </span>
           </div>
         </li>
@@ -346,7 +357,7 @@ export default function Trade() {
     )
     const best = row?.offers[0]
     if (!row || !best) return null
-    return { unitPrice: best.price, currency: row.currency, store: best.store, owner: best.owner }
+    return { unitPrice: best.price, currency: row.currency, store: best.store, owner: best.owner, norm: best.norm ?? row.norm }
   }, [drill, logistics])
 
   const topStores = useMemo(
@@ -495,12 +506,16 @@ export default function Trade() {
           </div>
           <div className="stats">
             <div className="stat">
-              <p className="stat-value">{fmtPrice(drill.latestPrice)}</p>
+              <p className="stat-value">
+                <ItemPrice price={drill.latestPrice} norm={drill.norm} currency={drill.currency} />
+              </p>
               <p className="stat-label">Latest price</p>
               <p className="stat-detail">day {drill.latestDay}</p>
             </div>
             <div className="stat">
-              <p className="stat-value">{fmtPrice(drill.medianPrice)}</p>
+              <p className="stat-value">
+                <ItemPrice price={drill.medianPrice} norm={drill.norm} currency={drill.currency} />
+              </p>
               <p className="stat-label">Median price</p>
             </div>
             <div className="stat">
@@ -515,7 +530,15 @@ export default function Trade() {
           <PriceChart points={drillPoints} />
           {drillSource && (
             <p className="hero-pill" data-testid="drill-source">
-              Cheapest right now: {fmtPrice(drillSource.unitPrice)} {drillSource.currency} at{" "}
+              Cheapest right now:{" "}
+              <ItemPrice
+                price={drillSource.unitPrice}
+                norm={drillSource.norm}
+                currency={drillSource.currency}
+                showCurrency
+                layout="inline"
+              />{" "}
+              at{" "}
               <EcoRichText text={drillSource.store} /> (<EcoRichText text={drillSource.owner} />)
             </p>
           )}
@@ -560,13 +583,15 @@ export default function Trade() {
                           </ItemLink>
                         </td>
                         <td>
-                          {fmtPrice(a.buyFrom.price)} — <EcoRichText text={a.buyFrom.store} />
+                          <ItemPrice price={a.buyFrom.price} norm={a.buyFrom.norm ?? a.norm} currency={a.currency} layout="inline" />{" "}
+                          — <EcoRichText text={a.buyFrom.store} />
                         </td>
                         <td>
-                          {fmtPrice(a.sellTo.price)} — <EcoRichText text={a.sellTo.store} />
+                          <ItemPrice price={a.sellTo.price} norm={a.sellTo.norm ?? a.norm} currency={a.currency} layout="inline" />{" "}
+                          — <EcoRichText text={a.sellTo.store} />
                         </td>
                         <td className="num">
-                          +{fmtPrice(a.spread)} {a.currency} ({Math.round(a.spreadPct)}%)
+                          +{formatMoney(a.spread)} {a.currency} ({Math.round(a.spreadPct)}%)
                         </td>
                       </tr>
                     ))}

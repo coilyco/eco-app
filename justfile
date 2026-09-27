@@ -66,6 +66,10 @@ frontend-build *ARGS:
 frontend-test *ARGS:
     @pnpm --dir frontend test "$@"
 
+# Regenerate the annotated price payloads the frontend norm tests render (eco-app#8368).
+frontend-norm-fixtures:
+    @uv run python -m scripts.frontend_norm_fixtures
+
 # The coilyco kit's browser checks (axe, 16px floor, layering, overflow, weight) on every route. Native args - [--base URL] [--only /a,/b] [--json].
 frontend-kit-check *ARGS:
     @pnpm --dir frontend kit-check "$@"

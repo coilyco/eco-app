@@ -17,6 +17,8 @@ consolidation (coilysiren/inbox#101).
 - **Historical price norms** - every tool and data route that lists an item
   price carries its norm from past cycles at the live upgrade stage, from
   `data/eco_trades_norms.json.gz`. See [price-history.md](price-history.md).
+  Every web page shows it beside the price through one component, see
+  [frontend/price-norms.md](frontend/price-norms.md).
 - **Privileged `/admin` MCP** - `src/eco_mcp_app/admin/`, flagged off in the
   ordinary app. See [admin-mcp.md](admin-mcp.md).
 - **React frontend** - `frontend/`, a Vite SPA the fused service serves at `/`,

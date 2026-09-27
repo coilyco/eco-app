@@ -1,0 +1,164 @@
+{
+ "craftCount": 39,
+ "craftQuantity": 39.0,
+ "crafts": [
+  {
+   "actionType": "ItemCraftedAction",
+   "citizen": "redacted",
+   "day": 40.24993055555556,
+   "quantity": 1.0,
+   "station": "SawmillItem",
+   "time": 3477594.0
+  },
+  {
+   "actionType": "ItemCraftedAction",
+   "citizen": "redacted",
+   "day": 39.66638888888889,
+   "quantity": 1.0,
+   "station": "SawmillItem",
+   "time": 3427176.0
+  }
+ ],
+ "feed": [
+  {
+   "actionType": "ItemCraftedAction",
+   "actor": "redacted",
+   "buyer": "redacted",
+   "currency": "",
+   "currencyAmount": 0.0,
+   "day": 40.24993055555556,
+   "kind": "craft",
+   "quantity": 4.0,
+   "runCount": 4,
+   "seller": "redacted",
+   "spanSeconds": 378035.0,
+   "station": "SawmillItem",
+   "time": 3477594.0,
+   "unitPrice": null
+  },
+  {
+   "actionType": "ItemCraftedAction",
+   "actor": "redacted",
+   "buyer": "redacted",
+   "currency": "",
+   "currencyAmount": 0.0,
+   "day": 35.237314814814816,
+   "kind": "craft",
+   "quantity": 2.0,
+   "runCount": 2,
+   "seller": "redacted",
+   "spanSeconds": 27707.0,
+   "station": "SawmillItem",
+   "time": 3044504.0,
+   "unitPrice": null
+  }
+ ],
+ "feedTruncated": false,
+ "item": "LumberItem",
+ "norm": {
+  "basis": "stage",
+  "cycles": 11,
+  "n": 134,
+  "referencePrice": 0.8368
+ },
+ "normContext": {
+  "caveat": "stage trails the tech level by the time from an upgrade's first craft to its first trade",
+  "cycle": 14,
+  "notes": [],
+  "referenceCurrency": "Spectres",
+  "referenceCurrencyId": "2533707",
+  "source": "#eco-trades 2024-11-09 to 2026-08-24, 202,368 trade lines",
+  "stage": "Modern 4"
+ },
+ "summary": {
+  "crafters": [],
+  "demand": {
+   "capped": false,
+   "offers": [
+    {
+     "currency": "Spectres",
+     "owner": "redacted",
+     "price": 1.5,
+     "quantity": 0.0,
+     "source": "live",
+     "store": "redacted"
+    },
+    {
+     "currency": "Barter",
+     "owner": "redacted",
+     "price": 1.4,
+     "quantity": 100.0,
+     "source": "live",
+     "store": "redacted"
+    }
+   ],
+   "storeCount": 4,
+   "totalQuantity": 519.0
+  },
+  "live": true,
+  "supply": {
+   "capped": false,
+   "offers": [
+    {
+     "currency": "Barter",
+     "owner": "redacted",
+     "price": 0.7,
+     "quantity": 0.0,
+     "source": "live",
+     "store": "redacted"
+    },
+    {
+     "currency": "Spectres",
+     "owner": "redacted",
+     "price": 0.7,
+     "quantity": 185.0,
+     "source": "live",
+     "store": "redacted"
+    }
+   ],
+   "storeCount": 13,
+   "totalQuantity": 5867.0
+  }
+ },
+ "tradeCount": 9,
+ "tradeVolume": 895.0,
+ "trades": [
+  {
+   "aggregated": false,
+   "buyer": "redacted",
+   "currency": "2533707",
+   "currencyAmount": 16.0,
+   "day": 34.683761574074076,
+   "direction": "redacted",
+   "eventCount": 1,
+   "item": "LumberItem",
+   "location": "redacted",
+   "quantity": 20.0,
+   "seller": "redacted",
+   "shopOwner": "redacted",
+   "store": "redacted",
+   "time": 2996677.0,
+   "tradeType": "CurrencyTrade",
+   "unitPrice": 0.8
+  },
+  {
+   "aggregated": false,
+   "buyer": "redacted",
+   "currency": "2533707",
+   "currencyAmount": 16.0,
+   "day": 34.65487268518518,
+   "direction": "redacted",
+   "eventCount": 1,
+   "item": "LumberItem",
+   "location": "redacted",
+   "quantity": 20.0,
+   "seller": "redacted",
+   "shopOwner": "redacted",
+   "store": "redacted",
+   "time": 2994181.0,
+   "tradeType": "CurrencyTrade",
+   "unitPrice": 0.8
+  }
+ ],
+ "worldClockS": null
+}

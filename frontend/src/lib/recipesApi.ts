@@ -3,6 +3,7 @@
 // (the vendored Eco Gnome recipe graph, eco-app#100).
 //
 import { fetchJsonOrNull } from "./api"
+import type { PriceNorm } from "./priceNorm"
 
 // Unlike the item / trade planes this is ONE static bundled payload — no
 // `?server=`, no per-id endpoint. So both the list (/recipes) and the detail
@@ -93,6 +94,8 @@ export interface RecipeIndex {
 }
 
 export interface RecipeCostIngredient {
+  /** Historical price norm (eco-app#8368). Optional while payloads gain it. */
+  norm?: PriceNorm | null
   item: string
   displayName: string
   quantity: number
@@ -103,6 +106,8 @@ export interface RecipeCostIngredient {
 }
 
 export interface RecipeCost {
+  /** Historical price norm (eco-app#8368). Optional while payloads gain it. */
+  norm?: PriceNorm | null
   recipe: string
   product: string
   yield: number

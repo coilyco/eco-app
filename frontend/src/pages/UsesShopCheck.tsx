@@ -3,20 +3,18 @@ import { Link, useSearchParams } from "react-router-dom"
 import EcoRichText from "../components/EcoRichText"
 import ItemLink from "../components/ItemLink"
 import FreshnessNote from "../components/FreshnessNote"
+import ItemPrice from "../components/ItemPrice"
 import Layout from "../components/Layout"
 import { fetchStores, type StoreProfile } from "../lib/storesApi"
-import { fetchMarket } from "../lib/marketApi"
+import { fetchMarket, type ItemMarket } from "../lib/marketApi"
 import { formatCount, stripEcoMarkup } from "../lib/format"
+import type { PriceNorm } from "../lib/priceNorm"
 import { useFreshData } from "../lib/useFreshData"
 
 const PICK_ROWS = 200
 // A shelf priced within ±this of the market median reads as "at market"; beyond
 // it, the item is flagged notably over- or under-priced.
 const NOTABLE_PCT = 15
-
-function fmtPrice(n: number): string {
-  return new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(n)
-}
 
 type Verdict = "over" | "under" | "at" | "unknown"
 
@@ -35,7 +33,10 @@ interface CheckRow {
   item: string
   pretty: string
   avgUnitPrice: number | null
+  avgNorm: PriceNorm | null | undefined
   median: number | null
+  medianNorm: PriceNorm | null | undefined
+  currency: string | null
   deltaPct: number | null
   verdict: Verdict
 }
@@ -63,12 +64,12 @@ export default function UsesShopCheck() {
     setParams(key ? { store: key } : {}, { replace: false })
   }
 
-  // item id -> market median (first, i.e. most-traded, currency wins).
+  // item id -> market row (first, i.e. most-traded, currency wins).
   const medians = useMemo(() => {
-    const m = new Map<string, number>()
+    const m = new Map<string, ItemMarket>()
     if (market) {
       for (const row of market.markets) {
-        if (!m.has(row.item)) m.set(row.item, row.medianPrice)
+        if (!m.has(row.item)) m.set(row.item, row)
       }
     }
     return m
@@ -101,7 +102,8 @@ export default function UsesShopCheck() {
   const rows: CheckRow[] = useMemo(() => {
     if (!store) return []
     return store.topItems.map((it) => {
-      const median = medians.get(it.item) ?? null
+      const marketRow = medians.get(it.item) ?? null
+      const median = marketRow?.medianPrice ?? null
       const avg = it.avgUnitPrice
       let deltaPct: number | null = null
       let verdict: Verdict = "unknown"
@@ -109,7 +111,17 @@ export default function UsesShopCheck() {
         deltaPct = ((avg - median) / median) * 100
         verdict = deltaPct > NOTABLE_PCT ? "over" : deltaPct < -NOTABLE_PCT ? "under" : "at"
       }
-      return { item: it.item, pretty: it.pretty, avgUnitPrice: avg, median, deltaPct, verdict }
+      return {
+        item: it.item,
+        pretty: it.pretty,
+        avgUnitPrice: avg,
+        avgNorm: it.norm,
+        median,
+        medianNorm: marketRow?.norm,
+        currency: marketRow?.currency ?? null,
+        deltaPct,
+        verdict,
+      }
     })
   }, [store, medians])
 
@@ -251,8 +263,12 @@ export default function UsesShopCheck() {
                           {r.pretty}
                         </ItemLink>
                       </td>
-                      <td className="num">{r.avgUnitPrice != null ? fmtPrice(r.avgUnitPrice) : "—"}</td>
-                      <td className="num">{r.median != null ? fmtPrice(r.median) : "—"}</td>
+                      <td className="num">
+                        <ItemPrice price={r.avgUnitPrice} norm={r.avgNorm} />
+                      </td>
+                      <td className="num">
+                        <ItemPrice price={r.median} norm={r.medianNorm} currency={r.currency} />
+                      </td>
                       <td className="num">
                         {r.deltaPct != null
                           ? `${r.deltaPct > 0 ? "+" : ""}${Math.round(r.deltaPct)}%`

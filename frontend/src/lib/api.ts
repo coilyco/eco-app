@@ -1,3 +1,4 @@
+import { hydrateNorms } from "./priceNorm"
 // Typed client for the fused service's JSON surfaces. The SPA talks to the
 // same origin in production; in dev, Vite proxies these routes to :4000.
 
@@ -86,7 +87,8 @@ export async function fetchJsonOrNull<T>(url: string, signal?: AbortSignal): Pro
   try {
     const resp = await fetch(url, { signal })
     if (!resp.ok) return null
-    return (await resp.json()) as T
+    // Folds each payload's normContext into its norms (eco-app#8368).
+    return hydrateNorms((await resp.json()) as T)
   } catch {
     return null
   }

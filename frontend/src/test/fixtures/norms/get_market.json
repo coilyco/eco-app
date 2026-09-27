@@ -1,0 +1,105 @@
+{
+ "markets": [
+  {
+   "buckets": [
+    {
+     "day": 13,
+     "max": 1.0,
+     "median": 1.0,
+     "min": 1.0,
+     "trades": 3,
+     "volume": 394.0
+    },
+    {
+     "day": 15,
+     "max": 0.8,
+     "median": 0.8,
+     "min": 0.8,
+     "trades": 1,
+     "volume": 100.0
+    }
+   ],
+   "currency": "2533707",
+   "item": "CementItem",
+   "itemPretty": "Cement",
+   "latestDay": 31,
+   "latestPrice": 0.6000000215919811,
+   "longMedian": 0.60000003814,
+   "medianPrice": 0.8,
+   "norm": {
+    "basis": "stage",
+    "currency": "Spectres",
+    "currencyN": 19,
+    "cycle": 14,
+    "cycles": 10,
+    "median": 0.6,
+    "multiple": 1.33,
+    "n": 137,
+    "p25": 0.6,
+    "p75": 0.6,
+    "referencePrice": 0.5999
+   },
+   "shortMedian": 0.6000000215919811,
+   "totalTrades": 7,
+   "totalVolume": 1343.0,
+   "trend": "flat",
+   "trendDeltaPct": -2.758002983869672e-06
+  },
+  {
+   "buckets": [
+    {
+     "day": 7,
+     "max": 0.7999999834130435,
+     "median": 0.7999999834130435,
+     "min": 0.7999999834130435,
+     "trades": 1,
+     "volume": 46.0
+    },
+    {
+     "day": 10,
+     "max": 0.7,
+     "median": 0.7,
+     "min": 0.7,
+     "trades": 1,
+     "volume": 50.0
+    }
+   ],
+   "currency": "2533707",
+   "item": "LeatherHideItem",
+   "itemPretty": "Leather Hide",
+   "latestDay": 24,
+   "latestPrice": 0.5,
+   "longMedian": 1.0,
+   "medianPrice": 0.7999999834130435,
+   "norm": {
+    "basis": "stage",
+    "currency": "Spectres",
+    "currencyN": 44,
+    "cycle": 14,
+    "cycles": 10,
+    "median": 1.0,
+    "multiple": 1.74,
+    "n": 151,
+    "p25": 0.5,
+    "p75": 1.2,
+    "referencePrice": 0.4597
+   },
+   "shortMedian": 0.5,
+   "totalTrades": 7,
+   "totalVolume": 340.0,
+   "trend": "falling",
+   "trendDeltaPct": -50.0
+  }
+ ],
+ "normContext": {
+  "caveat": "stage trails the tech level by the time from an upgrade's first craft to its first trade",
+  "cycle": 14,
+  "notes": [],
+  "referenceCurrency": "Spectres",
+  "referenceCurrencyId": "2533707",
+  "source": "#eco-trades 2024-11-09 to 2026-08-24, 202,368 trade lines",
+  "stage": "Modern 4"
+ },
+ "totalTrades": 23043,
+ "view": "market"
+}

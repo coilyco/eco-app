@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router-dom"
 import EcoRichText from "../components/EcoRichText"
 import ItemLink from "../components/ItemLink"
 import FreshnessNote from "../components/FreshnessNote"
+import ItemPrice from "../components/ItemPrice"
 import Layout from "../components/Layout"
 import { formatCount, prettifyEcoName } from "../lib/format"
 import { fetchJobsData } from "../lib/jobsApi"
@@ -10,10 +11,6 @@ import { fetchLogistics, type ShelfOffer } from "../lib/logisticsApi"
 import { fetchMarket } from "../lib/marketApi"
 import { fetchRecipeIndexWithCost } from "../lib/recipesApi"
 import { useFreshData } from "../lib/useFreshData"
-
-function fmtPrice(value: number): string {
-  return new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(value)
-}
 
 function skillKey(value: string): string {
   return value.replace(/Skill$/, "").replace(/[^a-z0-9]/gi, "").toLowerCase()
@@ -143,15 +140,15 @@ export default function UsesResolve() {
                 <ul className="rank-rows">
                   {selectedRecipes.map((recipe) => {
                     const unpriced = recipe.cost?.unpricedInputs ?? []
-                    return <li key={recipe.name} data-testid="resolve-recipe"><div className="rank-row"><span className="rank-name">{recipe.displayName}<br /><span className="section-sub">{recipe.stationDisplayName || "Hand craft"}{recipe.skill ? ` · ${prettifyEcoName(recipe.skill.name.replace(/Skill$/, ""))} ${recipe.skill.level}+` : ""}</span></span><span className="rank-count">{recipe.cost?.perUnitCost != null ? `${fmtPrice(recipe.cost.perUnitCost)}/unit` : "cost incomplete"}</span></div>{unpriced.length > 0 && <p className="empty-note">Unpriced inputs: {unpriced.join(", ")}. Availability is unknown.</p>}</li>
+                    return <li key={recipe.name} data-testid="resolve-recipe"><div className="rank-row"><span className="rank-name">{recipe.displayName}<br /><span className="section-sub">{recipe.stationDisplayName || "Hand craft"}{recipe.skill ? ` · ${prettifyEcoName(recipe.skill.name.replace(/Skill$/, ""))} ${recipe.skill.level}+` : ""}</span></span><span className="rank-count">{recipe.cost?.perUnitCost != null ? <ItemPrice price={recipe.cost.perUnitCost} norm={recipe.cost.norm} suffix="/unit" data-testid="resolve-unit-cost" /> : "cost incomplete"}</span></div>{unpriced.length > 0 && <p className="empty-note">Unpriced inputs: {unpriced.join(", ")}. Availability is unknown.</p>}</li>
                   })}
                 </ul>
               )}
             </div>
             <div>
               <h2 className="section-title">Buy</h2>
-              {!logistics ? <p className="empty-note">Shelf data unavailable right now.</p> : sells.length === 0 && buys.length === 0 ? <p className="empty-note" data-testid="resolve-no-offers">No current or history-derived offers for this item.</p> : <ul className="rank-rows" data-testid="resolve-offers">{[...sells.slice(0, 4), ...buys.slice(0, 4)].map((offer, index) => <li key={`${offer.storeKey}-${offer.side}-${index}`}><div className="rank-row"><span className="rank-name">{offer.side === "sell" ? "Buy from" : "Sell to"} <EcoRichText text={offer.store} /><br /><span className="section-sub">{sourceLabel(offer.source)}</span></span><span className="rank-count">{fmtPrice(offer.price)} {offer.currency} · {formatCount(offer.quantity)} qty</span></div></li>)}</ul>}
-              {marketRow && <p className="section-sub" data-testid="resolve-market">Recent market: {fmtPrice(marketRow.medianPrice)} {marketRow.currency} median, {formatCount(marketRow.totalTrades)} trades, {marketRow.trend}.</p>}
+              {!logistics ? <p className="empty-note">Shelf data unavailable right now.</p> : sells.length === 0 && buys.length === 0 ? <p className="empty-note" data-testid="resolve-no-offers">No current or history-derived offers for this item.</p> : <ul className="rank-rows" data-testid="resolve-offers">{[...sells.slice(0, 4), ...buys.slice(0, 4)].map((offer, index) => <li key={`${offer.storeKey}-${offer.side}-${index}`}><div className="rank-row"><span className="rank-name">{offer.side === "sell" ? "Buy from" : "Sell to"} <EcoRichText text={offer.store} /><br /><span className="section-sub">{sourceLabel(offer.source)}</span></span><span className="rank-count"><ItemPrice price={offer.price} norm={offer.norm} currency={offer.currency} showCurrency suffix={`, ${formatCount(offer.quantity)} qty`} /></span></div></li>)}</ul>}
+              {marketRow && <p className="section-sub" data-testid="resolve-market">Recent market: <ItemPrice price={marketRow.medianPrice} norm={marketRow.norm} currency={marketRow.currency} showCurrency layout="inline" /> median, {formatCount(marketRow.totalTrades)} trades, {marketRow.trend}.</p>}
             </div>
           </section>
 

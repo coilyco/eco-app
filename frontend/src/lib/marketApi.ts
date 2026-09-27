@@ -10,6 +10,7 @@
 // endpoint so the /trade page degrades panel-by-panel (eco-app#54).
 
 import { fetchJsonOrNull } from "./api"
+import type { PriceNorm } from "./priceNorm"
 
 export type MarketTrend = "rising" | "falling" | "flat" | "insufficient"
 
@@ -23,6 +24,8 @@ export interface PriceBucket {
 }
 
 export interface ItemMarket {
+  /** Historical price norm (eco-app#8368). Optional while payloads gain it. */
+  norm?: PriceNorm | null
   item: string
   itemPretty: string
   currency: string

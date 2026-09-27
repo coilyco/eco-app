@@ -8,8 +8,11 @@
 // degrades panel-by-panel (eco-app#54).
 
 import { fetchJsonOrNull } from "./api"
+import type { PriceNorm } from "./priceNorm"
 
 export interface StoreItemRow {
+  /** Historical price norm (eco-app#8368). Optional while payloads gain it. */
+  norm?: PriceNorm | null
   item: string
   pretty: string
   tradeCount: number

@@ -13,9 +13,12 @@
 // partial payload never crashes the panel (eco-app#54).
 
 import { fetchJsonOrNull } from "./api"
+import type { PriceNorm } from "./priceNorm"
 
 // One store's offer for one item on one side — `ShelfOffer.to_dict()`.
 export interface ShelfOffer {
+  /** Historical price norm (eco-app#8368). Optional while payloads gain it. */
+  norm?: PriceNorm | null
   store: string
   owner: string
   storeKey: string
@@ -32,6 +35,8 @@ export interface ShelfOffer {
 // Cheapest-source / best-resale row: a market with its ranked offers. `cheapest`
 // is the lowest sell price; `best` the highest buy price.
 export interface PricedBoardRow {
+  /** Historical price norm (eco-app#8368). Optional while payloads gain it. */
+  norm?: PriceNorm | null
   item: string
   itemPretty: string
   currency: string
@@ -43,6 +48,8 @@ export interface PricedBoardRow {
 }
 
 export interface ArbitrageSpread {
+  /** Historical price norm (eco-app#8368). Optional while payloads gain it. */
+  norm?: PriceNorm | null
   item: string
   itemPretty: string
   currency: string
@@ -57,6 +64,8 @@ export interface ArbitrageSpread {
 
 // Who needs a supply-gap item — one citizen's folded demand.
 export interface GapBuyer {
+  /** Historical price norm (eco-app#8368). Optional while payloads gain it. */
+  norm?: PriceNorm | null
   owner: string
   store: string
   quantity: number
@@ -66,6 +75,8 @@ export interface GapBuyer {
 export type GapReason = "no_supply" | "thin_supply" | "overpriced"
 
 export interface SupplyGap {
+  /** Historical price norm (eco-app#8368). Optional while payloads gain it. */
+  norm?: PriceNorm | null
   item: string
   itemPretty: string
   currency: string

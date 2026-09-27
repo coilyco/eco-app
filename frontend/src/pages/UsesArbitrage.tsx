@@ -3,16 +3,13 @@ import { Link } from "react-router-dom"
 import EcoRichText from "../components/EcoRichText"
 import ItemLink from "../components/ItemLink"
 import FreshnessNote from "../components/FreshnessNote"
+import ItemPrice from "../components/ItemPrice"
 import Layout from "../components/Layout"
 import { fetchLogistics } from "../lib/logisticsApi"
-import { formatCount } from "../lib/format"
+import { formatCount, formatMoney } from "../lib/format"
 import { useFreshData } from "../lib/useFreshData"
 
 const ROWS = 40
-
-function fmtPrice(n: number): string {
-  return new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(n)
-}
 
 // "Buy low here, sell high there" (eco-app#99): the cross-store arbitrage
 // spreads from the logistics board, ranked by opportunity (spread × movable
@@ -96,13 +93,15 @@ export default function UsesArbitrage() {
                     </ItemLink>
                   </td>
                   <td>
-                    {fmtPrice(a.buyFrom.price)} — <EcoRichText text={a.buyFrom.store} />
+                    <ItemPrice price={a.buyFrom.price} norm={a.buyFrom.norm ?? a.norm} currency={a.currency} layout="inline" />{" "}
+                    — <EcoRichText text={a.buyFrom.store} />
                   </td>
                   <td>
-                    {fmtPrice(a.sellTo.price)} — <EcoRichText text={a.sellTo.store} />
+                    <ItemPrice price={a.sellTo.price} norm={a.sellTo.norm ?? a.norm} currency={a.currency} layout="inline" />{" "}
+                    — <EcoRichText text={a.sellTo.store} />
                   </td>
                   <td className="num">
-                    +{fmtPrice(a.spread)} {a.currency} ({Math.round(a.spreadPct)}%)
+                    +{formatMoney(a.spread)} {a.currency} ({Math.round(a.spreadPct)}%)
                   </td>
                   <td className="num">{formatCount(a.volume)}</td>
                   <td className="num">{formatCount(a.opportunity)}</td>

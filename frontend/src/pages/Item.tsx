@@ -1,9 +1,11 @@
 import { Link, useSearchParams } from "react-router-dom"
 import EcoRichText from "../components/EcoRichText"
 import FreshnessNote from "../components/FreshnessNote"
+import ItemPrice from "../components/ItemPrice"
 import Layout from "../components/Layout"
 import { fetchItemPivot, type ItemFeedRow, type ItemPivot } from "../lib/itemsApi"
 import { formatCount, formatDuration, formatRelative, prettifyEcoName } from "../lib/format"
+import type { PriceNorm } from "../lib/priceNorm"
 import { useFreshData } from "../lib/useFreshData"
 
 // Maps the raw production action id to a past-tense verb for the feed lines.
@@ -18,15 +20,6 @@ const PAGE_SIZE = 50
 
 type EventType = "all" | "craft" | "trade"
 
-function fmtPrice(n: number): string {
-  return new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(n)
-}
-
-function pricePhrase(unitPrice: number | null, currency: string): string {
-  if (unitPrice === null || !currency) return ""
-  return ` @ ${fmtPrice(unitPrice)} ${currency}`.trimEnd()
-}
-
 // A run of collapsed identical events reads as "(×N over 3 minutes)". A single
 // event carries no run tail.
 function runTail(row: ItemFeedRow): string {
@@ -37,7 +30,8 @@ function runTail(row: ItemFeedRow): string {
 
 // One feed row rendered as a single relative-time sentence. Compressed runs sum
 // their quantity, so "crafted 100 Hewn Log" is the whole run, not one event.
-function FeedLine({ row, item, now }: { row: ItemFeedRow; item: string; now: number }) {
+// Feed rows and offers share the pivot's one item-level norm (eco-app#8368).
+function FeedLine({ row, item, now, norm }: { row: ItemFeedRow; item: string; now: number; norm?: PriceNorm | null }) {
   const when = formatRelative(row.time, now)
   if (row.kind === "craft") {
     const verb = ACTION_VERBS[row.actionType] ?? "made"
@@ -57,7 +51,19 @@ function FeedLine({ row, item, now }: { row: ItemFeedRow; item: string; now: num
       <span className="pivot-day">{when}</span>{" "}
       <strong><EcoRichText text={row.seller || "someone"} /></strong> sold {formatCount(row.quantity)} {item} to{" "}
       <strong><EcoRichText text={row.buyer || "someone"} /></strong>
-      {pricePhrase(row.unitPrice, row.currency)}
+      {row.unitPrice !== null && row.currency ? (
+        <>
+          {" "}
+          <ItemPrice
+            price={row.unitPrice}
+            norm={row.norm ?? norm}
+            currency={row.currency}
+            showCurrency
+            prefix="@ "
+            layout="inline"
+          />
+        </>
+      ) : null}
       {runTail(row)}
     </li>
   )
@@ -258,8 +264,13 @@ export default function Item() {
                       <div className="rank-row">
                         <span className="rank-name"><EcoRichText text={o.store} /></span>
                         <span className="rank-count">
-                          {o.price !== null ? `${fmtPrice(o.price)} ${o.currency}` : "—"}
-                          {o.quantity !== null ? ` · ${formatCount(o.quantity)} in stock` : ""}
+                          <ItemPrice
+                            price={o.price}
+                            norm={o.norm ?? pivot?.norm}
+                            currency={o.currency}
+                            showCurrency
+                            suffix={o.quantity !== null ? `, ${formatCount(o.quantity)} in stock` : ""}
+                          />
                         </span>
                       </div>
                     </li>
@@ -286,8 +297,13 @@ export default function Item() {
                       <div className="rank-row">
                         <span className="rank-name"><EcoRichText text={o.owner || o.store} /></span>
                         <span className="rank-count">
-                          {o.price !== null ? `${fmtPrice(o.price)} ${o.currency}` : "—"}
-                          {o.quantity !== null ? ` · wants ${formatCount(o.quantity)}` : ""}
+                          <ItemPrice
+                            price={o.price}
+                            norm={o.norm ?? pivot?.norm}
+                            currency={o.currency}
+                            showCurrency
+                            suffix={o.quantity !== null ? `, wants ${formatCount(o.quantity)}` : ""}
+                          />
                         </span>
                       </div>
                     </li>
@@ -362,7 +378,7 @@ export default function Item() {
           ) : (
             <ul className="pivot-lines" data-testid="item-feed">
               {pageRows.map((row, i) => (
-                <FeedLine key={`${row.kind}-${row.time}-${i}`} row={row} item={pretty} now={now} />
+                <FeedLine key={`${row.kind}-${row.time}-${i}`} row={row} item={pretty} now={now} norm={pivot?.norm} />
               ))}
             </ul>
           )}

@@ -4,6 +4,7 @@ import EcoRichText from "../components/EcoRichText"
 import ItemLink from "../components/ItemLink"
 import FreshnessNote from "../components/FreshnessNote"
 import Layout from "../components/Layout"
+import ItemPrice from "../components/ItemPrice"
 import PriceHistoryPanel from "../components/PriceHistoryPanel"
 import { fetchFairPrice, type FairPriceResult } from "../lib/fairPriceApi"
 import { fetchJsonOrNull } from "../lib/api"
@@ -14,7 +15,8 @@ import {
   type ShelfOffer,
 } from "../lib/logisticsApi"
 import { fetchMarket, type ItemMarket, type MarketTrend } from "../lib/marketApi"
-import { formatCount, prettifyEcoName } from "../lib/format"
+import { formatCount, formatDecimal, formatMoney, prettifyEcoName } from "../lib/format"
+import type { PriceNorm } from "../lib/priceNorm"
 import { useFreshData } from "../lib/useFreshData"
 import {
   fetchItemPriceHistory,
@@ -31,6 +33,7 @@ const DEMAND_REASON: Record<GapReason, string> = {
 }
 
 type RecipeCostLine = {
+  norm?: PriceNorm | null
   item: string
   displayName: string
   quantity: number
@@ -41,6 +44,7 @@ type RecipeCostLine = {
 }
 
 type RecipeCost = {
+  norm?: PriceNorm | null
   recipe: string
   product: string
   yield: number
@@ -76,6 +80,7 @@ type MarketOption = {
   currency: string
   score: number
   detail: string
+  market?: ItemMarket
 }
 
 type TrendMeta = { glyph: string; label: string; color: string }
@@ -94,13 +99,9 @@ const VERDICT: Record<string, { glyph: string; label: string; color: string }> =
   inconclusive: { glyph: "·", label: "inconclusive", color: "var(--ink-faint)" },
 }
 
-function fmtPrice(n: number): string {
-  return new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(n)
-}
-
 function signedPrice(n: number, currency: string): string {
   const sign = n > 0 ? "+" : ""
-  return `${sign}${fmtPrice(n)} ${currency}`
+  return `${sign}${formatMoney(n)} ${currency}`
 }
 
 function TrendTag({ trend, delta }: { trend: MarketTrend; delta: number | null }) {
@@ -172,8 +173,20 @@ function bandFit(price: number, low: number, high: number): string {
   return "inside band"
 }
 
-function marketSummary(row: ItemMarket): string {
-  return `${fmtPrice(row.medianPrice)} ${row.currency} median · ${formatCount(row.totalTrades)} trades · ${formatCount(row.totalVolume)} volume`
+function MarketSummary({ row }: { row: ItemMarket }) {
+  return (
+    <>
+      <ItemPrice
+        price={row.medianPrice}
+        norm={row.norm}
+        currency={row.currency}
+        showCurrency
+        suffix=" median"
+        layout="inline"
+      />
+      , {formatCount(row.totalTrades)} trades, {formatCount(row.totalVolume)} volume
+    </>
+  )
 }
 
 // The flagship "How should I price X?" page (eco-app#104). It reads the live
@@ -315,7 +328,7 @@ export default function UsesPrice() {
     const byItem = new Map<string, MarketOption>()
     if (market) {
       for (const row of market.markets) {
-        const detail = `${fmtPrice(row.medianPrice)} ${row.currency} median · ${formatCount(row.totalTrades)} trades`
+        const detail = `${formatCount(row.totalTrades)} trades`
         const score = row.totalTrades * 1000 + row.totalVolume
         const previous = byItem.get(row.item)
         if (!previous || score > previous.score) {
@@ -325,6 +338,7 @@ export default function UsesPrice() {
             currency: row.currency,
             score,
             detail,
+            market: row,
           })
         }
       }
@@ -341,6 +355,7 @@ export default function UsesPrice() {
           currency: row.currency,
           score,
           detail,
+          market: prev?.market,
         })
       }
       logistics.cheapest.forEach(absorb)
@@ -426,7 +441,7 @@ export default function UsesPrice() {
         {item && marketRow && (
           <p className="hero-pill" data-testid="price-pill">
             <span className="pulse-dot" aria-hidden="true" />
-            {marketSummary(marketRow)}
+            <MarketSummary row={marketRow} />
           </p>
         )}
         {loaded && !market && !logistics && (
@@ -454,7 +469,7 @@ export default function UsesPrice() {
             {formatCount(opportunityContext.demandQty)} observed demand ·{" "}
             {DEMAND_REASON[opportunityContext.demandReason]} ·{" "}
             {opportunityContext.margin !== null
-              ? `estimated margin ${fmtPrice(opportunityContext.margin)} per unit`
+              ? `estimated margin ${formatMoney(opportunityContext.margin)} per unit`
               : "estimated margin unavailable"}
           </p>
           <p className="empty-note" data-testid="opportunity-confidence">
@@ -486,7 +501,19 @@ export default function UsesPrice() {
                   <ItemLink className="rank-name linklike" item={o.item}>
                     {o.pretty}
                   </ItemLink>
-                  <span className="rank-count">{o.detail}</span>
+                  <span className="rank-count">
+                    {o.market ? (
+                      <ItemPrice
+                        price={o.market.medianPrice}
+                        norm={o.market.norm}
+                        currency={o.market.currency}
+                        showCurrency
+                        suffix={` median, ${formatCount(o.market.totalTrades)} trades`}
+                      />
+                    ) : (
+                      o.detail
+                    )}
+                  </span>
                   <button
                     className="linklike"
                     onClick={() => pickItem(o.item, o.currency)}
@@ -568,8 +595,8 @@ export default function UsesPrice() {
                 <>
                   <p className="hero-pill" data-testid="price-band-pill">
                     <span className="pulse-dot" aria-hidden="true" />
-                    {marketSummary(marketRow)}
-                    {bandWidth !== null ? ` · IQR ${fmtPrice(bandWidth)} ${moneyUnit}` : ""}
+                    <MarketSummary row={marketRow} />
+                    {bandWidth !== null ? `, IQR ${formatMoney(bandWidth)} ${moneyUnit}` : ""}
                   </p>
                   <table tabIndex={0} className="ledger-table" data-testid="price-band-table">
                     <thead>
@@ -586,9 +613,15 @@ export default function UsesPrice() {
                       {marketRow.buckets.slice(-8).map((b) => (
                         <tr key={b.day} data-testid="price-band-row">
                           <td>Day {b.day}</td>
-                          <td className="num">{fmtPrice(b.median)}</td>
-                          <td className="num">{fmtPrice(b.min)}</td>
-                          <td className="num">{fmtPrice(b.max)}</td>
+                          <td className="num">
+                            <ItemPrice price={b.median} norm={marketRow?.norm} currency={marketRow?.currency} />
+                          </td>
+                          <td className="num">
+                            <ItemPrice price={b.min} norm={marketRow?.norm} currency={marketRow?.currency} />
+                          </td>
+                          <td className="num">
+                            <ItemPrice price={b.max} norm={marketRow?.norm} currency={marketRow?.currency} />
+                          </td>
                           <td className="num">{formatCount(b.volume)}</td>
                           <td className="num">{formatCount(b.trades)}</td>
                         </tr>
@@ -601,7 +634,7 @@ export default function UsesPrice() {
                 <p className="hero-pill" data-testid="price-fred">
                   <span className="pulse-dot" aria-hidden="true" />
                   {currentFairPrice.displayName} benchmark{" "}
-                  {currentFairPrice.latestValue != null ? fmtPrice(currentFairPrice.latestValue) : "—"}{" "}
+                  {currentFairPrice.latestValue != null ? formatMoney(currentFairPrice.latestValue) : "—"}{" "}
                   {currentFairPrice.displayUnit || ""}
                   {currentFairPrice.inGameVerdict ? (
                     <>
@@ -651,7 +684,7 @@ export default function UsesPrice() {
                           <td><EcoRichText text={o.store} /></td>
                           <td>{o.owner ? <EcoRichText text={o.owner} /> : "—"}</td>
                           <td className="num">
-                            {fmtPrice(o.price)} {o.currency || currency}
+                            <ItemPrice price={o.price} norm={o.norm ?? cheapest?.norm} currency={o.currency || currency} showCurrency />
                           </td>
                           <td className="num">{formatCount(o.quantity)}</td>
                           <td>
@@ -665,7 +698,7 @@ export default function UsesPrice() {
                           <td><EcoRichText text={o.store} /></td>
                           <td>{o.owner ? <EcoRichText text={o.owner} /> : "—"}</td>
                           <td className="num">
-                            {fmtPrice(o.price)} {o.currency || currency}
+                            <ItemPrice price={o.price} norm={o.norm ?? resale?.norm} currency={o.currency || currency} showCurrency />
                           </td>
                           <td className="num">{formatCount(o.quantity)}</td>
                           <td>
@@ -677,7 +710,7 @@ export default function UsesPrice() {
                   </table>
                   <p className="section-sub" data-testid="price-comparison-summary">
                     {marketRow
-                      ? `${marketSummary(marketRow)}.`
+                      ? <><MarketSummary row={marketRow} />.</>
                       : `${formatCount(currentCount)} open shelf offers on the item.`}
                   </p>
                 </>
@@ -713,7 +746,7 @@ export default function UsesPrice() {
                     </ItemLink>{" "}
                     ·{" "}
                     {bestRecipe.cost?.perUnitCost !== null && bestRecipe.cost?.perUnitCost !== undefined
-                      ? `${fmtPrice(bestRecipe.cost.perUnitCost)} ${moneyUnit}/unit`
+                      ? <ItemPrice price={bestRecipe.cost.perUnitCost} norm={bestRecipe.cost.norm} currency={moneyUnit} showCurrency suffix="/unit" />
                       : "unpriced"}
                     {bestRecipe.cost?.complete ? "" : " · partial"}
                   </p>
@@ -738,10 +771,10 @@ export default function UsesPrice() {
                           </td>
                           <td className="num">{formatCount(line.quantity)}</td>
                           <td className="num">
-                            {line.unitCost !== null ? `${fmtPrice(line.unitCost)} ${moneyUnit}` : "—"}
+                            <ItemPrice price={line.unitCost} norm={line.norm} currency={moneyUnit} showCurrency />
                           </td>
                           <td className="num">
-                            {line.subtotal !== null ? `${fmtPrice(line.subtotal)} ${moneyUnit}` : "—"}
+                            {line.subtotal !== null ? `${formatMoney(line.subtotal)} ${moneyUnit}` : "—"}
                           </td>
                           <td>{line.source}</td>
                         </tr>
@@ -754,7 +787,7 @@ export default function UsesPrice() {
                         <span className="rank-name">Ingredient cost</span>
                         <span className="rank-count">
                           {bestRecipe.cost?.ingredientCost != null
-                            ? `${fmtPrice(bestRecipe.cost.ingredientCost)} ${moneyUnit}`
+                            ? `${formatMoney(bestRecipe.cost.ingredientCost)} ${moneyUnit}`
                             : "—"}
                         </span>
                       </div>
@@ -771,7 +804,7 @@ export default function UsesPrice() {
                       <div className="rank-row">
                         <span className="rank-name">Time</span>
                         <span className="rank-count">
-                          {bestRecipe.cost ? `${fmtPrice(bestRecipe.cost.craftMinutes)} min` : "—"}
+                          {bestRecipe.cost ? `${formatDecimal(bestRecipe.cost.craftMinutes)} min` : "—"}
                         </span>
                       </div>
                     </li>
@@ -803,7 +836,12 @@ export default function UsesPrice() {
                       <div className="rank-row">
                         <span className="rank-name">Target ask</span>
                         <span className="rank-count">
-                          {fmtPrice(suggestedAsk)} {moneyUnit}
+                          <ItemPrice
+                            price={suggestedAsk}
+                            norm={marketRow?.norm ?? bestRecipe?.cost?.norm}
+                            currency={moneyUnit}
+                            showCurrency
+                          />
                         </span>
                       </div>
                     </li>
@@ -813,7 +851,7 @@ export default function UsesPrice() {
                         <span className="rank-count">
                           {priceVsCraft !== null
                             ? signedPrice(priceVsCraft, moneyUnit)
-                            : `median ${fmtPrice(marketRow.medianPrice)} ${moneyUnit}`}
+                            : <ItemPrice price={marketRow.medianPrice} norm={marketRow.norm} currency={moneyUnit} showCurrency prefix="median " layout="inline" />}
                         </span>
                       </div>
                     </li>
@@ -836,7 +874,15 @@ export default function UsesPrice() {
                     {craftedPrice !== null
                       ? `${TARGET_MARKUP.toFixed(2)}x markup over craft cost.`
                       : "Phase 1 falls back to the market median and liquidity."}
-                    {band ? ` The current band spans ${fmtPrice(band.low)} to ${fmtPrice(band.high)} ${moneyUnit}.` : ""}
+                    {band ? (
+                      <>
+                        {" "}The current band spans{" "}
+                        <ItemPrice price={band.low} norm={marketRow?.norm} currency={moneyUnit} layout="inline" /> to{" "}
+                        <ItemPrice price={band.high} norm={marketRow?.norm} currency={moneyUnit} showCurrency layout="inline" />.
+                      </>
+                    ) : (
+                      ""
+                    )}
                   </p>
                 </>
               )}
@@ -871,7 +917,7 @@ export default function UsesPrice() {
                   <span className="rank-name">Labor valuation</span>
                   <span className="rank-count">
                     {currentRecipes?.costParams
-                      ? `${fmtPrice(currentRecipes.costParams.caloriePrice)} ${moneyUnit}/calorie and ${fmtPrice(currentRecipes.costParams.minutePrice)} ${moneyUnit}/minute`
+                      ? `${formatMoney(currentRecipes.costParams.caloriePrice)} ${moneyUnit}/calorie and ${formatMoney(currentRecipes.costParams.minutePrice)} ${moneyUnit}/minute`
                       : "The recipe plane did not publish labor and time rates."}
                   </span>
                 </div>

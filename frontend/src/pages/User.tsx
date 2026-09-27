@@ -2,6 +2,7 @@ import { useMemo } from "react"
 import { useParams } from "react-router-dom"
 import ItemLink from "../components/ItemLink"
 import FreshnessNote from "../components/FreshnessNote"
+import ItemPrice from "../components/ItemPrice"
 import Layout from "../components/Layout"
 import {
   formatCount,
@@ -243,7 +244,13 @@ export default function User() {
                           {o.itemPretty || prettifyEcoName(o.item)}
                         </ItemLink>
                         <span className="rank-count">
-                          {formatCount(o.price)} {o.currency} · {formatCount(o.quantity)} in stock
+                          <ItemPrice
+                            price={o.price}
+                            norm={o.norm}
+                            currency={o.currency}
+                            showCurrency
+                            suffix={`, ${formatCount(o.quantity)} in stock`}
+                          />
                         </span>
                       </div>
                     </li>
@@ -280,7 +287,13 @@ export default function User() {
                           {o.itemPretty || prettifyEcoName(o.item)}
                         </ItemLink>
                         <span className="rank-count">
-                          {formatCount(o.price)} {o.currency} · wants {formatCount(o.quantity)}
+                          <ItemPrice
+                            price={o.price}
+                            norm={o.norm}
+                            currency={o.currency}
+                            showCurrency
+                            suffix={`, wants ${formatCount(o.quantity)}`}
+                          />
                         </span>
                       </div>
                     </li>

@@ -1,3 +1,5 @@
+import { hydrateNorms, type PriceNorm } from "./priceNorm"
+
 // Typed clients for the item directory + per-item pivot (eco-app#81).
 //
 // `/preview/items.json` returns ItemIndex.to_dict() from eco_mcp_app/items.py:
@@ -25,6 +27,8 @@ export interface ItemIndex {
 
 // One trade row for an item — mirrors a trades-ledger row (tradesApi.Trade).
 export interface ItemTrade {
+  /** Historical price norm (eco-app#8368). Optional while payloads gain it. */
+  norm?: PriceNorm | null
   tradeType: string
   time: number
   day: number
@@ -56,6 +60,8 @@ export interface ItemCraft {
 // folded, `quantity` / `currencyAmount` are summed, `time` / `day` are the
 // newest in the run, `spanSeconds` is how long the run took.
 export interface ItemFeedRow {
+  /** Historical price norm (eco-app#8368). Optional while payloads gain it. */
+  norm?: PriceNorm | null
   kind: "craft" | "trade"
   time: number
   day: number
@@ -74,6 +80,8 @@ export interface ItemFeedRow {
 
 // One store's shelf offer feeding the actionable summary (supply or demand).
 export interface ItemShelfOffer {
+  /** Historical price norm (eco-app#8368). Optional while payloads gain it. */
+  norm?: PriceNorm | null
   store: string
   owner: string
   price: number | null
@@ -106,6 +114,8 @@ export interface ItemSummary {
 }
 
 export interface ItemPivot {
+  /** Historical price norm for this item, shared by its feed and offers (eco-app#8368). */
+  norm?: PriceNorm | null
   fetchedAtISO: string
   sourceBaseUrl: string
   item: string
@@ -135,5 +145,5 @@ export async function fetchItemPivot(item: string, signal?: AbortSignal): Promis
   if (!resp.ok) {
     throw new Error(`item pivot fetch failed: HTTP ${resp.status}`)
   }
-  return (await resp.json()) as ItemPivot
+  return hydrateNorms((await resp.json()) as ItemPivot)
 }

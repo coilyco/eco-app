@@ -1,0 +1,160 @@
+{
+ "byProduct": {
+  "LumberItem": [
+   "redacted"
+  ]
+ },
+ "bySkill": {
+  "CarpentrySkill": [
+   "redacted"
+  ]
+ },
+ "byStation": {
+  "SawmillObject": [
+   "redacted"
+  ]
+ },
+ "costParams": {
+  "caloriePrice": 0.0,
+  "minutePrice": 0.0
+ },
+ "counts": {
+  "products": 1323,
+  "recipes": 1,
+  "skills": 44,
+  "stations": 68,
+  "tags": 112
+ },
+ "exportedAtISO": null,
+ "indexScope": "filtered",
+ "indexScopeNote": "byProduct, bySkill, byStation, tags and skills are restricted to the recipes in this response. Call without a filter for the whole graph.",
+ "normContext": {
+  "caveat": "stage trails the tech level by the time from an upgrade's first craft to its first trade",
+  "cycle": 14,
+  "notes": [],
+  "referenceCurrency": "Spectres",
+  "referenceCurrencyId": "2533707",
+  "source": "#eco-trades 2024-11-09 to 2026-08-24, 202,368 trade lines",
+  "stage": "Modern 4"
+ },
+ "recipes": [
+  {
+   "byproducts": [],
+   "cost": {
+    "complete": true,
+    "craftMinutes": 0.32,
+    "ingredientCost": 0.7333333393020833,
+    "ingredients": [
+     {
+      "displayName": "Nail",
+      "isTag": false,
+      "item": "NailItem",
+      "norm": {
+       "basis": "stage",
+       "cycles": 7,
+       "n": 70,
+       "referencePrice": 0.0564
+      },
+      "quantity": 2.0,
+      "source": "craft",
+      "subtotal": 0.1125,
+      "unitCost": 0.05625
+     },
+     {
+      "displayName": "Flaxseed Oil",
+      "isTag": false,
+      "item": "FlaxseedOilItem",
+      "norm": {
+       "basis": "stage",
+       "cycles": 7,
+       "n": 54,
+       "referencePrice": 0.3184
+      },
+      "quantity": 0.5,
+      "source": "market",
+      "subtotal": 0.28750000596875,
+      "unitCost": 0.5750000119375
+     }
+    ],
+    "laborCalories": 60.0,
+    "laborCost": 0.0,
+    "norm": {
+     "basis": "stage",
+     "cycles": 11,
+     "n": 134,
+     "referencePrice": 0.8368
+    },
+    "perUnitCost": 0.36666666965104167,
+    "product": "LumberItem",
+    "recipe": "Lumber",
+    "timeCost": 0.0,
+    "totalCost": 0.7333333393020833,
+    "unpricedInputs": [],
+    "yield": 2.0
+   },
+   "craftMinutes": 0.32,
+   "displayName": "Lumber",
+   "family": "redacted",
+   "ingredients": [
+    {
+     "displayName": "Nail",
+     "isTag": false,
+     "item": "NailItem",
+     "quantity": 2.0
+    },
+    {
+     "displayName": "Flaxseed Oil",
+     "isTag": false,
+     "item": "FlaxseedOilItem",
+     "quantity": 0.5
+    }
+   ],
+   "isBlueprint": false,
+   "isDefault": true,
+   "laborCost": 60.0,
+   "name": "redacted",
+   "product": {
+    "displayName": "Lumber",
+    "isTag": false,
+    "item": "LumberItem",
+    "quantity": 2.0
+   },
+   "skill": {
+    "level": 1,
+    "name": "redacted"
+   },
+   "station": "SawmillObject",
+   "stationDisplayName": "Sawmill Object",
+   "tableTierRequired": null,
+   "variants": [
+    "redacted",
+    "redacted"
+   ]
+  }
+ ],
+ "recipesMatched": 1,
+ "recipesReturned": 1,
+ "serverSpecific": false,
+ "skills": [
+  {
+   "displayName": "Carpentry",
+   "maxLevel": 7,
+   "name": "redacted",
+   "profession": "redacted",
+   "tags": [
+    "Carpenter Specialty",
+    "Specialty"
+   ],
+   "tier": 2
+  }
+ ],
+ "source": "Eco dedicated server AutoGen (Steam app 739590, build 24618181)",
+ "sourceKind": "autogen",
+ "tags": {
+  "WoodBoard": [
+   "BoardItem",
+   "HardwoodBoardItem"
+  ]
+ },
+ "version": 0
+}

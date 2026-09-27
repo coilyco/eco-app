@@ -1,0 +1,398 @@
+{
+ "arbitrage": [
+  {
+   "buyFrom": {
+    "currency": "Spectres",
+    "item": "GoldBarItem",
+    "itemPretty": "Gold Bar",
+    "lastDay": null,
+    "owner": "redacted",
+    "price": 0.56,
+    "quantity": 631.0,
+    "side": "sell",
+    "source": "live",
+    "store": "redacted",
+    "storeKey": "redacted"
+   },
+   "currency": "Spectres",
+   "item": "GoldBarItem",
+   "itemPretty": "Gold Bar",
+   "norm": {
+    "basis": "stage",
+    "currency": "Spectres",
+    "currencyN": 22,
+    "cycle": 14,
+    "cycles": 11,
+    "median": 2.0,
+    "n": 104,
+    "p25": 1.61,
+    "p75": 2.0,
+    "referencePrice": 0.9405
+   },
+   "opportunity": 86.4,
+   "sellTo": {
+    "currency": "Spectres",
+    "item": "GoldBarItem",
+    "itemPretty": "Gold Bar",
+    "lastDay": null,
+    "owner": "redacted",
+    "price": 2.0,
+    "quantity": 60.0,
+    "side": "buy",
+    "source": "live",
+    "store": "redacted",
+    "storeKey": "redacted"
+   },
+   "spread": 1.44,
+   "spreadPct": 257.1,
+   "storeCount": 4,
+   "volume": 60.0
+  },
+  {
+   "buyFrom": {
+    "currency": "Racines",
+    "item": "LightBulbItem",
+    "itemPretty": "Light Bulb",
+    "lastDay": null,
+    "owner": "redacted",
+    "price": 7.0,
+    "quantity": 22.0,
+    "side": "sell",
+    "source": "live",
+    "store": "redacted",
+    "storeKey": "redacted"
+   },
+   "currency": "Racines",
+   "item": "LightBulbItem",
+   "itemPretty": "Light Bulb",
+   "norm": {
+    "basis": "stage",
+    "currency": "Racines",
+    "currencyN": 11,
+    "cycle": 14,
+    "cycles": 9,
+    "median": 14.0,
+    "n": 108,
+    "p25": 10.5,
+    "p75": 14.0,
+    "referencePrice": 13.0915
+   },
+   "opportunity": 77.0,
+   "sellTo": {
+    "currency": "Racines",
+    "item": "LightBulbItem",
+    "itemPretty": "Light Bulb",
+    "lastDay": null,
+    "owner": "redacted",
+    "price": 14.0,
+    "quantity": 11.0,
+    "side": "buy",
+    "source": "live",
+    "store": "redacted",
+    "storeKey": "redacted"
+   },
+   "spread": 7.0,
+   "spreadPct": 100.0,
+   "storeCount": 2,
+   "volume": 11.0
+  }
+ ],
+ "cheapest": [
+  {
+   "cheapest": 0.01,
+   "currency": "2533707",
+   "item": "SandstoneItem",
+   "itemPretty": "Sandstone",
+   "norm": {
+    "basis": "stage",
+    "currency": "Spectres",
+    "currencyN": 77,
+    "cycle": 14,
+    "cycles": 9,
+    "median": 0.05,
+    "multiple": 0.45,
+    "n": 197,
+    "p25": 0.05,
+    "p75": 0.05,
+    "referencePrice": 0.0224
+   },
+   "offers": [
+    {
+     "currency": "2533707",
+     "item": "SandstoneItem",
+     "itemPretty": "Sandstone",
+     "lastDay": 38.22,
+     "owner": "redacted",
+     "price": 0.01,
+     "quantity": 1480.0,
+     "side": "sell",
+     "source": "history",
+     "store": "redacted",
+     "storeKey": "redacted"
+    },
+    {
+     "currency": "2533707",
+     "item": "SandstoneItem",
+     "itemPretty": "Sandstone",
+     "lastDay": 7.77,
+     "owner": "redacted",
+     "price": 0.05,
+     "quantity": 480.0,
+     "side": "sell",
+     "source": "history",
+     "store": "redacted",
+     "storeKey": "redacted"
+    }
+   ],
+   "sellerCount": 2
+  },
+  {
+   "cheapest": 0.01,
+   "currency": "2533707",
+   "item": "PricklyPearFruitItem",
+   "itemPretty": "Prickly Pear Fruit",
+   "norm": {
+    "basis": "stage",
+    "currency": "Spectres",
+    "currencyN": 10,
+    "cycle": 14,
+    "cycles": 8,
+    "median": 0.1,
+    "multiple": 0.09,
+    "n": 55,
+    "p25": 0.1,
+    "p75": 0.1,
+    "referencePrice": 0.1079
+   },
+   "offers": [
+    {
+     "currency": "2533707",
+     "item": "PricklyPearFruitItem",
+     "itemPretty": "Prickly Pear Fruit",
+     "lastDay": 9.98,
+     "owner": "redacted",
+     "price": 0.01,
+     "quantity": 24.0,
+     "side": "sell",
+     "source": "history",
+     "store": "redacted",
+     "storeKey": "redacted"
+    }
+   ],
+   "sellerCount": 1
+  }
+ ],
+ "live": true,
+ "marketSummaries": [
+  {
+   "bestBuy": 0.01,
+   "buyerCount": 1,
+   "cheapestSell": 0.01,
+   "currency": "Spectres",
+   "demandQty": 321.0,
+   "item": "MortarItem",
+   "itemPretty": "Mortar",
+   "norm": {
+    "basis": "stage",
+    "currency": "Spectres",
+    "currencyN": 9,
+    "cycle": 14,
+    "cycles": 6,
+    "median": 0.04,
+    "multiple": 0.22,
+    "n": 43,
+    "p25": 0.01,
+    "p75": 0.04,
+    "referencePrice": 0.0457
+   },
+   "sellerCount": 2,
+   "sources": [
+    "live"
+   ],
+   "supplyQty": 15252.0
+  },
+  {
+   "bestBuy": 0.05,
+   "buyerCount": 1,
+   "cheapestSell": 0.04,
+   "currency": "Spectres",
+   "demandQty": 999.0,
+   "item": "SpoiledFoodItem",
+   "itemPretty": "Spoiled Food",
+   "norm": {
+    "basis": "stage",
+    "currency": "Spectres",
+    "currencyN": 25,
+    "cycle": 14,
+    "cycles": 11,
+    "median": 0.05,
+    "multiple": 1.88,
+    "n": 270,
+    "p25": 0.05,
+    "p75": 0.05,
+    "referencePrice": 0.0213
+   },
+   "sellerCount": 1,
+   "sources": [
+    "live"
+   ],
+   "supplyQty": 12303.0
+  }
+ ],
+ "normContext": {
+  "caveat": "stage trails the tech level by the time from an upgrade's first craft to its first trade",
+  "cycle": 14,
+  "notes": [],
+  "referenceCurrency": "Spectres",
+  "referenceCurrencyId": "2533707",
+  "source": "#eco-trades 2024-11-09 to 2026-08-24, 202,368 trade lines",
+  "stage": "Modern 4"
+ },
+ "resale": [
+  {
+   "best": 353.89,
+   "buyerCount": 1,
+   "currency": "Spectres",
+   "item": "ModernUpgradeLvl3Item",
+   "itemPretty": "Modern Upgrade Lvl3",
+   "norm": {
+    "basis": "stage",
+    "cycles": 4,
+    "multiple": 1.36,
+    "n": 13,
+    "referencePrice": 259.4413
+   },
+   "offers": [
+    {
+     "currency": "Spectres",
+     "item": "ModernUpgradeLvl3Item",
+     "itemPretty": "Modern Upgrade 3",
+     "lastDay": null,
+     "owner": "redacted",
+     "price": 353.89,
+     "quantity": 2.0,
+     "side": "buy",
+     "source": "live",
+     "store": "redacted",
+     "storeKey": "redacted"
+    }
+   ]
+  },
+  {
+   "best": 300.0,
+   "buyerCount": 1,
+   "currency": "Spectres",
+   "item": "AdvancedUpgradeLvl4Item",
+   "itemPretty": "Advanced Upgrade Lvl4",
+   "norm": {
+    "basis": "stage",
+    "currency": "Spectres",
+    "currencyN": 7,
+    "cycle": 14,
+    "cycles": 7,
+    "median": 400.0,
+    "multiple": 0.69,
+    "n": 25,
+    "p25": 390.0,
+    "p75": 458.605,
+    "referencePrice": 433.6051
+   },
+   "offers": [
+    {
+     "currency": "Spectres",
+     "item": "AdvancedUpgradeLvl4Item",
+     "itemPretty": "Advanced Upgrade 4",
+     "lastDay": null,
+     "owner": "redacted",
+     "price": 300.0,
+     "quantity": 1.0,
+     "side": "buy",
+     "source": "live",
+     "store": "redacted",
+     "storeKey": "redacted"
+    }
+   ]
+  }
+ ],
+ "supplyGaps": [
+  {
+   "buyPrice": 0.12,
+   "buyerCount": 1,
+   "buyers": [
+    {
+     "owner": "redacted",
+     "price": 0.12,
+     "quantity": 3716.0,
+     "store": "redacted"
+    }
+   ],
+   "cheapestSell": null,
+   "currency": "2533707",
+   "demandQty": 3716.0,
+   "item": "CoalItem",
+   "itemPretty": "Coal",
+   "median": 0.12,
+   "norm": {
+    "basis": "stage",
+    "currency": "Spectres",
+    "currencyN": 23,
+    "cycle": 14,
+    "cycles": 7,
+    "median": 0.1,
+    "multiple": 0.75,
+    "n": 56,
+    "p25": 0.1,
+    "p75": 0.1,
+    "referencePrice": 0.1596
+   },
+   "overMedianPct": null,
+   "reason": "no_supply",
+   "sellerCount": 0,
+   "supplyQty": 0
+  },
+  {
+   "buyPrice": 0.12,
+   "buyerCount": 3,
+   "buyers": [
+    {
+     "owner": "redacted",
+     "price": 0.12,
+     "quantity": 999.0,
+     "store": "redacted"
+    },
+    {
+     "owner": "redacted",
+     "price": 0.1,
+     "quantity": 966.0,
+     "store": "redacted"
+    }
+   ],
+   "cheapestSell": null,
+   "currency": "Spectres",
+   "demandQty": 2215.0,
+   "item": "CopperOreItem",
+   "itemPretty": "Copper Ore",
+   "median": null,
+   "norm": {
+    "basis": "stage",
+    "currency": "Spectres",
+    "currencyN": 5,
+    "cycle": 14,
+    "cycles": 6,
+    "median": 0.1,
+    "multiple": 0.44,
+    "n": 21,
+    "p25": 0.1,
+    "p75": 0.1,
+    "referencePrice": 0.2715
+   },
+   "overMedianPct": null,
+   "reason": "no_supply",
+   "sellerCount": 0,
+   "supplyQty": 0
+  }
+ ],
+ "totalOffers": 3062,
+ "totalStores": 180,
+ "view": "logistics"
+}

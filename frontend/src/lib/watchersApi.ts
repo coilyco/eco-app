@@ -9,8 +9,11 @@
 // (`trade_watchers`); the SPA is a read-only surface for them.
 
 import type { Trade } from "./tradesApi"
+import { hydrateNorms, type PriceNorm } from "./priceNorm"
 
 export interface WatcherDisplay {
+  /** Historical price norm (eco-app#8368). Optional while payloads gain it. */
+  norm?: PriceNorm | null
   matchCount: number
   recent: Trade[]
   bestUnitPrice: number | null
@@ -51,6 +54,6 @@ export async function fetchWatchers(signal?: AbortSignal): Promise<WatcherHit[]>
   if (!resp.ok) {
     return []
   }
-  const body = (await resp.json()) as Partial<WatchersReport>
+  const body = hydrateNorms((await resp.json()) as Partial<WatchersReport>)
   return Array.isArray(body.hits) ? body.hits : []
 }

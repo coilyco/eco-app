@@ -1,0 +1,300 @@
+{
+ "counts": {
+  "detailedRows": 535,
+  "exporterRows": 3706,
+  "note": "perTypeCounts counts exporter rows, not trades; totalTrades counts trade events, with each hourly rollup row standing for its merged Count. Eco's own /info counter (get_economy.trades_total) counts a different population again and will not match.",
+  "rollupRows": 3171,
+  "rollupTrades": 22508,
+  "tradeEvents": 23043
+ },
+ "normContext": {
+  "caveat": "stage trails the tech level by the time from an upgrade's first craft to its first trade",
+  "cycle": 14,
+  "notes": [],
+  "referenceCurrency": "Spectres",
+  "referenceCurrencyId": "2533707",
+  "source": "#eco-trades 2024-11-09 to 2026-08-24, 202,368 trade lines",
+  "stage": "Modern 4"
+ },
+ "perTypeCounts": {
+  "BarterTrade": 4,
+  "CurrencyTrade": 3702
+ },
+ "stores": [
+  {
+   "buyCount": 7,
+   "currencies": [
+    [
+     "redacted",
+     4282.04
+    ],
+    [
+     "redacted",
+     193.43
+    ]
+   ],
+   "label": "redacted",
+   "lastDay": 38.04,
+   "location": "redacted",
+   "mixedCurrencyVolume": true,
+   "owner": "redacted",
+   "ownerId": "redacted",
+   "sellCount": 41,
+   "storeKey": "redacted",
+   "storeObject": "redacted",
+   "storeObjectPretty": "Store",
+   "topCounterparties": [],
+   "topItems": [
+    {
+     "avgUnitPrice": 1.575,
+     "item": "ReinforcedConcreteItem",
+     "norm": {
+      "basis": "stage",
+      "cycles": 10,
+      "n": 114,
+      "referencePrice": 1.3941
+     },
+     "pretty": "Reinforced Concrete",
+     "quantity": 715.0,
+     "tradeCount": 2,
+     "volume": 1145.25
+    },
+    {
+     "avgUnitPrice": 0.8143,
+     "item": "CementItem",
+     "norm": {
+      "basis": "stage",
+      "cycles": 10,
+      "n": 137,
+      "referencePrice": 0.5999
+     },
+     "pretty": "Cement",
+     "quantity": 1343.0,
+     "tradeCount": 7,
+     "volume": 1020.9
+    }
+   ],
+   "totalVolume": 4615.47,
+   "tradeCount": 48,
+   "uniqueCounterparties": 16
+  },
+  {
+   "buyCount": 6,
+   "currencies": [
+    [
+     "redacted",
+     2473.28
+    ]
+   ],
+   "label": "redacted",
+   "lastDay": 21.58,
+   "location": "redacted",
+   "mixedCurrencyVolume": false,
+   "owner": "redacted",
+   "ownerId": "redacted",
+   "sellCount": 17,
+   "storeKey": "redacted",
+   "storeObject": "redacted",
+   "storeObjectPretty": "Store",
+   "topCounterparties": [],
+   "topItems": [
+    {
+     "avgUnitPrice": 1.15,
+     "item": "PaperItem",
+     "norm": {
+      "basis": "stage",
+      "cycles": 11,
+      "n": 196,
+      "referencePrice": 0.5614
+     },
+     "pretty": "Paper",
+     "quantity": 974.0,
+     "tradeCount": 3,
+     "volume": 1128.4
+    },
+    {
+     "avgUnitPrice": 0.112,
+     "item": "CoalItem",
+     "norm": {
+      "basis": "stage",
+      "cycles": 7,
+      "n": 56,
+      "referencePrice": 0.1596
+     },
+     "pretty": "Coal",
+     "quantity": 3716.0,
+     "tradeCount": 5,
+     "volume": 414.48
+    }
+   ],
+   "totalVolume": 2473.28,
+   "tradeCount": 23,
+   "uniqueCounterparties": 12
+  }
+ ],
+ "totalStores": 114,
+ "totalTraders": 43,
+ "totalTrades": 23043,
+ "traders": [
+  {
+   "buyVolume": 4127.84,
+   "citizenId": "redacted",
+   "lastDay": 38.22,
+   "name": "redacted",
+   "sellVolume": 4384.37,
+   "storesOperated": [
+    {
+     "location": "redacted",
+     "storeKey": "redacted",
+     "volume": 4615.47
+    }
+   ],
+   "topBuys": [
+    {
+     "avgUnitPrice": 1.68,
+     "item": "PlasticItem",
+     "norm": {
+      "basis": "stage",
+      "cycles": 11,
+      "n": 335,
+      "referencePrice": 0.6737
+     },
+     "pretty": "Plastic",
+     "quantity": 1234.0,
+     "tradeCount": 5,
+     "volume": 1728.8
+    },
+    {
+     "avgUnitPrice": 2.8675,
+     "item": "RebarItem",
+     "norm": {
+      "basis": "stage",
+      "cycles": 8,
+      "n": 92,
+      "referencePrice": 2.2044
+     },
+     "pretty": "Rebar",
+     "quantity": 548.0,
+     "tradeCount": 4,
+     "volume": 1602.54
+    }
+   ],
+   "topSells": [
+    {
+     "avgUnitPrice": 1.575,
+     "item": "ReinforcedConcreteItem",
+     "norm": {
+      "basis": "stage",
+      "cycles": 10,
+      "n": 114,
+      "referencePrice": 1.3941
+     },
+     "pretty": "Reinforced Concrete",
+     "quantity": 715.0,
+     "tradeCount": 2,
+     "volume": 1145.25
+    },
+    {
+     "avgUnitPrice": 0.8143,
+     "item": "CementItem",
+     "norm": {
+      "basis": "stage",
+      "cycles": 10,
+      "n": 137,
+      "referencePrice": 0.5999
+     },
+     "pretty": "Cement",
+     "quantity": 1343.0,
+     "tradeCount": 7,
+     "volume": 1020.9
+    }
+   ],
+   "totalVolume": 8512.21,
+   "tradeCount": 66,
+   "uniqueCounterparties": 18
+  },
+  {
+   "buyVolume": 3100.25,
+   "citizenId": "redacted",
+   "lastDay": 36.82,
+   "name": "redacted",
+   "sellVolume": 4722.64,
+   "storesOperated": [
+    {
+     "location": "redacted",
+     "storeKey": "redacted",
+     "volume": 1621.5
+    },
+    {
+     "location": "redacted",
+     "storeKey": "redacted",
+     "volume": 899.0
+    }
+   ],
+   "topBuys": [
+    {
+     "avgUnitPrice": 64.0,
+     "item": "GeologyResearchPaperModernItem",
+     "norm": {
+      "basis": "stage",
+      "cycles": 5,
+      "n": 21,
+      "referencePrice": 53.0767
+     },
+     "pretty": "Geology Research Paper Modern",
+     "quantity": 8.0,
+     "tradeCount": 1,
+     "volume": 512.0
+    },
+    {
+     "avgUnitPrice": 1.35,
+     "item": "ReinforcedConcreteItem",
+     "norm": {
+      "basis": "stage",
+      "cycles": 10,
+      "n": 114,
+      "referencePrice": 1.3941
+     },
+     "pretty": "Reinforced Concrete",
+     "quantity": 315.0,
+     "tradeCount": 1,
+     "volume": 425.25
+    }
+   ],
+   "topSells": [
+    {
+     "avgUnitPrice": 1.31,
+     "item": "CopperWiringItem",
+     "norm": {
+      "basis": "stage",
+      "cycles": 10,
+      "n": 194,
+      "referencePrice": 1.261
+     },
+     "pretty": "Copper Wiring",
+     "quantity": 1000.0,
+     "tradeCount": 3,
+     "volume": 1310.0
+    },
+    {
+     "avgUnitPrice": 375.0,
+     "item": "Shipping_03Item",
+     "norm": {
+      "basis": null,
+      "fallback": "no trade history for this item",
+      "n": 0
+     },
+     "pretty": "Shipping_03",
+     "quantity": 2.0,
+     "tradeCount": 2,
+     "volume": 750.0
+    }
+   ],
+   "totalVolume": 7822.89,
+   "tradeCount": 74,
+   "uniqueCounterparties": 25
+  }
+ ],
+ "view": "eco_stores",
+ "volumeNote": "totalVolume sums currency amounts across every currency a store traded in. Where mixedCurrencyVolume is true it adds unlike units \u2014 read `currencies` for the per-currency breakout instead."
+}
