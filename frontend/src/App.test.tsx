@@ -9,7 +9,7 @@ describe("SPA routes", () => {
     window.history.pushState({}, "", "/mods")
     render(<App />)
 
-    expect(screen.getByRole("heading", { name: "The complete mod catalog" })).toBeInTheDocument()
+    expect(screen.getByRole("heading", { name: "Every mod on the server" })).toBeInTheDocument()
   })
 
   it("serves the official Wiki snapshot on a direct /wiki route", () => {

@@ -6,12 +6,32 @@ import brief from "../../../data/server_brief.json"
 // and parsed from live status below, because a second copy is how the old
 // Discord info block went stale.
 
+// `source` is the link label when `href` exists, and the reason there is no
+// link when it does not. /mods renders both; the homepage shows name and
+// summary only.
+export interface ModItem {
+  name: string
+  summary: string
+  href?: string
+  source?: string
+  author?: string
+  version?: string
+  includes?: Array<{ name: string; summary: string }>
+}
+
+export interface BenchedMod extends ModItem {
+  reason: string
+}
+
 export interface ServerBrief {
   reviewedOn: string
   join: { serverName: string; discordUrl: string; steps: string[] }
   nextCycle?: string
   configs: Array<{ group: string; items: Array<{ label: string; value: string }> }>
-  mods: Array<{ group: string; items: Array<{ name: string; summary: string }> }>
+  mods: Array<{ group: string; items: ModItem[] }>
+  serverPlumbing?: ModItem[]
+  servicePlugins?: ModItem[]
+  benched?: BenchedMod[]
   skillTrees: { pickOne: string[]; chains: string[][] }
   gameplayNotes: Array<{ title: string; body: string }>
 }

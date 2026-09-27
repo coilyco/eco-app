@@ -2,6 +2,7 @@ import { cleanup, render, screen, within } from "@testing-library/react"
 import { afterEach, describe, expect, it } from "vitest"
 import { MemoryRouter } from "react-router-dom"
 import Mods from "./Mods"
+import { SERVER_BRIEF, type ModItem } from "../lib/serverBrief"
 
 afterEach(cleanup)
 
@@ -13,42 +14,71 @@ function renderMods() {
   )
 }
 
+const slug = (name: string) =>
+  name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+
+const everyMod: ModItem[] = [
+  ...SERVER_BRIEF.mods.flatMap((g) => g.items),
+  ...(SERVER_BRIEF.serverPlumbing ?? []),
+  ...(SERVER_BRIEF.servicePlugins ?? []),
+  ...(SERVER_BRIEF.benched ?? []),
+]
+
 describe("Mod catalog", () => {
-  it("lists every canonical catalog group in a compact inventory", () => {
-    renderMods()
+  it("renders every mod in the brief and nothing else", () => {
+    const { container } = renderMods()
 
-    expect(within(screen.getByTestId("catalog-app")).getAllByRole("article")).toHaveLength(4)
-    expect(within(screen.getByTestId("catalog-public")).getAllByRole("article")).toHaveLength(9)
-    expect(within(screen.getByTestId("catalog-server")).getAllByRole("article")).toHaveLength(21)
-    expect(within(screen.getByTestId("catalog-nid")).getAllByRole("article")).toHaveLength(11)
+    expect(container.querySelectorAll("li.mods-card")).toHaveLength(everyMod.length)
+    for (const mod of everyMod) {
+      expect(screen.getByTestId(`mod-${slug(mod.name)}`)).toHaveTextContent(mod.name)
+    }
   })
 
-  it("links every public upstream and labels entries without a public source", () => {
+  it("links out where a source is published and says why where it is not", () => {
     renderMods()
 
-    expect(within(screen.getByTestId("public-agricultural")).getByRole("link")).toHaveAttribute(
-      "href",
-      "https://forgejo.coilysiren.me/coilyco-gaming/eco-mods/src/branch/main/mods/Mods/UserCode/BunWulfAgricultural",
-    )
-    expect(within(screen.getByTestId("server-beekeeping")).getByRole("link")).toHaveAttribute(
-      "href",
-      "https://mod.io/g/eco/m/beekeeping",
-    )
-    expect(screen.getByTestId("server-cavrn")).toHaveTextContent(
-      "Discord-only release. No public source page.",
-    )
-    expect(screen.getByTestId("server-cavrn").querySelector("a")).toBeNull()
+    for (const mod of everyMod) {
+      const card = screen.getByTestId(`mod-${slug(mod.name)}`)
+      const link = card.querySelector("a.mods-source")
+      if (mod.href) {
+        expect(link).toHaveAttribute("href", mod.href)
+        expect(link).toHaveAttribute("target", "_blank")
+      } else {
+        expect(link).toBeNull()
+        expect(card).toHaveTextContent(mod.source ?? "Source not published")
+      }
+    }
   })
 
-  it("keeps each Nid Toolbox module separately visible", () => {
+  it("lists a toolbox's modules inside its own card", () => {
     renderMods()
 
-    expect(screen.getByTestId("nid-core")).toHaveTextContent("Core")
-    expect(screen.getByTestId("nid-chat-logger")).toHaveTextContent("Chat Logger")
-    expect(screen.getByTestId("nid-timed-messages")).toHaveTextContent("Timed Messages")
-    expect(within(screen.getByTestId("nid-laws")).getByRole("link")).toHaveAttribute(
-      "href",
-      "https://mod.io/g/eco/m/nidtoolbox-full-pack",
-    )
+    const toolboxes = everyMod.filter((m) => m.includes?.length)
+    expect(toolboxes.length).toBeGreaterThan(0)
+    for (const mod of toolboxes) {
+      const list = within(screen.getByTestId(`mod-${slug(mod.name)}`)).getByRole("list", {
+        name: `${mod.name} modules`,
+      })
+      expect(within(list).getAllByRole("listitem")).toHaveLength(mod.includes!.length)
+    }
+  })
+
+  it("shows the benched section only when the brief benches something", () => {
+    renderMods()
+
+    const benched = SERVER_BRIEF.benched ?? []
+    if (benched.length === 0) {
+      expect(screen.queryByTestId("mods-benched")).not.toBeInTheDocument()
+    } else {
+      expect(screen.getByTestId("mods-benched")).toHaveTextContent(benched[0].reason)
+    }
+  })
+
+  it("keeps mod names unique, since each card is addressed by its name", () => {
+    const slugs = everyMod.map((m) => slug(m.name))
+    expect(new Set(slugs).size).toBe(slugs.length)
   })
 })

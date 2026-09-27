@@ -300,73 +300,6 @@ a.k-card:visited {
   list-style: none;
 }
 
-/* --- Mod catalog and wiki snapshot ----------------------------------- */
-
-.catalog-note {
-  max-width: 62ch;
-  margin: 1rem 0 0;
-  color: var(--ink-faint);
-  font-size: 0.9rem;
-  line-height: 1.5;
-}
-
-.mod-catalog {
-  display: grid;
-  gap: 1rem;
-}
-
-.mod-catalog-heading h2 {
-  margin: 0;
-  color: var(--leaf);
-  font-size: 1.35rem;
-}
-
-.mod-catalog-heading p {
-  max-width: 68ch;
-  margin: 0.4rem 0 0;
-  color: var(--ink-soft);
-  line-height: 1.55;
-}
-
-.mod-catalog-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 0.8rem;
-}
-
-.mod-catalog-card {
-  display: flex;
-  flex-direction: column;
-  gap: 0.55rem;
-  min-width: 0;
-  padding: 1rem 1.1rem;
-  border: 1px solid var(--card-border);
-  border-radius: 12px;
-  background: var(--card);
-  backdrop-filter: blur(6px);
-}
-
-.mod-catalog-card h3 {
-  margin: 0;
-  color: var(--leaf);
-  font-size: 1rem;
-}
-
-.mod-catalog-card p {
-  flex: 1;
-  margin: 0;
-  color: var(--ink-soft);
-  font-size: 0.9rem;
-  line-height: 1.5;
-}
-
-.mod-catalog-card a,
-.mod-source-note {
-  color: var(--ink-faint);
-  font-size: 0.8rem;
-  font-weight: 600;
-}
-
 /* --- Meteor banner --------------------------------------------------- */
 
 .meteor {
@@ -2250,4 +2183,66 @@ a.k-card:visited {
   border-radius: var(--k-r-1);
   background: var(--k-surface);
   font-weight: 600;
+}
+
+/* --- /mods from the server brief ----------------------------------------- */
+
+.mods-title,
+.mods-h2 {
+  margin: 0;
+  text-wrap: balance;
+}
+
+.mods-sub {
+  margin: 0;
+  max-width: 68ch;
+  color: var(--k-dim);
+}
+
+.mods-count,
+.mods-meta {
+  color: var(--k-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.mods-meta {
+  margin: 0;
+}
+
+.mods-card .k-card__claim {
+  margin: 0;
+}
+
+/* The source line sits at the foot of every card, so cards in a row share a
+   baseline however long their summaries run. */
+.mods-source,
+.mods-nolink {
+  margin-top: auto;
+  align-self: flex-start;
+}
+
+.mods-nolink {
+  color: var(--k-dim);
+  font-style: normal;
+}
+
+.mods-reason {
+  margin: 0;
+}
+
+.mods-includes {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: var(--k-s-2);
+}
+
+.mods-includes li {
+  display: grid;
+  gap: 2px;
+}
+
+.mods-includes span {
+  color: var(--k-dim);
 }
