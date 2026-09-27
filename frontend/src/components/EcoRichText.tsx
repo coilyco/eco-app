@@ -28,6 +28,19 @@ const NAMED_COLORS = new Set([
   "yellow",
 ])
 
+// Unity's named colours are tuned for the game's own panels, and the dark ones
+// (blue, navy, maroon) vanish on this site's ground. The server name itself is
+// <color=green>Eco</color> via <color=blue>Sirens</color>, so those map onto the
+// theme instead. Player-picked hex values stay exactly as written.
+const THEMED_COLORS: Record<string, string> = {
+  green: "var(--k-brand)",
+  blue: "var(--k-accent)",
+  darkblue: "var(--k-accent)",
+  navy: "var(--k-accent)",
+  red: "var(--k-cost)",
+  maroon: "var(--k-cost)",
+}
+
 interface Frame {
   color?: string
   children: ReactNode[]
@@ -36,7 +49,8 @@ interface Frame {
 function safeColor(raw: string): string | undefined {
   const color = raw.trim().replace(/^['"]|['"]$/g, "").toLowerCase()
   if (HEX_COLOR.test(color) && [4, 5, 7, 9].includes(color.length)) return color
-  return NAMED_COLORS.has(color) ? color : undefined
+  if (!NAMED_COLORS.has(color)) return undefined
+  return THEMED_COLORS[color] ?? color
 }
 
 function appendText(frame: Frame, text: string) {

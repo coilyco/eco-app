@@ -42,9 +42,9 @@ export default function Home() {
         </p>
       </section>
 
-      <section className="dir-cards" aria-label="site directory">
-        <Link className="dir-card" to="/info" data-testid="dir-info">
-          <h3>Info</h3>
+      <section className="k-card-grid k-card-grid--condensed dir-cards" aria-label="site directory">
+        <Link className="k-card dir-card" to="/info" data-testid="dir-info">
+          <h3 className="k-card__name">Info</h3>
           <p>Meteor countdown, players, world stats, and the economy at a glance.</p>
           {status && (
             <p className="dir-badges" data-testid="info-badges">
@@ -56,8 +56,8 @@ export default function Home() {
           )}
         </Link>
 
-        <Link className="dir-card" to="/jobs" data-testid="dir-jobs">
-          <h3>Jobs</h3>
+        <Link className="k-card dir-card" to="/jobs" data-testid="dir-jobs">
+          <h3 className="k-card__name">Jobs</h3>
           <p>Who can make what — professions, specialties, and every player's skills.</p>
           {status && (
             <p className="dir-badges">
@@ -66,8 +66,8 @@ export default function Home() {
           )}
         </Link>
 
-        <Link className="dir-card" to="/wiki" data-testid="dir-wiki">
-          <h3>Eco Wiki</h3>
+        <Link className="k-card dir-card" to="/wiki" data-testid="dir-wiki">
+          <h3 className="k-card__name">Eco Wiki</h3>
           <p>Stable official guides for getting started, skills, economy, civics, and modding.</p>
         </Link>
 
@@ -76,8 +76,8 @@ export default function Home() {
             graceful 0 (the market plane is empty on servers that trade but have
             no priced markets), while volume and the trade count come from the
             ledger's own totalCurrencyVolume / totalTrades. */}
-        <Link className="dir-card" to="/trade" data-testid="dir-trade">
-          <h3>Trade &amp; logistics</h3>
+        <Link className="k-card dir-card" to="/trade" data-testid="dir-trade">
+          <h3 className="k-card__name">Trade &amp; logistics</h3>
           <p>
             Movers, price history, the full trade ledger, stores, and what to buy, sell, and ship
             next.
@@ -98,8 +98,8 @@ export default function Home() {
           )}
         </Link>
 
-        <Link className="dir-card" to="/crafting" data-testid="dir-crafting">
-          <h3>Crafting atlas</h3>
+        <Link className="k-card dir-card" to="/crafting" data-testid="dir-crafting">
+          <h3 className="k-card__name">Crafting atlas</h3>
           <p>What the world is making — top items and stations, deep-linkable.</p>
           {craftingPulse && (
             <p className="dir-badges" data-testid="crafting-badges">
@@ -111,29 +111,29 @@ export default function Home() {
           )}
         </Link>
 
-        <Link className="dir-card" to="/items" data-testid="dir-items">
-          <h3>Item directory</h3>
+        <Link className="k-card dir-card" to="/items" data-testid="dir-items">
+          <h3 className="k-card__name">Item directory</h3>
           <p>Every item ever bought, sold, or crafted — click through to its full history.</p>
         </Link>
 
         {/* The recipe browse surface (eco-app#101): the bill-of-materials for
             every craftable, deep-linkable by product, profession, station, or
             ingredient. /recipe details are URL-only, reached from here. */}
-        <Link className="dir-card" to="/recipes" data-testid="dir-recipes">
-          <h3>Recipes</h3>
+        <Link className="k-card dir-card" to="/recipes" data-testid="dir-recipes">
+          <h3 className="k-card__name">Recipes</h3>
           <p>How everything is made — ingredients, station, profession, labor, and craft time.</p>
         </Link>
 
         {/* The /uses hub is the ONLY homepage card the whole use-case family
             gets (eco-app#99): the demand-side pages (what's in demand, buy/sell,
             arbitrage, shop-check) are URL-only, reached from the hub. */}
-        <Link className="dir-card" to="/uses" data-testid="dir-uses">
-          <h3>Use cases</h3>
+        <Link className="k-card dir-card" to="/uses" data-testid="dir-uses">
+          <h3 className="k-card__name">Use cases</h3>
           <p>Task-framed answers — what's in demand, where to buy or sell, arbitrage, shop pricing.</p>
         </Link>
 
-        <Link className="dir-card" to="/civics" data-testid="dir-civics">
-          <h3>Civics &amp; governance</h3>
+        <Link className="k-card dir-card" to="/civics" data-testid="dir-civics">
+          <h3 className="k-card__name">Civics &amp; governance</h3>
           <p>Elections, turnout, demographics, and new settlements over time.</p>
           {civicsPulse && (
             <p className="dir-badges" data-testid="civics-badges">
@@ -147,8 +147,8 @@ export default function Home() {
 
         {/* Climate folded into the World card (eco-app#90). The focused page
             keeps the map, biomes, ecoregions, biodiversity, and atmosphere. */}
-        <Link className="dir-card" to="/map" data-testid="dir-map">
-          <h3>World</h3>
+        <Link className="k-card dir-card" to="/map" data-testid="dir-map">
+          <h3 className="k-card__name">World</h3>
           <p>
             The live map, biome &amp; water mix, closest real-world ecoregions, species risk,
             and the climate — CO₂, temperature, and sea level.
@@ -173,21 +173,21 @@ export default function Home() {
         </Link>
 
         <a
-          className="dir-card"
+          className="k-card dir-card"
           href={ECO_GNOME_URL}
           target="_blank"
           rel="noreferrer"
           data-testid="dir-gnome"
         >
-          <h3>Crafting calculator ↗</h3>
+          <h3 className="k-card__name">Crafting calculator ↗</h3>
           <p>
             Price your craft with Eco Gnome (MIT) — optimal buy and sell prices from your
             professions and recipes. Opens the gnome service.
           </p>
         </a>
 
-        <div className="dir-card dir-card-static">
-          <h3>Community</h3>
+        <div className="k-card dir-card">
+          <h3 className="k-card__name">Community</h3>
           <p>
             {discordUrl && (
               <>

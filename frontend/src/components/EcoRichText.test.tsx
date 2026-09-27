@@ -29,4 +29,12 @@ describe("EcoRichText", () => {
     expect(screen.getByTestId("name")).toHaveTextContent("Safe")
     expect(screen.getByText("Safe")).not.toHaveAttribute("style")
   })
+
+  it("maps the game's dark named colours onto the theme", () => {
+    render(<EcoRichText text={"<color=green>Eco</color> via <color=blue>Sirens</color> <color=teal>x</color>"} />)
+
+    expect(screen.getByText("Eco").getAttribute("style")).toContain("var(--k-brand)")
+    expect(screen.getByText("Sirens").getAttribute("style")).toContain("var(--k-accent)")
+    expect(screen.getByText("x")).toHaveStyle({ color: "rgb(0, 128, 128)" })
+  })
 })

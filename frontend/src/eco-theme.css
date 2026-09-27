@@ -1,0 +1,79 @@
+/* Eco theme over the coilyco kit (eco-app#8308).
+
+   ./vendor/coilyco-kit/ is a verbatim copy of coilyco/website
+   packages/kit/dist/coilyco-kit.css and packages/kit/vendor/fonts at 41eca17.
+   Never edit it here: refresh it by copying the files again. Walkthrough and
+   the derivation behind every value below: docs/frontend/kit-theme.md.
+
+   This block swaps primitives only. Every semantic token the kit derives from
+   them (--k-ground, --k-brand, --k-edge, the shadows, the planet texture on
+   .k-page) follows on its own. */
+
+@import "./vendor/coilyco-kit/coilyco-kit.css";
+
+@font-face {
+  font-family: "Roboto";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("./vendor/coilyco-kit/fonts/roboto-latin-400-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Roboto";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("./vendor/coilyco-kit/fonts/roboto-latin-700-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Chakra Petch";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("./vendor/coilyco-kit/fonts/chakra-petch-latin-700-normal.woff2") format("woff2");
+}
+
+:root {
+  /* Ink structure at OKLCH hue 142, the foliage green of the game's globe
+     icon (#588d53). Lightness and chroma are the kit's own per step. */
+  --k-p-950: #020402;
+  --k-p-900: #040b04;
+  --k-p-850: #091708;
+  --k-p-800: #10230e;
+  --k-p-750: #1d331b;
+  --k-p-700: #2b4229;
+  --k-p-650: #404e3e;
+
+  /* Brand at the same hue, kit lightness per step, chroma capped at 0.14 so
+     it stays the game's leaf rather than a highlighter. */
+  --k-b-700: #024700;
+  --k-b-600: #11640d;
+  --k-b-500: #327f2d;
+  --k-b-400: #60ac59;
+  --k-b-300: #76c06f;
+  --k-b-200: #acd8a8;
+
+  /* The accent is the ocean from the same icon, so the kit's edges and
+     secondary marks read as coastline beside the green. Amber is NOT the
+     accent: the kit draws every edge in the accent, and the meteor is meant
+     to be the only amber thing on the page. */
+  --k-a-300: #45aade;
+  --k-a-700: #025f86;
+
+  /* eco-app's own primitive, outside the kit's ramps: the meteor warning.
+     Measured 7.34:1 on the lightest green surface. */
+  --eco-meteor: #f0b35c;
+
+  /* Registers lifted until each clears 4.5:1 on the lightest green surface.
+     Grant moves to teal: at the kit's 150 it sat 8 degrees from the brand. */
+  --k-dim-d: #a3aca2;
+  --k-cost-d: #e3746d;
+  --k-refuse-d: #c08c21;
+  --k-grant-d: #02a98c;
+  --k-context-d: #928fcc;
+  --k-reference-d: #b181d4;
+
+  --k-shade-ink: #000500;
+}

@@ -16,7 +16,9 @@ consolidation (coilysiren/inbox#101).
   can fill the arguments without one. See [dual-route-inventory.md](dual-route-inventory.md#reply-templates).
 - **Privileged `/admin` MCP** - `src/eco_mcp_app/admin/`, flagged off in the
   ordinary app. See [admin-mcp.md](admin-mcp.md).
-- **React frontend** - `frontend/`, a Vite SPA the fused service serves at `/`.
+- **React frontend** - `frontend/`, a Vite SPA the fused service serves at `/`,
+  styled by the coilyco kit under an Eco green theme. See
+  [frontend/kit-theme.md](frontend/kit-theme.md).
 - **Jobs API** at `/jobs/api` and **Replay API** at `/replay/api`. See
   [progression.md](progression.md).
 - **Discord worker** - `src/eco_discord/`, a separate Pycord gateway process.

@@ -1,19 +1,23 @@
-/* Design tokens. Forest-dark theme carried over from the placeholder,
-   with a meteor-amber accent for the countdown. */
+/* eco-app's names for the kit's semantic tokens (eco-app#8308). The values
+   live in eco-theme.css and the vendored kit, so nothing below this block
+   holds a colour of its own. Discord's blurple is the one exception, because
+   it is Discord's brand rather than ours. */
 :root {
-  --bg-deep: #07130c;
-  --bg-mid: #0d1f15;
-  --bg-glow: #1d3a2a;
-  --ink: #e8f3ea;
-  --ink-soft: #c4dcc9;
-  --ink-faint: #7da18a;
-  --leaf: #9fdcb4;
-  --leaf-dim: rgba(159, 220, 180, 0.4);
-  --leaf-wash: rgba(159, 220, 180, 0.12);
-  --meteor: #f0b35c;
-  --meteor-deep: #b97a2a;
-  --card: rgba(20, 44, 30, 0.55);
-  --card-border: rgba(126, 200, 148, 0.25);
+  --bg-deep: var(--k-ground);
+  --bg-mid: var(--k-frame);
+  --bg-glow: var(--k-raised);
+  --ink: var(--k-text);
+  --ink-soft: var(--k-text);
+  --ink-faint: var(--k-dim);
+  --leaf: var(--k-brand);
+  --leaf-dim: var(--k-edge);
+  --leaf-wash: var(--k-raised);
+  --meteor: var(--eco-meteor);
+  --meteor-deep: color-mix(in srgb, var(--eco-meteor) 72%, var(--k-ground));
+  --meteor-wash: color-mix(in srgb, var(--eco-meteor) 16%, var(--k-surface));
+  --meteor-edge: color-mix(in srgb, var(--eco-meteor) 45%, var(--k-ground));
+  --card: var(--k-surface);
+  --card-border: var(--k-line-quiet);
 }
 
 * {
@@ -30,25 +34,19 @@ body,
 body {
   background: var(--bg-deep);
   color: var(--ink);
-  font-family: "Avenir Next", "Segoe UI", system-ui, -apple-system, sans-serif;
+  font-family: var(--k-font-ui);
 }
 
-/* The forest glow is viewport-anchored (a fixed pseudo-element), not painted
-   on the body: body-painted gradients scale with content height, so short
-   pages (/) and long ones (/jobs) ended up with visibly different backdrops. */
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  background: radial-gradient(1200px 800px at 20% 10%, var(--bg-glow) 0%, var(--bg-mid) 45%, var(--bg-deep) 100%);
+h1,
+h2 {
+  font-family: var(--k-font-display);
 }
 
 /* Global link baseline. Without this, unstyled links fall back to the browser
    default blue and — worse against the forest-dark background — turn an
    unreadable purple once visited. Pin both states to the leaf accent; every
    component that wants a different link color sets its own higher-specificity
-   rule (topnav, footer, dir-card), so this only catches the bare ones and
+   rule (the kit nav, footer, cards), so this only catches the bare ones and
    guarantees a clicked link never goes purple. */
 a {
   color: var(--leaf);
@@ -62,62 +60,53 @@ a:visited {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  max-width: 1080px;
-  margin: 0 auto;
-  padding: 1.5rem 2rem;
 }
 
-/* --- Top bar -------------------------------------------------------- */
-
-.topbar {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
-
-.wordmark {
-  font-size: 1.35rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: var(--leaf);
-  text-decoration: none;
-}
-
-.wordmark:hover {
-  text-decoration: underline;
-}
-
-.topnav {
-  display: flex;
-  gap: 1.4rem;
-  flex-wrap: wrap;
-}
-
-.topnav a {
-  color: var(--ink-soft);
-  text-decoration: none;
-  font-size: 0.95rem;
-  font-weight: 600;
-  border-bottom: 1px solid transparent;
-  transition: color 120ms ease, border-color 120ms ease;
-}
-
-.topnav a:hover {
-  color: var(--leaf);
-  border-color: var(--leaf-dim);
-}
-
-/* --- Hero ----------------------------------------------------------- */
-
+/* The kit's nav and footer bands run full width, and the reading column sits
+   between them. */
 .content {
   flex: 1;
+  width: 100%;
+  max-width: 1080px;
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
   gap: 2.5rem;
-  padding: 4rem 0 3rem;
+  padding: 3rem 2rem;
 }
+
+@media (max-width: 600px) {
+  .content {
+    padding: 2rem 1rem;
+  }
+}
+
+/* The Eco globe stands in for the kit's brandmark, which is Kai's own mark. */
+.eco-mark {
+  width: 1.4em;
+  height: 1.4em;
+  border-radius: 50%;
+}
+
+.k-nav__links a:visited {
+  color: var(--k-dim);
+}
+
+.k-nav__links a[aria-current] {
+  color: var(--k-text);
+}
+
+.k-footer a,
+.k-footer a:visited {
+  color: var(--k-dim);
+}
+
+a.k-card,
+a.k-card:visited {
+  color: inherit;
+}
+
+/* --- Hero ----------------------------------------------------------- */
 
 .hero {
   max-width: 760px;
@@ -175,19 +164,19 @@ a:visited {
   height: 0.55rem;
   border-radius: 50%;
   background: var(--leaf);
-  box-shadow: 0 0 0 0 rgba(159, 220, 180, 0.6);
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--leaf) 60%, transparent);
   animation: pulse 2.4s ease-out infinite;
 }
 
 @keyframes pulse {
   0% {
-    box-shadow: 0 0 0 0 rgba(159, 220, 180, 0.55);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--leaf) 55%, transparent);
   }
   70% {
-    box-shadow: 0 0 0 9px rgba(159, 220, 180, 0);
+    box-shadow: 0 0 0 9px transparent;
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(159, 220, 180, 0);
+    box-shadow: 0 0 0 0 transparent;
   }
 }
 
@@ -272,41 +261,10 @@ a:visited {
   font-size: clamp(2rem, 5vw, 2.9rem);
 }
 
-.dir-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 1rem;
-}
-
-.dir-card {
-  display: block;
-  padding: 1.4rem 1.5rem;
-  border-radius: 14px;
-  border: 1px solid var(--card-border);
-  background: var(--card);
-  backdrop-filter: blur(6px);
-  color: inherit;
-  text-decoration: none;
-  transition: border-color 120ms ease, background 120ms ease, transform 120ms ease;
-}
-
-a.dir-card:hover {
-  border-color: var(--leaf-dim);
-  background: rgba(28, 58, 40, 0.65);
-  transform: translateY(-2px);
-}
-
-.dir-card h3 {
-  margin: 0 0 0.45rem;
-  font-size: 1.15rem;
-  font-weight: 700;
-  color: var(--leaf);
-}
-
+/* Directory cards are kit cards (eco-app#8308), so the neon hover and the
+   accent edge come from a.k-card. Only the body copy and badges are ours. */
 .dir-card p {
   margin: 0;
-  font-size: 0.95rem;
-  line-height: 1.55;
   color: var(--ink-soft);
 }
 
@@ -326,7 +284,7 @@ a.dir-card:hover {
   padding: 0.2rem 0.65rem;
   border-radius: 999px;
   border: 1px solid var(--card-border);
-  background: rgba(0, 0, 0, 0.25);
+  background: var(--k-ground);
   font-size: 0.78rem;
   font-weight: 600;
   color: var(--ink-soft);
@@ -414,9 +372,9 @@ a.dir-card:hover {
 .meteor {
   padding: 1.75rem 2rem;
   border-radius: 16px;
-  border: 1px solid rgba(240, 179, 92, 0.3);
-  background: linear-gradient(135deg, rgba(63, 41, 13, 0.55), rgba(20, 44, 30, 0.55));
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--meteor-edge);
+  background: linear-gradient(135deg, var(--meteor-wash), var(--k-surface));
+  box-shadow: var(--k-shadow-2);
   backdrop-filter: blur(6px);
 }
 
@@ -440,7 +398,7 @@ a.dir-card:hover {
   margin-top: 1rem;
   height: 0.6rem;
   border-radius: 999px;
-  background: rgba(0, 0, 0, 0.35);
+  background: var(--k-ground);
   overflow: hidden;
 }
 
@@ -554,14 +512,14 @@ a.dir-card:hover {
   font-size: 0.9rem;
   font-weight: 600;
   color: var(--meteor);
-  background: rgba(63, 41, 13, 0.75);
-  border: 1px solid rgba(240, 179, 92, 0.35);
+  background: var(--meteor-wash);
+  border: 1px solid var(--meteor-edge);
 }
 
 .mock-banner code {
   padding: 0.1rem 0.35rem;
   border-radius: 6px;
-  background: rgba(0, 0, 0, 0.35);
+  background: var(--k-ground);
   font-size: 0.8rem;
 }
 
@@ -875,15 +833,15 @@ a.dir-card:hover {
 }
 
 .pill-inactive {
-  background: rgba(63, 41, 13, 0.55);
-  border: 1px solid rgba(240, 179, 92, 0.35);
+  background: var(--meteor-wash);
+  border: 1px solid var(--meteor-edge);
   color: var(--meteor);
 }
 
 /* --- Economy & crafting pages ------------------------------------------ */
 
 .hero-pill-warn {
-  border-color: rgba(240, 179, 92, 0.35);
+  border-color: var(--meteor-edge);
   color: var(--meteor);
 }
 
@@ -908,7 +866,7 @@ a.dir-card:hover {
   padding: 0.65rem 1rem;
   border-radius: 10px;
   border: 1px solid var(--card-border);
-  background: rgba(0, 0, 0, 0.25);
+  background: var(--k-ground);
   color: var(--ink);
   font: inherit;
   font-size: 0.95rem;
@@ -1070,6 +1028,9 @@ a.dir-card:hover {
   padding: 0.7rem 1.4rem;
   border-radius: 10px;
   border: 1px solid var(--leaf-dim);
+  /* A <button> otherwise keeps the browser's grey fill and system font. */
+  background: transparent;
+  font: inherit;
   color: var(--leaf);
   text-decoration: none;
   font-weight: 600;
@@ -1087,7 +1048,7 @@ a.dir-card:hover {
 }
 
 .button-primary:hover {
-  background: #b7e8c8;
+  background: color-mix(in srgb, var(--leaf) 75%, var(--ink));
 }
 
 /* Discord CTA — blurple fill with white text, mirroring the MCP card's
@@ -1104,28 +1065,6 @@ a.dir-card:hover {
 
 .button-discord:hover {
   background: #4a56d6;
-}
-
-.site-footer {
-  padding: 2rem 0 0.5rem;
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  flex-wrap: wrap;
-  font-size: 0.85rem;
-  color: var(--ink-faint);
-}
-
-.site-footer a {
-  color: var(--ink-faint);
-}
-
-.footer-stamp {
-  margin: 0;
-}
-
-.site-footer p {
-  margin: 0;
 }
 
 /* ---- trades ledger (/trades) ---- */
@@ -1232,7 +1171,7 @@ a.dir-card:hover {
   height: auto;
   border: 1px solid var(--card-border);
   border-radius: 12px;
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--k-ground);
   padding: 0.5rem;
 }
 
@@ -1254,7 +1193,7 @@ a.dir-card:hover {
   padding: 0.45rem;
   border: 1px solid var(--card-border);
   border-radius: 12px;
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--k-ground);
 }
 
 .price-history-chart .axis-label {
@@ -1312,7 +1251,7 @@ a.dir-card:hover {
   padding: 0.75rem 0.6rem;
   border: 1px solid var(--card-border);
   border-radius: 12px;
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--k-ground);
 }
 
 .price-histogram-bin {
@@ -1386,7 +1325,7 @@ a.dir-card:hover {
   height: auto;
   border: 1px solid var(--card-border);
   border-radius: 12px;
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--k-ground);
   padding: 0.5rem;
 }
 
@@ -1469,7 +1408,7 @@ a.dir-card:hover {
 .prog-trend {
   border: 1px solid var(--card-border);
   border-radius: 12px;
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--k-ground);
   padding: 0.75rem;
 }
 
@@ -1580,7 +1519,7 @@ a.dir-card:hover {
   height: auto;
   border: 1px solid var(--card-border);
   border-radius: 12px;
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--k-ground);
   padding: 0.5rem;
 }
 
@@ -1774,7 +1713,7 @@ a.dir-card:hover {
 }
 
 .eco-bar-remove {
-  background: rgba(240, 179, 92, 0.14);
+  background: var(--meteor-wash);
 }
 
 /* --- World map (/map, eco-app#82) -------------------------------------- */
@@ -1792,7 +1731,7 @@ a.dir-card:hover {
   border-radius: 12px;
   border: 1px solid var(--card-border);
   overflow: hidden;
-  background: #0b1a12;
+  background: var(--k-ground);
 }
 
 .map-base,
@@ -1839,7 +1778,7 @@ a.dir-card:hover {
 }
 
 .map-hotspot {
-  fill: rgba(240, 179, 92, 0.22);
+  fill: color-mix(in srgb, var(--meteor) 22%, transparent);
   stroke: var(--meteor);
   stroke-width: 1.2;
   pointer-events: auto;
@@ -1915,7 +1854,7 @@ a.dir-card:hover {
   padding: 0.65rem 1rem;
   border-radius: 10px;
   border: 1px solid var(--card-border);
-  background: rgba(0, 0, 0, 0.25);
+  background: var(--k-ground);
   color: var(--ink);
   font: inherit;
   font-size: 0.9rem;
@@ -2021,7 +1960,7 @@ a.dir-card:hover {
   padding: 0.85rem 1rem;
   border: 1px solid var(--card-border);
   border-radius: 10px;
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--k-ground);
 }
 
 .fact-label {
