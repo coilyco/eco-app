@@ -105,6 +105,11 @@ class DualRouteRegistry:
         """Return whether this registry owns an MCP tool name."""
         return name in self._routes
 
+    def rest_path(self, name: str) -> str | None:
+        """Return the REST path a registered GET tool is served at, else None."""
+        route = self._routes.get(name)
+        return route.rest_path if route and route.rest_method == "GET" else None
+
     def mcp_tools(self) -> list[Tool]:
         """Build MCP discovery entries from the registered typed models."""
         return [

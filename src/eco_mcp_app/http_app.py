@@ -99,7 +99,7 @@ class CoilycoDevCors:
 
     coilyco.dev/dash/eco is a static page that fetches from the viewer's
     browser (teable:coilyco/eco-app#8362). Exactly one origin, never `*`, and
-    only the MCP mount plus the read-only `/preview/` data plane; `/page-auth`,
+    only the MCP mount plus the read-only `/preview*` data plane; `/page-auth`,
     `/admin` and the SPA stay same-origin. The preflight is answered here
     because every scoped route would 405 an OPTIONS. Headers mirror
     infrastructure's `caddy/sites-manual/tailnet-api.caddy`.
@@ -125,7 +125,9 @@ class CoilycoDevCors:
 
     @staticmethod
     def _scoped(path: str) -> bool:
-        return path == "/mcp" or path.startswith(("/mcp/", "/preview/"))
+        if path in ("/mcp", "/preview.json", "/preview-map.json"):
+            return True
+        return path.startswith(("/mcp/", "/preview/"))
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] != "http" or not self._scoped(scope.get("path", "")):
@@ -136,7 +138,10 @@ class CoilycoDevCors:
         # could otherwise replay an Origin-less response to the dashboard.
         async def send_with_vary(message: Message) -> None:
             if message["type"] == "http.response.start":
-                MutableHeaders(scope=message).add_vary_header("Origin")
+                headers = MutableHeaders(scope=message)
+                vary = {v.strip().lower() for v in headers.get("vary", "").split(",")}
+                if "origin" not in vary:
+                    headers.add_vary_header("Origin")
             await send(message)
 
         await self.cors(scope, receive, send_with_vary)
@@ -704,7 +709,7 @@ def create_app(route_registry: DualRouteRegistry | None = None) -> Starlette:
                 continue
         return None
 
-    async def preview_tool(request: Request) -> JSONResponse:
+    async def preview_tool(request: Request) -> Response:
         """Dispatch any MCP tool by name and return its JSON content block.
 
         The SPA consumes `/preview/<tool>.json?<args>` — query-string args pass
@@ -719,6 +724,13 @@ def create_app(route_registry: DualRouteRegistry | None = None) -> Starlette:
                 status_code=404,
             )
         tool_name = raw_name[: -len(".json")]
+        # A dual-route tool served elsewhere (`get_stores` at `/preview/stores.json`)
+        # goes to its typed route, which coerces `?limit=0`. Here every query value
+        # stays a string and fails the tool's schema (teable:coilyco/eco-app#8363).
+        canonical = dual_routes.rest_path(tool_name)
+        if canonical is not None and canonical != request.url.path:
+            query = request.url.query
+            return RedirectResponse(f"{canonical}?{query}" if query else canonical, 307)
         args = dict(request.query_params)
         req = mt.CallToolRequest(
             method="tools/call",
@@ -730,6 +742,9 @@ def create_app(route_registry: DualRouteRegistry | None = None) -> Starlette:
             return JSONResponse({"error": str(e)}, status_code=500)
         call_result = cast(mt.CallToolResult, result.root)
         payload = _extract_json_block(call_result)
+        if payload is None and call_result.isError:
+            text = " ".join(getattr(block, "text", "") or "" for block in call_result.content)
+            return JSONResponse({"error": text.strip() or "tool error"}, status_code=400)
         if payload is None:
             return JSONResponse(
                 {"error": f"tool '{tool_name}' did not return a JSON content block"},

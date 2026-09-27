@@ -34,13 +34,15 @@ def _preflight(client: TestClient, path: str, origin: str, method: str = "POST")
     )
 
 
-@pytest.mark.parametrize("path", ["/mcp", "/mcp/", "/preview/get_economy.json"])
+@pytest.mark.parametrize(
+    "path", ["/mcp", "/mcp/", "/preview/get_economy.json", "/preview.json", "/preview-map.json"]
+)
 def test_preflight_from_the_dashboard_is_granted(client: TestClient, path: str) -> None:
     r = _preflight(client, path, DASH)
     assert r.status_code == 200
     assert r.headers["access-control-allow-origin"] == DASH
     assert "DELETE" in r.headers["access-control-allow-methods"]
-    assert "Origin" in r.headers["vary"]
+    assert r.headers["vary"] == "Origin"
 
 
 def test_preflight_from_another_origin_gets_no_allow_header(client: TestClient) -> None:
@@ -66,6 +68,7 @@ def test_mcp_post_carries_the_allow_and_expose_headers(client: TestClient) -> No
     assert r.status_code == 200
     assert r.headers["access-control-allow-origin"] == DASH
     assert "Mcp-Session-Id" in r.headers["access-control-expose-headers"]
+    assert r.headers["vary"] == "Origin"
 
 
 def test_preview_get_carries_the_allow_header(client: TestClient) -> None:
