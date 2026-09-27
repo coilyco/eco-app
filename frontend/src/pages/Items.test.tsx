@@ -52,7 +52,7 @@ describe("Items", () => {
     expect(screen.getAllByTestId("item-row")).toHaveLength(2)
     expect(screen.getByText("Iron Ingot").closest("a")).toHaveAttribute(
       "href",
-      "/item?item=IronIngotItem",
+      "/item?id=IronIngot",
     )
     expect(screen.queryByText("Dirt")).not.toBeInTheDocument()
   })

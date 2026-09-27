@@ -13,9 +13,11 @@ describe("ItemLink", () => {
 
     expect(screen.getByRole("link", { name: "Fancy item" })).toHaveAttribute(
       "href",
-      "/item?item=Fancy%20Item%2FOne%20%26%20Two",
+      "/item?id=Fancy%20Item%2FOne%20%26%20Two",
     )
-    expect(itemHref("A+B")).toBe("/item?item=A%2BB")
+    expect(itemHref("A+B")).toBe("/item?id=A%2BB")
+    // The page key drops the Item suffix, so a recipe name and its product agree (eco-app#8383).
+    expect(itemHref("AcornPowderItem")).toBe("/item?id=AcornPowder")
   })
 
   it("keeps content plain when there is no concrete item id", () => {

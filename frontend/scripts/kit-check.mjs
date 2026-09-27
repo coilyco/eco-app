@@ -41,7 +41,7 @@ const BUDGETS = { "/jobs": 3200, "/recipes": 2000, "/recipe": 2000, "/uses/resol
 const SAMPLE = {
   "/jobs/*": "/jobs",
   "/users/:hex": "/users/636f696c79736972656e",
-  "/item": "/item?name=IronBarItem",
+  "/item": "/item?id=IronBar",
   "/recipe": "/recipe?id=IronBar",
 }
 const manifest = JSON.parse(readFileSync(path.join(ROOT, "data", "spa_routes.json"), "utf8"))

@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router-dom"
 import ItemLink from "../components/ItemLink"
 import FreshnessNote from "../components/FreshnessNote"
 import Layout from "../components/Layout"
+import { recipeHref } from "../lib/itemPage"
 import { fetchRecipeIndex, type Recipe } from "../lib/recipesApi"
 import { formatCount, formatDuration, prettifyEcoName } from "../lib/format"
 import { useFreshData } from "../lib/useFreshData"
@@ -11,7 +12,7 @@ const LIST_ROWS = 200
 
 // The recipe browse surface (eco-app#101), modeled on pages/Items.tsx: every
 // control is URL-driven and deep-linkable, rows deep-link to the per-recipe
-// detail (/recipe?id=<name>). The whole recipe graph is one static bundled
+// card on its item page (recipeHref, eco-app#8383). The whole recipe graph is one static bundled
 // payload (recipes.py / eco-app#100), so filtering is entirely client-side.
 //
 // Filters: ?q= (product + ingredient name search, the default), ?skill= (the
@@ -259,7 +260,7 @@ export default function Recipes() {
                       <td>
                         <Link
                           className="linklike"
-                          to={`/recipe?id=${encodeURIComponent(r.name)}`}
+                          to={recipeHref(r)}
                         >
                           {r.displayName}
                         </Link>

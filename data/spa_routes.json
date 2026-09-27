@@ -20,14 +20,14 @@
       "path": "/item",
       "component": "Item",
       "crawl": "noindex",
-      "note": "Per-item detail keyed by ?name=. Thousands of URLs over one shell, reached only from /items."
+      "note": "One page per item keyed by ?id= (the item id minus Item), holding market, recipes, and uses. The retired ?item= form redirects in the client. Thousands of URLs over one shell."
     },
     { "path": "/recipes", "component": "Recipes", "crawl": "index" },
     {
       "path": "/recipe",
       "component": "Recipe",
       "crawl": "noindex",
-      "note": "Per-recipe detail keyed by ?id=. Same unbounded shape as /item."
+      "note": "Kept so old links never 404: the page redirects ?id=<recipe> to its card on the product's item page (eco-app#8383)."
     },
     { "path": "/civics", "component": "Civics", "crawl": "index" },
     { "path": "/uses", "component": "Uses", "crawl": "index" },

@@ -140,7 +140,7 @@ export default function UsesResolve() {
                 <ul className="rank-rows">
                   {selectedRecipes.map((recipe) => {
                     const unpriced = recipe.cost?.unpricedInputs ?? []
-                    return <li key={recipe.name} data-testid="resolve-recipe"><div className="rank-row"><span className="rank-name">{recipe.displayName}<br /><span className="section-sub">{recipe.stationDisplayName || "Hand craft"}{recipe.skill ? ` · ${prettifyEcoName(recipe.skill.name.replace(/Skill$/, ""))} ${recipe.skill.level}+` : ""}</span></span><span className="rank-count">{recipe.cost?.perUnitCost != null ? <ItemPrice price={recipe.cost.perUnitCost} norm={recipe.cost.norm} suffix="/unit" data-testid="resolve-unit-cost" /> : "cost incomplete"}</span></div>{unpriced.length > 0 && <p className="empty-note">Unpriced inputs: {unpriced.join(", ")}. Availability is unknown.</p>}</li>
+                    return <li key={recipe.name} data-testid="resolve-recipe"><div className="rank-row"><span className="rank-name">{recipe.displayName}<br /><span className="section-sub">{recipe.station ? prettifyEcoName(recipe.station) : "Hand craft"}{recipe.skill ? ` · ${prettifyEcoName(recipe.skill.name.replace(/Skill$/, ""))} ${recipe.skill.level}+` : ""}</span></span><span className="rank-count">{recipe.cost?.perUnitCost != null ? <ItemPrice price={recipe.cost.perUnitCost} norm={recipe.cost.norm} suffix="/unit" data-testid="resolve-unit-cost" /> : "cost incomplete"}</span></div>{unpriced.length > 0 && <p className="empty-note">Unpriced inputs: {unpriced.join(", ")}. Availability is unknown.</p>}</li>
                   })}
                 </ul>
               )}

@@ -88,7 +88,7 @@ afterEach(() => {
 })
 
 describe("Recipes", () => {
-  it("lists recipes and deep-links each row to the detail page", async () => {
+  it("lists recipes and deep-links each row to its card on the item page", async () => {
     stubFetch(INDEX)
     renderRecipes()
 
@@ -98,7 +98,7 @@ describe("Recipes", () => {
     expect(screen.getAllByTestId("recipe-row")).toHaveLength(2)
     expect(screen.getByText("Steel Axe").closest("a")).toHaveAttribute(
       "href",
-      "/recipe?id=SteelAxeRecipe",
+      "/item?id=SteelAxe#recipe-SteelAxeRecipe",
     )
   })
 

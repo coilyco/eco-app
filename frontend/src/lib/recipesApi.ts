@@ -145,6 +145,16 @@ export async function fetchRecipeIndex(signal?: AbortSignal): Promise<RecipeInde
   return await getJson<RecipeIndex>("/preview/recipes.json?limit=0", signal)
 }
 
+// One item's recipes only (eco-app#8383). The whole graph is 1.2 MB uncompressed,
+// too heavy for the most-linked page on the site. The service resolves the id or
+// the suffix-less page id (`AcornPowder` -> `AcornPowderItem`) itself.
+export async function fetchRecipesForProduct(product: string, signal?: AbortSignal): Promise<RecipeIndex> {
+  return await getJson<RecipeIndex>(
+    `/preview/recipes.json?limit=0&product=${encodeURIComponent(product)}`,
+    signal,
+  )
+}
+
 export async function fetchRecipeIndexWithCost(
   signal?: AbortSignal,
 ): Promise<RecipeIndexWithCost | null> {

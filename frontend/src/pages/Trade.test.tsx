@@ -475,7 +475,7 @@ describe("Trade", () => {
       expect(screen.getByTestId("most-traded")).toBeInTheDocument()
     })
     const list = within(screen.getByTestId("most-traded"))
-    expect(list.getByRole("link", { name: "Wheat" })).toHaveAttribute("href", "/item?item=WheatItem")
+    expect(list.getByRole("link", { name: "Wheat" })).toHaveAttribute("href", "/item?id=Wheat")
     fireEvent.click(list.getByRole("button", { name: "Filter trade ledger by Wheat" }))
     expect(screen.getByTestId("trade-filter")).toHaveValue("Wheat")
   })

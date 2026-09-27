@@ -1,11 +1,12 @@
 import type { ReactNode } from "react"
 import { Link } from "react-router-dom"
+import { itemPageHref } from "../lib/itemPage"
 
 // Canonical route for a concrete Eco item id. Keep the id (rather than its
 // display label) in the query string: labels are lossy and may contain spaces
-// or punctuation, while ids are what the item pivot consumes.
+// or punctuation. The page key drops the `Item` suffix (eco-app#8383).
 export function itemHref(item: string): string {
-  return `/item?item=${encodeURIComponent(item)}`
+  return itemPageHref(item)
 }
 
 interface ItemLinkProps {

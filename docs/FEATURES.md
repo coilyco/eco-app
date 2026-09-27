@@ -25,6 +25,9 @@ consolidation (coilysiren/inbox#101).
   styled by the coilyco kit under an Eco green theme. See
   [frontend/kit-theme.md](frontend/kit-theme.md). The homepage is the server's
   player-facing brief over live status, see [frontend/homepage.md](frontend/homepage.md).
+  Each item has one page holding its market, recipes, and uses, and old
+  `/recipe` links redirect to the recipe's card there, see
+  [frontend/item-pages.md](frontend/item-pages.md).
 - **Jobs API** at `/jobs/api` and **Replay API** at `/replay/api`. See
   [progression.md](progression.md).
 - **Discord worker** - `src/eco_discord/`, a separate Pycord gateway process.

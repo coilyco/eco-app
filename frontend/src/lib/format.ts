@@ -165,10 +165,12 @@ export function formatEventDay(day: number | null | undefined): string {
 }
 
 // "BunWulfRawMeatItem" -> "Bun Wulf Raw Meat", "OakSpecies" -> "Oak".
-// Mirrors prettify_eco_name in eco_mcp_app/crafting.py.
+// Mirrors prettify_eco_name in eco_mcp_app/crafting.py, except the station
+// suffix, which the service still leaves on stationDisplayName.
 export function prettifyEcoName(raw: string): string {
   let base = raw
-  for (const suffix of ["Item", "Species"]) {
+  // "Object" is the station class suffix: the game calls MillObject "Mill".
+  for (const suffix of ["Item", "Species", "Object"]) {
     if (base.endsWith(suffix) && base.length > suffix.length) {
       base = base.slice(0, -suffix.length)
     }

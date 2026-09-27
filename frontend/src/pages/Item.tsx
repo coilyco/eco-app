@@ -1,9 +1,13 @@
-import { Link, useSearchParams } from "react-router-dom"
+import { useEffect, useState } from "react"
+import { Link, Navigate, useLocation, useSearchParams } from "react-router-dom"
 import EcoRichText from "../components/EcoRichText"
 import FreshnessNote from "../components/FreshnessNote"
 import ItemPrice from "../components/ItemPrice"
 import Layout from "../components/Layout"
+import RecipeCard from "../components/RecipeCard"
+import { itemPageId, itemPageModel, pivotItemFor, recipeHref, sortMakes } from "../lib/itemPage"
 import { fetchItemPivot, type ItemFeedRow, type ItemPivot } from "../lib/itemsApi"
+import { fetchRecipeIndex, fetchRecipesForProduct, type Recipe } from "../lib/recipesApi"
 import { formatCount, formatDuration, formatRelative, prettifyEcoName } from "../lib/format"
 import type { PriceNorm } from "../lib/priceNorm"
 import { useFreshData } from "../lib/useFreshData"
@@ -17,6 +21,9 @@ const ACTION_VERBS: Record<string, string> = {
 }
 
 const PAGE_SIZE = 50
+// "What it's used in" can run to hundreds for a tag member like a log. The
+// recipe directory already filters by ingredient, so the rest go there.
+const USED_IN_SHOWN = 30
 
 type EventType = "all" | "craft" | "trade"
 
@@ -69,17 +76,56 @@ function FeedLine({ row, item, now, norm }: { row: ItemFeedRow; item: string; no
   )
 }
 
-// Per-item pivot: an actionable summary (who makes it, what's for sale, who's
-// buying) over a single reverse-chrono feed that interleaves crafts and trades,
-// compresses repeats, and reads in relative time. Search / actor / type filters
-// and the page are deep-linkable via query params (?q= ?actor= ?type= ?page=).
+function RecipeLinks({ recipes, testId }: { recipes: Recipe[]; testId: string }) {
+  return (
+    <ul className="recipe-list" data-testid={testId}>
+      {recipes.map((r) => (
+        <li key={r.name}>
+          <Link className="linklike" to={recipeHref(r)}>
+            {r.displayName}
+          </Link>{" "}
+          <span className="section-sub">{r.station ? `at ${prettifyEcoName(r.station)}` : "by hand"}</span>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+// One page per item (eco-app#8383), keyed ?id=<item id minus "Item">: the market
+// (an actionable summary over a reverse-chrono feed of crafts and trades), every
+// recipe that makes it as a card, and, one tap away, what it goes into. Search / actor / type
+// filters and the page are deep-linkable (?q= ?actor= ?type= ?page=), and
+// /recipe?id= lands on its card here by anchor.
 export default function Item() {
   const [params, setParams] = useSearchParams()
-  const item = params.get("item") ?? ""
+  const location = useLocation()
+  const id = params.get("id") ?? ""
+  const legacyItem = params.get("item") ?? ""
   const q = params.get("q") ?? ""
   const actor = params.get("actor") ?? ""
   const type = (params.get("type") ?? "all") as EventType
   const page = Math.max(1, Number.parseInt(params.get("page") ?? "1", 10) || 1)
+
+  // This item's recipes come first and alone: the whole graph is 1.2 MB, too
+  // heavy for the most-linked page, so it loads only when asked for (uses and
+  // byproducts need it). The recipes also name the id the market is keyed by,
+  // so the pivot waits for them, or for their failure and then guesses.
+  const makesPlane = useFreshData(
+    "recipes",
+    (signal) => (id ? fetchRecipesForProduct(id, signal) : Promise.resolve(null)),
+    [id],
+  )
+  const makesIndex = makesPlane.data
+  const makes = makesIndex ? sortMakes(makesIndex.recipes, id) : []
+  const item = !id ? "" : makesIndex ? pivotItemFor(makes, id) : makesPlane.error ? pivotItemFor([], id) : ""
+
+  const [wantGraph, setWantGraph] = useState(false)
+  const graphPlane = useFreshData(
+    "recipes",
+    (signal) => (wantGraph ? fetchRecipeIndex(signal) : Promise.resolve(null)),
+    [wantGraph],
+  )
+  const model = graphPlane.data && id ? itemPageModel(graphPlane.data, id) : null
 
   // Refresh contract lives in freshness.ts, not here (eco-app#201). `item` is
   // in the deps, so a pivot always belongs to the item currently in the URL —
@@ -96,12 +142,23 @@ export default function Item() {
   // loading gap rather than the previous item's data.
   const pivot = fetched && fetched.item === item ? fetched : null
   const error = erroredItem === item
-  const pretty = item ? prettifyEcoName(item) : ""
+  const pretty = makes[0]?.product.displayName ?? model?.displayName ?? (id ? prettifyEcoName(id) : "")
+
+  // A /recipe?id= redirect arrives with #recipe-<name>. The card renders only
+  // once the graph loads, so scroll and move focus to it then.
+  const hash = location.hash
+  useEffect(() => {
+    if (!hash || !makesIndex) return
+    const card = document.getElementById(decodeURIComponent(hash.slice(1)))
+    if (!card) return
+    card.scrollIntoView?.({ block: "start" })
+    card.focus({ preventScroll: true })
+  }, [hash, makesIndex])
 
   // Preserve the other params when one control changes; always reset to page 1
   // (except when the page itself changes).
   const update = (patch: Record<string, string>) => {
-    const next: Record<string, string> = { item }
+    const next: Record<string, string> = { id }
     if (q) next.q = q
     if (actor) next.actor = actor
     if (type !== "all") next.type = type
@@ -151,6 +208,14 @@ export default function Item() {
   const clampedPage = Math.min(page, totalPages)
   const pageRows = filtered.slice((clampedPage - 1) * PAGE_SIZE, clampedPage * PAGE_SIZE)
 
+  // Retired ?item=<full id> links keep working, filters included.
+  if (legacyItem && !id) {
+    const next = new URLSearchParams(params)
+    next.delete("item")
+    next.set("id", itemPageId(legacyItem))
+    return <Navigate to={`/item?${next.toString()}${location.hash}`} replace />
+  }
+
   return (
     <Layout fetchedAtISO={pivot?.fetchedAtISO}>
       <section className="hero hero-compact">
@@ -175,7 +240,7 @@ export default function Item() {
             {pivot.tradeVolume ? ` · ${formatCount(pivot.tradeVolume)} currency moved` : ""}
           </p>
         )}
-        {item && !pivot && error && (
+        {id && !pivot && error && (
           <p className="hero-pill hero-pill-muted" data-testid="item-error">
             item history unavailable right now
           </p>
@@ -190,7 +255,7 @@ export default function Item() {
         <FreshnessNote plane="items" loadedAt={itemPlane.loadedAt} />
       </section>
 
-      {!item && (
+      {!id && (
         <section>
           <p className="empty-note" data-testid="item-missing">
             No item selected. Head to the{" "}
@@ -202,11 +267,15 @@ export default function Item() {
         </section>
       )}
 
+      {id && (
+        <h2 className="section-title" id="market">
+          Market
+        </h2>
+      )}
       {pivot && pivot.tradeCount === 0 && pivot.craftCount === 0 && (
         <section>
           <p className="empty-note" data-testid="item-empty">
-            Nothing recorded for {pretty} yet — it has never been traded or crafted on this
-            server.
+            Nobody has traded or crafted {pretty} on this server yet.
           </p>
         </section>
       )}
@@ -312,6 +381,72 @@ export default function Item() {
               </>
             )}
           </div>
+        </section>
+      )}
+
+      {id && (
+        <section aria-labelledby="how-to-make" data-testid="item-recipes">
+          <h2 className="section-title" id="how-to-make">
+            How to make it{" "}
+            {makes.length > 0 && <span className="section-sub">({makes.length})</span>}
+          </h2>
+          {!makesIndex && !makesPlane.error && <p className="empty-note">Loading recipes…</p>}
+          {!makesIndex && makesPlane.error && (
+            <p className="empty-note" data-testid="item-recipes-error">
+              Recipes can't load right now. Try again in a minute.
+            </p>
+          )}
+          {makesIndex && makes.length === 0 && (
+            <p className="empty-note" data-testid="item-no-recipe">
+              No recipe makes {pretty} as its main product.
+            </p>
+          )}
+          {makesIndex && makes.length > 0 && (
+            <div className="recipe-cards">
+              {makes.map((r, i) => (
+                <RecipeCard key={r.name} recipe={r} index={makesIndex} main={i === 0 && makes.length > 1} />
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      {id && (
+        <section aria-labelledby="used-in" data-testid="item-used-in">
+          <h2 className="section-title" id="used-in">
+            What it's used in{" "}
+            {model && model.usedIn.length > 0 && <span className="section-sub">({model.usedIn.length})</span>}
+          </h2>
+          {!wantGraph && (
+            <button className="button" onClick={() => setWantGraph(true)} data-testid="item-load-uses">
+              Show what uses {pretty}
+            </button>
+          )}
+          {wantGraph && !model && !graphPlane.error && <p className="empty-note">Loading every recipe…</p>}
+          {wantGraph && graphPlane.error && (
+            <p className="empty-note" data-testid="item-uses-error">
+              Recipes can't load right now. Try again in a minute.
+            </p>
+          )}
+          {model && model.usedIn.length === 0 && <p className="empty-note">No recipe uses {pretty}.</p>}
+          {model && model.usedIn.length > 0 && (
+            <>
+              <RecipeLinks recipes={model.usedIn.slice(0, USED_IN_SHOWN)} testId="item-used-in-list" />
+              {model.usedIn.length > USED_IN_SHOWN && (
+                <p>
+                  <Link className="linklike" to={`/recipes?ingredient=${encodeURIComponent(item)}`}>
+                    See all {model.usedIn.length} in the recipe directory →
+                  </Link>
+                </p>
+              )}
+            </>
+          )}
+          {model && model.byproductOf.length > 0 && (
+            <>
+              <h3 className="section-title-sm">Also comes out of</h3>
+              <RecipeLinks recipes={model.byproductOf} testId="item-byproduct-of" />
+            </>
+          )}
         </section>
       )}
 

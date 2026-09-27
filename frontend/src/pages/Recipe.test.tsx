@@ -1,6 +1,8 @@
 import { cleanup, render, screen, waitFor } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
-import { MemoryRouter } from "react-router-dom"
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom"
+import RecipeCard from "../components/RecipeCard"
+import type { RecipeIndex } from "../lib/recipesApi"
 import Recipe from "./Recipe"
 
 // Two recipes producing the SAME product (SteelBar) two ways, so the "other
@@ -73,10 +75,18 @@ function stubFetch(payload: unknown, ok = true) {
   )
 }
 
+function Where() {
+  const loc = useLocation()
+  return <p data-testid="where">{`${loc.pathname}${loc.search}${loc.hash}`}</p>
+}
+
 function renderRecipe(entry: string) {
   return render(
     <MemoryRouter initialEntries={[entry]}>
-      <Recipe />
+      <Routes>
+        <Route path="/recipe" element={<Recipe />} />
+        <Route path="/item" element={<Where />} />
+      </Routes>
     </MemoryRouter>,
   )
 }
@@ -86,59 +96,25 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
+// A recipe has no page of its own any more (eco-app#8383): /recipe?id= lands on
+// its card on the product's item page.
 describe("Recipe", () => {
-  it("renders the BOM, facts, and product market cross-link", async () => {
+  it("redirects to the recipe's card on its product's item page", async () => {
     stubFetch(INDEX)
-    renderRecipe("/recipe?id=SteelBarRecipe")
+    renderRecipe("/recipe?id=SteelBarBlastRecipe")
 
     await waitFor(() => {
-      expect(screen.getByTestId("recipe-pill")).toHaveTextContent("makes 2× Steel Bar")
+      expect(screen.getByTestId("where")).toHaveTextContent("/item?id=SteelBar#recipe-SteelBarBlastRecipe")
     })
-    // Ingredients (item + tag) and byproduct render.
-    expect(screen.getByTestId("recipe-ingredients")).toHaveTextContent("Iron Bar")
-    expect(screen.getByTestId("recipe-ingredients")).toHaveTextContent("Charcoal")
-    expect(screen.getByTestId("recipe-products")).toHaveTextContent("Slag")
-    // Facts: profession + labor.
-    expect(screen.getByTestId("recipe-facts")).toHaveTextContent("Smelting")
-    expect(screen.getByTestId("recipe-facts")).toHaveTextContent("100 cal")
-    // The market cross-link points at the product's item page.
-    expect(screen.getByTestId("recipe-market-link")).toHaveAttribute(
-      "href",
-      "/item?item=SteelBarItem",
-    )
-    expect(screen.getByTestId("recipe-resolver-link")).toHaveAttribute(
-      "href",
-      "/uses/resolve?item=SteelBarItem",
-    )
   })
 
-  it("lists other recipes that make the same product", async () => {
+  it("sends an item id that arrived here to that item's page", async () => {
     stubFetch(INDEX)
-    renderRecipe("/recipe?id=SteelBarRecipe")
+    renderRecipe("/recipe?id=SteelBar")
 
     await waitFor(() => {
-      expect(screen.getByTestId("recipe-alternates")).toBeInTheDocument()
+      expect(screen.getByTestId("where")).toHaveTextContent("/item?id=SteelBar")
     })
-    // The blast-furnace sibling shows and deep-links to its own detail.
-    expect(screen.getByText("Steel Bar (Blast Furnace)").closest("a")).toHaveAttribute(
-      "href",
-      "/recipe?id=SteelBarBlastRecipe",
-    )
-  })
-
-  it("tag ingredients offer a reverse-lookup but no item link", async () => {
-    stubFetch(INDEX)
-    renderRecipe("/recipe?id=SteelBarRecipe")
-
-    await waitFor(() => {
-      expect(screen.getByTestId("recipe-ingredients")).toBeInTheDocument()
-    })
-    // The item ingredient links to /item; the tag ingredient does not.
-    expect(screen.getByText("Iron Bar").closest("a")).toHaveAttribute(
-      "href",
-      "/item?item=IronBarItem",
-    )
-    expect(screen.getByText("Charcoal").closest("a")).toBeNull()
   })
 
   it("shows the missing-selection note with no id", async () => {
@@ -166,5 +142,31 @@ describe("Recipe", () => {
     await waitFor(() => {
       expect(screen.getByTestId("recipe-error")).toBeInTheDocument()
     })
+  })
+})
+
+describe("RecipeCard", () => {
+  const renderCard = () =>
+    render(
+      <MemoryRouter>
+        <RecipeCard recipe={INDEX.recipes[0] as unknown as RecipeIndex["recipes"][number]} index={INDEX as unknown as RecipeIndex} />
+      </MemoryRouter>,
+    )
+
+  it("renders the ingredients, what it makes, and the facts", () => {
+    renderCard()
+    expect(screen.getByTestId("recipe-card")).toHaveAttribute("id", "recipe-SteelBarRecipe")
+    expect(screen.getByTestId("recipe-ingredients")).toHaveTextContent("Iron Bar")
+    expect(screen.getByTestId("recipe-ingredients")).toHaveTextContent("Charcoal")
+    expect(screen.getByTestId("recipe-products")).toHaveTextContent("Slag")
+    expect(screen.getByTestId("recipe-facts")).toHaveTextContent("Smelting")
+    expect(screen.getByTestId("recipe-facts")).toHaveTextContent("100 cal")
+  })
+
+  it("links item ingredients to their page and gives tags the directory lookup", () => {
+    renderCard()
+    expect(screen.getByText("Iron Bar").closest("a")).toHaveAttribute("href", "/item?id=IronBar")
+    expect(screen.getByText("Charcoal").closest("a")).toBeNull()
+    expect(screen.getByTestId("recipe-uses-link")).toHaveAttribute("href", "/recipes?ingredient=Charcoal")
   })
 })

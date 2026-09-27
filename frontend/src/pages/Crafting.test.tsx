@@ -102,7 +102,7 @@ describe("Crafting", () => {
     await waitFor(() => {
       expect(screen.getByText("Dirt")).toBeInTheDocument()
     })
-    expect(screen.getByRole("link", { name: "Dirt" })).toHaveAttribute("href", "/item?item=DirtItem")
+    expect(screen.getByRole("link", { name: "Dirt" })).toHaveAttribute("href", "/item?id=Dirt")
     fireEvent.click(screen.getByRole("button", { name: "Filter crafting atlas by Dirt" }))
     expect(screen.getByTestId("atlas-filter")).toHaveValue("Dirt")
     expect(screen.queryByText("Board")).not.toBeInTheDocument()

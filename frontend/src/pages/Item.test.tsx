@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
-import { MemoryRouter } from "react-router-dom"
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom"
 import Item from "./Item"
 
 // A pivot with a compressed feed: a trade (newest), a 3-run craft, and a single
@@ -93,11 +93,83 @@ const PIVOT = {
   warnings: [],
 }
 
+const component = (item: string, displayName: string, quantity = 1, isTag = false) => ({
+  item,
+  displayName,
+  quantity,
+  isTag,
+})
+const recipe = <T extends Record<string, unknown>>(over: T) => ({
+  ingredients: [],
+  byproducts: [],
+  station: "",
+  stationDisplayName: "",
+  skill: null,
+  laborCost: 0,
+  craftMinutes: 1,
+  tableTierRequired: null,
+  variants: [],
+  family: "",
+  isDefault: false,
+  isBlueprint: false,
+  ...over,
+})
+
+// Mortar is made two ways (the main recipe listed first) and goes into a wall.
+const INDEX = {
+  fetchedAtISO: "2026-06-12T13:00:00+00:00",
+  source: "test",
+  version: 1,
+  counts: { recipes: 3, skills: 0, tags: 0, products: 2, stations: 2 },
+  recipes: [
+    recipe({
+      name: "BakedMortar",
+      displayName: "Baked Mortar",
+      product: component("MortarItem", "Mortar", 3),
+      ingredients: [component("SandItem", "Sand", 2)],
+      station: "KilnObject",
+    }),
+    recipe({
+      name: "Mortar",
+      displayName: "Mortar",
+      product: component("MortarItem", "Mortar", 1),
+      ingredients: [component("SandItem", "Sand", 1)],
+      station: "MasonryTableObject",
+      isDefault: true,
+    }),
+    recipe({
+      name: "StoneWall",
+      displayName: "Stone Wall",
+      product: component("StoneWallItem", "Stone Wall"),
+      ingredients: [component("MortarItem", "Mortar", 2)],
+      station: "MasonryTableObject",
+      isDefault: true,
+    }),
+  ],
+  byProduct: { MortarItem: ["BakedMortar", "Mortar"], StoneWallItem: ["StoneWall"] },
+  bySkill: {},
+  byStation: {},
+  skills: [],
+  tags: {},
+  warnings: [],
+}
+
+// The page loads the item's own recipes (the service's ?product= filter), its
+// market pivot, and on request the whole recipe graph.
+function answer(url: string, payload: unknown) {
+  const u = new URL(url, "http://x")
+  if (!u.pathname.endsWith("recipes.json")) return payload
+  const product = u.searchParams.get("product")
+  if (!product) return INDEX
+  const recipes = INDEX.recipes.filter((r) => [product, `${product}Item`].includes(r.product.item))
+  return { ...INDEX, recipes }
+}
+
 function stubPivotFetch(payload: unknown = PIVOT) {
   vi.stubGlobal(
     "fetch",
-    vi.fn().mockResolvedValue(
-      new Response(JSON.stringify(payload), {
+    vi.fn().mockImplementation(async (url: string) =>
+      new Response(JSON.stringify(answer(String(url), payload)), {
         status: 200,
         headers: { "Content-Type": "application/json" },
       }),
@@ -105,10 +177,25 @@ function stubPivotFetch(payload: unknown = PIVOT) {
   )
 }
 
-function renderItem(entry = "/item?item=MortarItem") {
+function Where() {
+  const loc = useLocation()
+  return <p data-testid="where">{`${loc.pathname}${loc.search}${loc.hash}`}</p>
+}
+
+function renderItem(entry = "/item?id=Mortar") {
   return render(
     <MemoryRouter initialEntries={[entry]}>
-      <Item />
+      <Routes>
+        <Route
+          path="/item"
+          element={
+            <>
+              <Item />
+              <Where />
+            </>
+          }
+        />
+      </Routes>
     </MemoryRouter>,
   )
 }
@@ -155,7 +242,7 @@ describe("Item", () => {
 
   it("honors a ?q= deep link by filtering the feed", async () => {
     stubPivotFetch()
-    renderItem("/item?item=MortarItem&q=reihtnog")
+    renderItem("/item?id=Mortar&q=reihtnog")
 
     await waitFor(() => {
       expect(screen.getByTestId("item-filter")).toHaveValue("reihtnog")
@@ -165,7 +252,7 @@ describe("Item", () => {
     expect(rows[0]).toHaveTextContent("Reihtnog crafted 4 Mortar")
   })
 
-  it("prompts for a selection when no ?item= is present", async () => {
+  it("prompts for a selection when no ?id= is present", async () => {
     stubPivotFetch()
     renderItem("/item")
 
@@ -187,6 +274,62 @@ describe("Item", () => {
 
     await waitFor(() => {
       expect(screen.getByTestId("item-empty")).toBeInTheDocument()
+    })
+  })
+
+  it("redirects a retired ?item= link to the ?id= page, filters intact", async () => {
+    stubPivotFetch()
+    renderItem("/item?item=MortarItem&q=reihtnog")
+
+    await waitFor(() => {
+      expect(screen.getByTestId("where")).toHaveTextContent("/item?q=reihtnog&id=Mortar")
+    })
+    await waitFor(() => {
+      expect(screen.getAllByTestId("item-feed-row")).toHaveLength(1)
+    })
+  })
+
+  it("shows every recipe that makes it, main recipe first, and what it goes into on request", async () => {
+    stubPivotFetch()
+    renderItem()
+
+    await waitFor(() => {
+      expect(screen.getAllByTestId("recipe-card")).toHaveLength(2)
+    })
+    const cards = screen.getAllByTestId("recipe-card")
+    expect(cards[0]).toHaveAttribute("id", "recipe-Mortar")
+    expect(cards[0]).toHaveTextContent("main recipe")
+    expect(cards[0]).toHaveTextContent("Masonry Table")
+    expect(cards[0]).not.toHaveTextContent("Object")
+    expect(cards[1]).toHaveAttribute("id", "recipe-BakedMortar")
+    expect(screen.getByRole("heading", { name: /Everything about Mortar/ })).toBeInTheDocument()
+    // The whole graph stays unloaded until asked for.
+    expect(screen.queryByTestId("item-used-in-list")).not.toBeInTheDocument()
+    fireEvent.click(screen.getByTestId("item-load-uses"))
+    await waitFor(() => {
+      expect(screen.getByTestId("item-used-in-list")).toHaveTextContent("Stone Wall")
+    })
+    expect(screen.getByRole("link", { name: "Stone Wall" })).toHaveAttribute(
+      "href",
+      "/item?id=StoneWall#recipe-StoneWall",
+    )
+  })
+
+  it("lands on and focuses the recipe card a /recipe redirect anchors to", async () => {
+    stubPivotFetch()
+    renderItem("/item?id=Mortar#recipe-BakedMortar")
+
+    await waitFor(() => {
+      expect(document.getElementById("recipe-BakedMortar")).toHaveFocus()
+    })
+  })
+
+  it("says so when no recipe makes the item", async () => {
+    stubPivotFetch({ ...PIVOT, item: "SandItem" })
+    renderItem("/item?id=Sand")
+
+    await waitFor(() => {
+      expect(screen.getByTestId("item-no-recipe")).toHaveTextContent("No recipe makes Sand as its main product.")
     })
   })
 

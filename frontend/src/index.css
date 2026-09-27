@@ -1894,6 +1894,55 @@ a.k-card:visited {
   color: var(--leaf);
 }
 
+/* Recipe cards on the item page (eco-app#8383). A /recipe?id= redirect lands
+   on one by anchor and focuses it, so the landed card carries the ring. */
+.recipe-cards {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.recipe-card {
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--card-border);
+  border-radius: var(--k-r-1);
+  scroll-margin-top: 1rem;
+}
+
+.recipe-card:target,
+.recipe-card:focus-visible,
+.recipe-card:focus {
+  outline: 2px solid var(--leaf);
+  outline-offset: 2px;
+}
+
+.recipe-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.6rem;
+  margin-bottom: 0.85rem;
+}
+
+.recipe-card-title {
+  margin: 0;
+}
+
+/* Inside a card the facts sit two to a row, even at 320px. */
+.recipe-card .recipe-facts {
+  grid-template-columns: repeat(auto-fit, minmax(min(120px, 45%), 1fr));
+  gap: 0.6rem;
+}
+
+.recipe-card .fact {
+  padding: 0.55rem 0.7rem;
+}
+
+.recipe-card-tag {
+  font-size: var(--k-t-body);
+  font-weight: 400;
+  color: var(--ink-faint);
+}
+
 /* Refresh-contract caption (eco-app#201). Every fetching page shows one, so a
    reader can always tell whether what they see is still being updated. */
 .freshness-note {
