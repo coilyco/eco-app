@@ -1,4 +1,6 @@
 import { formatCount, prettifyEcoName } from "../lib/format"
+import ChartFrame from "./ChartFrame"
+import { useSvgTextScale } from "../hooks/useSvgTextScale"
 import type { ItemPriceHistory, PriceHistoryState } from "../lib/priceHistoryApi"
 
 const STATE_TEXT: Record<PriceHistoryState, string> = {
@@ -16,6 +18,7 @@ function fmtPrice(value: number): string {
 }
 
 function PriceTimeline({ history }: { history: ItemPriceHistory }) {
+  const svgRef = useSvgTextScale<SVGSVGElement>()
   const observedMarkers = history.specialtyUnlocks.filter(
     (marker) => marker.status === "observed" && marker.day !== null,
   )
@@ -51,7 +54,13 @@ function PriceTimeline({ history }: { history: ItemPriceHistory }) {
   const volumeWidth = Math.max(3, (width - left - right) / Math.max(history.daily.length * 2, 1))
 
   return (
+    <ChartFrame
+      above={[`high ${fmtPrice(maxPrice)}`, `low ${fmtPrice(minPrice)}`, "bars show volume"]}
+      start={`Day ${minDay}`}
+      end={`Day ${maxDay}`}
+    >
     <svg
+      ref={svgRef}
       className="price-history-chart"
       viewBox={`0 0 ${width} ${height}`}
       role="img"
@@ -95,22 +104,8 @@ function PriceTimeline({ history }: { history: ItemPriceHistory }) {
           </text>
         </g>
       ))}
-      <text x={left} y={height - 8} className="axis-label">
-        Day {minDay}
-      </text>
-      <text x={width - right} y={height - 8} textAnchor="end" className="axis-label">
-        Day {maxDay}
-      </text>
-      <text x={left - 6} y={top} textAnchor="end" className="axis-label">
-        {fmtPrice(maxPrice)}
-      </text>
-      <text x={left - 6} y={priceBottom} textAnchor="end" className="axis-label">
-        {fmtPrice(minPrice)}
-      </text>
-      <text x={left - 6} y={volumeBottom} textAnchor="end" className="axis-label">
-        volume
-      </text>
     </svg>
+    </ChartFrame>
   )
 }
 

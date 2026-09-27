@@ -1,4 +1,5 @@
 import { Link, useSearchParams } from "react-router-dom"
+import ChartFrame from "../components/ChartFrame"
 import FreshnessNote from "../components/FreshnessNote"
 import Layout from "../components/Layout"
 import Loading from "../components/Loading"
@@ -26,6 +27,11 @@ function PopulationCurve({ samples }: { samples: SpeciesPopulationSample[] }) {
   const points = samples.map((sample) => `${x(sample.day)},${y(sample.value)}`).join(" ")
 
   return (
+    <ChartFrame
+      above={[`high ${formatCount(maxValue)}`, `low ${formatCount(minValue)}`]}
+      start={`day ${minDay.toFixed(1)}`}
+      end={`day ${maxDay.toFixed(1)}`}
+    >
     <svg
       className="price-chart"
       viewBox={`0 0 ${width} ${height}`}
@@ -39,11 +45,8 @@ function PopulationCurve({ samples }: { samples: SpeciesPopulationSample[] }) {
           <title>Day {sample.day.toFixed(1)}: {formatCount(sample.value)}</title>
         </circle>
       ))}
-      <text x={pad} y={height - 7} className="axis-label">day {minDay.toFixed(1)}</text>
-      <text x={width - pad} y={height - 7} textAnchor="end" className="axis-label">day {maxDay.toFixed(1)}</text>
-      <text x={pad - 5} y={pad} textAnchor="end" className="axis-label">{formatCount(maxValue)}</text>
-      <text x={pad - 5} y={height - pad} textAnchor="end" className="axis-label">{formatCount(minValue)}</text>
     </svg>
+    </ChartFrame>
   )
 }
 

@@ -1,4 +1,5 @@
 import { useMemo } from "react"
+import ChartFrame from "../components/ChartFrame"
 import { Link, useSearchParams } from "react-router-dom"
 import EcoRichText from "../components/EcoRichText"
 import ItemLink from "../components/ItemLink"
@@ -127,6 +128,11 @@ function PriceChart({ points }: { points: Array<[number, number]> }) {
   const line = points.map(([d, p]) => `${x(d).toFixed(1)},${y(p).toFixed(1)}`).join(" ")
 
   return (
+    <ChartFrame
+      above={[`high ${fmtPrice(maxPrice)}`, `low ${fmtPrice(minPrice)}`]}
+      start={`day ${minDay}`}
+      end={`day ${maxDay}`}
+    >
     <svg
       className="price-chart"
       viewBox={`0 0 ${width} ${height}`}
@@ -143,19 +149,8 @@ function PriceChart({ points }: { points: Array<[number, number]> }) {
           </title>
         </circle>
       ))}
-      <text x={pad} y={height - 6} className="axis-label">
-        day {minDay}
-      </text>
-      <text x={width - pad} y={height - 6} textAnchor="end" className="axis-label">
-        day {maxDay}
-      </text>
-      <text x={pad} y={16} className="axis-label">
-        {fmtPrice(maxPrice)}
-      </text>
-      <text x={pad} y={height - pad + 12} className="axis-label">
-        {fmtPrice(minPrice)}
-      </text>
     </svg>
+    </ChartFrame>
   )
 }
 

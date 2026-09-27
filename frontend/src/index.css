@@ -1114,11 +1114,6 @@ a.k-card:visited {
   padding: 0.5rem;
 }
 
-.price-chart .axis-label {
-  fill: var(--ink-faint);
-  font-size: 11px;
-  font-variant-numeric: tabular-nums;
-}
 
 .price-history-states,
 .price-history-columns {
@@ -1135,11 +1130,6 @@ a.k-card:visited {
   background: var(--k-content);
 }
 
-.price-history-chart .axis-label {
-  fill: var(--ink-faint);
-  font-size: 11px;
-  font-variant-numeric: tabular-nums;
-}
 
 .price-range-line {
   stroke: var(--ink-faint);
@@ -1178,7 +1168,7 @@ a.k-card:visited {
   stroke: var(--bg);
   stroke-width: 3px;
   paint-order: stroke fill;
-  font-size: 10px;
+  font-size: calc(16px * var(--svg-px, 1));
   font-weight: 700;
 }
 
@@ -1268,11 +1258,6 @@ a.k-card:visited {
   padding: 0.5rem;
 }
 
-.mutation-timeline .axis-label {
-  fill: var(--ink-faint);
-  font-size: 11px;
-  font-variant-numeric: tabular-nums;
-}
 
 .mutation-timeline .axis-grid {
   stroke: var(--card-border);
@@ -1374,11 +1359,6 @@ a.k-card:visited {
   margin-top: 0.4rem;
 }
 
-.prog-trend-chart .axis-label {
-  fill: var(--ink-faint);
-  font-size: 10px;
-  font-variant-numeric: tabular-nums;
-}
 
 .prog-trend-single {
   margin: 0.6rem 0 0.2rem;
@@ -1464,7 +1444,7 @@ a.k-card:visited {
 
 .rep-graph .rep-label {
   fill: var(--ink-soft);
-  font-size: 12px;
+  font-size: calc(16px * var(--svg-px, 1));
   font-variant-numeric: tabular-nums;
 }
 
@@ -1517,7 +1497,7 @@ a.k-card:visited {
 
 .eco-donut-sub {
   fill: var(--ink-faint);
-  font-size: 5px;
+  font-size: 8px;
 }
 
 .eco-legend {
@@ -2321,4 +2301,28 @@ html {
 .wiki-link {
   margin-top: auto;
   align-self: flex-start;
+}
+
+/* --- Chart axis labels (ChartFrame) ------------------------------------ */
+/* Axis labels sit around the drawing as page text, so they hold the 16px
+   floor at every width instead of shrinking with the viewBox. */
+.chart-frame {
+  margin: 0;
+  display: grid;
+  gap: var(--k-s-1);
+  max-width: 100%;
+}
+
+.chart-axis {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--k-s-1) var(--k-s-4);
+  color: var(--k-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-axis--above {
+  justify-content: flex-start;
 }

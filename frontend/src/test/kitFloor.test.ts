@@ -17,10 +17,11 @@ const SITE = read("index.css") + "\n" + read("eco-theme.css")
 const FLOOR_PX = 16
 const ROOT_PX = 16
 
-// SVG text is sized in viewBox units, so its CSS number says nothing about
-// the pixels on screen. Those labels are measured where they render, by the
-// browser check (docs/frontend/kit-checks.md), not here.
-const SVG_TEXT = /\.(axis-label|rep-label|eco-donut-num|eco-donut-sub)\b|\.specialty-marker text\b/
+// The /map donut draws 100 viewBox units at a fixed 200px, so its SVG text
+// renders at twice its CSS number: 8 units is 16px. Every other in-drawing
+// label sizes itself with calc() through useSvgTextScale, and the browser
+// check measures all of them where they render (docs/frontend/kit-checks.md).
+const SVG_TEXT = /\.eco-donut-(num|sub)\b/
 
 const literalPx = (raw: string): number | null => {
   const m = raw.match(/^([\d.]*\.?\d+)(rem|px|em)$/)

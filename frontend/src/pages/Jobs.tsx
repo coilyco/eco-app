@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react"
+import ChartFrame from "../components/ChartFrame"
 import type { ReactNode } from "react"
 import { Link } from "react-router-dom"
 import EcoRichText from "../components/EcoRichText"
@@ -283,6 +284,7 @@ function TrendSparkline({
       maxDay,
     ).toFixed(1)},${(height - pad).toFixed(1)}`
     body = (
+      <ChartFrame above={[`peak ${formatCount(maxCount)}`]} start={`day ${minDay}`} end={`day ${maxDay}`}>
       <svg
         className="prog-trend-chart"
         viewBox={`0 0 ${width} ${height}`}
@@ -293,16 +295,8 @@ function TrendSparkline({
       >
         <polygon points={area} fill="var(--leaf-wash)" stroke="none" />
         <polyline points={line} fill="none" stroke="var(--leaf)" strokeWidth="2" />
-        <text x={pad} y={height - 4} className="axis-label">
-          day {minDay}
-        </text>
-        <text x={width - pad} y={height - 4} textAnchor="end" className="axis-label">
-          day {maxDay}
-        </text>
-        <text x={pad} y={14} className="axis-label">
-          peak {formatCount(maxCount)}
-        </text>
       </svg>
+      </ChartFrame>
     )
   }
 

@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom"
+import ChartFrame from "../components/ChartFrame"
 import FreshnessNote from "../components/FreshnessNote"
 import Layout from "../components/Layout"
 import { fetchCivics } from "../lib/civicsApi"
@@ -51,6 +52,7 @@ function TurnoutChart({ vote, didntVote }: { vote: Series; didntVote: Series }) 
     pts.map(([d, v]) => `${x(d).toFixed(1)},${y(v).toFixed(1)}`).join(" ")
 
   return (
+    <ChartFrame above={[`${formatCount(maxVal)} / day`]} start={`day ${minDay}`} end={`day ${maxDay}`}>
     <svg
       className="price-chart"
       viewBox={`0 0 ${width} ${height}`}
@@ -71,16 +73,8 @@ function TurnoutChart({ vote, didntVote }: { vote: Series; didntVote: Series }) 
           strokeDasharray="5 3"
         />
       )}
-      <text x={pad} y={height - 6} className="axis-label">
-        day {minDay}
-      </text>
-      <text x={width - pad} y={height - 6} textAnchor="end" className="axis-label">
-        day {maxDay}
-      </text>
-      <text x={pad} y={16} className="axis-label">
-        {formatCount(maxVal)} / day
-      </text>
     </svg>
+    </ChartFrame>
   )
 }
 

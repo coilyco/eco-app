@@ -1,4 +1,6 @@
 import { useMemo } from "react"
+import ChartFrame from "../components/ChartFrame"
+import { useSvgTextScale } from "../hooks/useSvgTextScale"
 import { Link } from "react-router-dom"
 import FreshnessNote from "../components/FreshnessNote"
 import Layout from "../components/Layout"
@@ -46,6 +48,7 @@ function VolumeChart({
   const y = (c: number) => height - pad - (c / maxCount) * (height - 2 * pad)
 
   return (
+    <ChartFrame above={[`peak ${formatCount(maxCount)}`]} start={`day ${minDay}`} end={`day ${maxDay}`}>
     <svg
       className="price-chart"
       viewBox={`0 0 ${width} ${height}`}
@@ -77,16 +80,8 @@ function VolumeChart({
         stroke="var(--card-border)"
         strokeWidth="1"
       />
-      <text x={pad} y={height - 6} className="axis-label">
-        day {minDay}
-      </text>
-      <text x={width - pad} y={height - 6} textAnchor="end" className="axis-label">
-        day {maxDay}
-      </text>
-      <text x={pad} y={16} className="axis-label">
-        {formatCount(maxCount)}
-      </text>
     </svg>
+    </ChartFrame>
   )
 }
 
@@ -124,6 +119,7 @@ function ReputationGraph({ edges }: { edges: ReputationEdge[] }) {
     const maxRecv = Math.max(...nodes.map((n) => Math.abs(received.get(n) ?? 0)), 1)
     return { nodes, pos, shown, maxEdge, received, maxRecv }
   }, [edges, cx, cy, radius])
+  const svgRef = useSvgTextScale<SVGSVGElement>()
 
   if (layout.nodes.length === 0) {
     return <p className="empty-note">No reputation transfers to graph yet.</p>
@@ -131,6 +127,7 @@ function ReputationGraph({ edges }: { edges: ReputationEdge[] }) {
 
   return (
     <svg
+      ref={svgRef}
       className="rep-graph"
       viewBox={`0 0 ${size} ${size}`}
       preserveAspectRatio="xMidYMid meet"

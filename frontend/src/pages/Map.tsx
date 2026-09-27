@@ -88,7 +88,7 @@ function Donut({ snap }: { snap: EcoregionSnapshot }) {
       <text x="0" y="-2" textAnchor="middle" className="eco-donut-num">
         {Math.round(snap.classifiedPercent)}%
       </text>
-      <text x="0" y="7" textAnchor="middle" className="eco-donut-sub">
+      <text x="0" y="12" textAnchor="middle" className="eco-donut-sub">
         classified
       </text>
     </svg>
