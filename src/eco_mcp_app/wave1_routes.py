@@ -13,6 +13,7 @@ from .public_routes import (
     CurrencyInput,
     EmptyInput,
     ServerInput,
+    StoresInput,
     ToolInvoker,
     TradeInput,
     extract_result,
@@ -157,12 +158,13 @@ def register_wave1_routes(registry: DualRouteRegistry, invoke: ToolInvoker) -> N
             "what it trades, its volume, its customers, and when it last traded, "
             "plus what each player buys and sells as a trader. Answers 'who runs "
             "the biggest store', 'what does this shop trade', and 'which player "
-            "moves the most goods'. It has no item filter, so for where to buy or sell "
-            "a specific item use find_trade. Requires the server-side admin API "
-            "key."
+            "moves the most goods'. By default it returns the top rows with their "
+            "lists shortened. Pass store or item for whole matching rows. For where "
+            "to buy or sell an item at the best price use find_trade. Requires the "
+            "server-side admin API key."
         ),
         rest_path="/preview/stores.json",
-        input_model=BoundedServerInput,
+        input_model=StoresInput,
     )
     register_json_route(
         registry,

@@ -64,6 +64,32 @@ class BoundedServerInput(ServerInput):
     limit: int = Field(default=50, ge=0, description=LIMIT_DESCRIPTION)
 
 
+# A default get_stores call has to fit a 16 KB tool-result bound. Five rows with
+# two nested entries each measured 11.5 KB on Cycle 14 (teable:coilyco/eco-app#8354).
+STORES_ROW_LIMIT = 5
+STORES_NESTED_LIMIT = 2
+
+
+class StoresInput(ServerInput):
+    """Select an Eco server, bound the directory, or filter it to whole rows."""
+
+    limit: int = Field(default=STORES_ROW_LIMIT, ge=0, description=LIMIT_DESCRIPTION)
+    store: str | None = Field(
+        default=None,
+        description=(
+            "Optional case-insensitive part of a store's name or owner, or a trader's "
+            "name. Matching rows come back whole."
+        ),
+    )
+    item: str | None = Field(
+        default=None,
+        description=(
+            "Optional case-insensitive part of an item name a store or trader trades. "
+            "Matching rows come back whole."
+        ),
+    )
+
+
 class CurrencyInput(BoundedServerInput):
     """Select an Eco server and optionally one currency."""
 

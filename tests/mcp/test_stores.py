@@ -16,6 +16,7 @@ Covers:
 from __future__ import annotations
 
 from collections.abc import Iterator
+from typing import Any
 
 import httpx
 import mcp.types as mt
@@ -378,3 +379,68 @@ def test_a_single_currency_store_is_not_flagged_as_mixed() -> None:
     assert store["mixedCurrencyVolume"] is False
     assert store["totalVolume"] == 150.0
     assert "per-currency breakout" in directory.to_dict()["volumeNote"]
+
+
+# ---------------------------------------------------------------------------
+# A default call fits the tool bound, and a filter returns whole rows (#8354)
+# ---------------------------------------------------------------------------
+
+
+def _directory_rows() -> dict[str, Any]:
+    items = [{"item": f"{name}Item", "pretty": name} for name in ("Iron", "Copper", "Wood", "Clay")]
+    return {
+        "stores": [
+            {
+                "label": "Iron Works",
+                "owner": "ada",
+                "storeKey": "k1",
+                "topItems": list(items),
+                "topCounterparties": [{"name": n} for n in "abcd"],
+            },
+            {
+                "label": "Farm Stand",
+                "owner": "bo",
+                "storeKey": "k2",
+                "topItems": [{"item": "WheatItem", "pretty": "Wheat"}],
+                "topCounterparties": [],
+            },
+        ],
+        "traders": [
+            {"name": "ada", "topSells": list(items), "topBuys": []},
+            {"name": "bo", "topSells": [], "topBuys": [{"item": "WheatItem", "pretty": "Wheat"}]},
+        ],
+        "warnings": [],
+    }
+
+
+def test_default_directory_lists_are_shortened_and_say_so() -> None:
+    from eco_mcp_app.server import _shorten_directory_lists
+
+    payload = _directory_rows()
+    _shorten_directory_lists(payload, 2)
+    assert len(payload["stores"][0]["topItems"]) == 2
+    assert len(payload["stores"][0]["topCounterparties"]) == 2
+    assert len(payload["traders"][0]["topSells"]) == 2
+    assert any("cut to its top 2" in w for w in payload["warnings"])
+
+
+def test_a_filter_keeps_matching_rows_whole() -> None:
+    from eco_mcp_app.server import _filter_directory
+
+    payload = _directory_rows()
+    _filter_directory(payload, None, "copper")
+    assert [s["label"] for s in payload["stores"]] == ["Iron Works"]
+    assert len(payload["stores"][0]["topItems"]) == 4
+    assert [t["name"] for t in payload["traders"]] == ["ada"]
+
+    payload = _directory_rows()
+    _filter_directory(payload, "farm", None)
+    assert [s["label"] for s in payload["stores"]] == ["Farm Stand"]
+    assert payload["traders"] == []
+
+
+def test_stores_input_defaults_to_a_small_page() -> None:
+    from eco_mcp_app.public_routes import STORES_ROW_LIMIT, StoresInput
+
+    assert StoresInput().limit == STORES_ROW_LIMIT
+    assert StoresInput(store="x", item="y").store == "x"

@@ -40,6 +40,7 @@ from .dual_routes import DualRouteRegistry
 from .logistics import fetch_logistics, logistics_markdown
 from .map import build_map_payload, fetch_map_bundle
 from .progression import fetch_history, history_markdown
+from .public_routes import STORES_NESTED_LIMIT, STORES_ROW_LIMIT
 from .reply_templates import with_reply_templates
 from .social import fetch_social, social_markdown
 from .stores import directory_markdown, fetch_directory
@@ -1426,6 +1427,65 @@ def _resolve_limit(args: dict[str, Any], default: int = MCP_ROW_LIMIT) -> int:
     return max(value, 0)
 
 
+# The nested lists that made a default get_stores 135 KB (eco-app#8354).
+_DIRECTORY_NESTED = {
+    "stores": ("topItems", "topCounterparties"),
+    "traders": ("topSells", "topBuys"),
+}
+
+
+def _shorten_directory_lists(payload: dict[str, Any], keep: int) -> None:
+    """Cut each row's nested lists to `keep` entries, and say so."""
+    shortened = False
+    for key, fields in _DIRECTORY_NESTED.items():
+        for row in payload.get(key) or []:
+            for name in fields:
+                entries = row.get(name)
+                if isinstance(entries, list) and len(entries) > keep:
+                    row[name] = entries[:keep]
+                    shortened = True
+    if shortened:
+        payload.setdefault("warnings", []).append(
+            f"each row's {', '.join(f for fs in _DIRECTORY_NESTED.values() for f in fs)} "
+            f"is cut to its top {keep}; pass store or item for whole matching rows, or "
+            "limit=0 for everything"
+        )
+
+
+def _filter_directory(payload: dict[str, Any], store: str | None, item: str | None) -> None:
+    """Keep only rows matching the store/trader name and the traded item, whole."""
+    store_q = (store or "").strip().lower()
+    item_q = (item or "").strip().lower()
+
+    def names(row: dict[str, Any], *keys: str) -> str:
+        return " ".join(str(row.get(k) or "") for k in keys).lower()
+
+    def trades(row: dict[str, Any], key: str) -> bool:
+        return any(
+            item_q in f"{e.get('item') or ''} {e.get('pretty') or ''}".lower()
+            for e in row.get(key) or []
+            if isinstance(e, dict)
+        )
+
+    stores = [
+        row
+        for row in payload.get("stores") or []
+        if store_q in names(row, "label", "owner", "storeKey")
+        and (not item_q or trades(row, "topItems"))
+    ]
+    traders = [
+        row
+        for row in payload.get("traders") or []
+        if store_q in names(row, "name")
+        and (not item_q or trades(row, "topSells") or trades(row, "topBuys"))
+    ]
+    payload["stores"], payload["traders"] = stores, traders
+    payload.setdefault("warnings", []).append(
+        f"filtered to {len(stores)} store(s) and {len(traders)} trader(s) matching "
+        f"store={store!r} item={item!r}; an item match reads each row's top items only"
+    )
+
+
 def _bound_rows(payload: dict[str, Any], limit: int, *keys: str) -> None:
     """Truncate unbounded detail arrays, and say what was dropped.
 
@@ -2507,7 +2567,13 @@ def build_server(
                 return _unreachable_result("Eco exporter", e)
             # `stores` (91 KB) + `traders` (79 KB) were 99% of the response.
             directory_payload = directory.to_dict()
-            _bound_rows(directory_payload, _resolve_limit(arguments or {}), "stores", "traders")
+            args = arguments or {}
+            limit = _resolve_limit(args, default=STORES_ROW_LIMIT)
+            if args.get("store") or args.get("item"):
+                _filter_directory(directory_payload, args.get("store"), args.get("item"))
+            elif limit > 0:
+                _shorten_directory_lists(directory_payload, STORES_NESTED_LIMIT)
+            _bound_rows(directory_payload, limit, "stores", "traders")
             return CallToolResult(
                 content=[
                     TextContent(type="text", text=directory_markdown(directory)),
