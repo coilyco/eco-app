@@ -1,0 +1,267 @@
+{
+ "view": "logistics",
+ "live": true,
+ "totalOffers": 3062,
+ "totalStores": 180,
+ "cheapest": [
+  {
+   "item": "SandstoneItem",
+   "itemPretty": "Sandstone",
+   "currency": "2533707",
+   "sellerCount": 2,
+   "cheapest": 0.01,
+   "offers": [
+    {
+     "store": "redacted",
+     "owner": "redacted",
+     "storeKey": "redacted",
+     "item": "SandstoneItem",
+     "itemPretty": "Sandstone",
+     "currency": "2533707",
+     "side": "sell",
+     "price": 0.01,
+     "quantity": 1480.0,
+     "source": "history",
+     "lastDay": 38.22
+    },
+    {
+     "store": "redacted",
+     "owner": "redacted",
+     "storeKey": "redacted",
+     "item": "SandstoneItem",
+     "itemPretty": "Sandstone",
+     "currency": "2533707",
+     "side": "sell",
+     "price": 0.05,
+     "quantity": 480.0,
+     "source": "history",
+     "lastDay": 7.77
+    }
+   ]
+  },
+  {
+   "item": "PricklyPearFruitItem",
+   "itemPretty": "Prickly Pear Fruit",
+   "currency": "2533707",
+   "sellerCount": 1,
+   "cheapest": 0.01,
+   "offers": [
+    {
+     "store": "redacted",
+     "owner": "redacted",
+     "storeKey": "redacted",
+     "item": "PricklyPearFruitItem",
+     "itemPretty": "Prickly Pear Fruit",
+     "currency": "2533707",
+     "side": "sell",
+     "price": 0.01,
+     "quantity": 24.0,
+     "source": "history",
+     "lastDay": 9.98
+    }
+   ]
+  }
+ ],
+ "resale": [
+  {
+   "item": "ModernUpgradeLvl3Item",
+   "itemPretty": "Modern Upgrade Lvl3",
+   "currency": "Spectres",
+   "buyerCount": 1,
+   "best": 353.89,
+   "offers": [
+    {
+     "store": "redacted",
+     "owner": "redacted",
+     "storeKey": "redacted",
+     "item": "ModernUpgradeLvl3Item",
+     "itemPretty": "Modern Upgrade 3",
+     "currency": "Spectres",
+     "side": "buy",
+     "price": 353.89,
+     "quantity": 2.0,
+     "source": "live",
+     "lastDay": null
+    }
+   ]
+  },
+  {
+   "item": "AdvancedUpgradeLvl4Item",
+   "itemPretty": "Advanced Upgrade Lvl4",
+   "currency": "Spectres",
+   "buyerCount": 1,
+   "best": 300.0,
+   "offers": [
+    {
+     "store": "redacted",
+     "owner": "redacted",
+     "storeKey": "redacted",
+     "item": "AdvancedUpgradeLvl4Item",
+     "itemPretty": "Advanced Upgrade 4",
+     "currency": "Spectres",
+     "side": "buy",
+     "price": 300.0,
+     "quantity": 1.0,
+     "source": "live",
+     "lastDay": null
+    }
+   ]
+  }
+ ],
+ "arbitrage": [
+  {
+   "item": "GoldBarItem",
+   "itemPretty": "Gold Bar",
+   "currency": "Spectres",
+   "spread": 1.44,
+   "spreadPct": 257.1,
+   "volume": 60.0,
+   "opportunity": 86.4,
+   "storeCount": 4,
+   "buyFrom": {
+    "store": "redacted",
+    "owner": "redacted",
+    "storeKey": "redacted",
+    "item": "GoldBarItem",
+    "itemPretty": "Gold Bar",
+    "currency": "Spectres",
+    "side": "sell",
+    "price": 0.56,
+    "quantity": 631.0,
+    "source": "live",
+    "lastDay": null
+   },
+   "sellTo": {
+    "store": "redacted",
+    "owner": "redacted",
+    "storeKey": "redacted",
+    "item": "GoldBarItem",
+    "itemPretty": "Gold Bar",
+    "currency": "Spectres",
+    "side": "buy",
+    "price": 2.0,
+    "quantity": 60.0,
+    "source": "live",
+    "lastDay": null
+   }
+  },
+  {
+   "item": "LightBulbItem",
+   "itemPretty": "Light Bulb",
+   "currency": "Racines",
+   "spread": 7.0,
+   "spreadPct": 100.0,
+   "volume": 11.0,
+   "opportunity": 77.0,
+   "storeCount": 2,
+   "buyFrom": {
+    "store": "redacted",
+    "owner": "redacted",
+    "storeKey": "redacted",
+    "item": "LightBulbItem",
+    "itemPretty": "Light Bulb",
+    "currency": "Racines",
+    "side": "sell",
+    "price": 7.0,
+    "quantity": 22.0,
+    "source": "live",
+    "lastDay": null
+   },
+   "sellTo": {
+    "store": "redacted",
+    "owner": "redacted",
+    "storeKey": "redacted",
+    "item": "LightBulbItem",
+    "itemPretty": "Light Bulb",
+    "currency": "Racines",
+    "side": "buy",
+    "price": 14.0,
+    "quantity": 11.0,
+    "source": "live",
+    "lastDay": null
+   }
+  }
+ ],
+ "supplyGaps": [
+  {
+   "item": "CoalItem",
+   "itemPretty": "Coal",
+   "currency": "2533707",
+   "reason": "no_supply",
+   "sellerCount": 0,
+   "buyerCount": 1,
+   "demandQty": 3716.0,
+   "supplyQty": 0,
+   "buyPrice": 0.12,
+   "cheapestSell": null,
+   "median": 0.12,
+   "overMedianPct": null,
+   "buyers": [
+    {
+     "owner": "redacted",
+     "store": "redacted",
+     "quantity": 3716.0,
+     "price": 0.12
+    }
+   ]
+  },
+  {
+   "item": "CopperOreItem",
+   "itemPretty": "Copper Ore",
+   "currency": "Spectres",
+   "reason": "no_supply",
+   "sellerCount": 0,
+   "buyerCount": 3,
+   "demandQty": 2215.0,
+   "supplyQty": 0,
+   "buyPrice": 0.12,
+   "cheapestSell": null,
+   "median": null,
+   "overMedianPct": null,
+   "buyers": [
+    {
+     "owner": "redacted",
+     "store": "redacted",
+     "quantity": 999.0,
+     "price": 0.12
+    },
+    {
+     "owner": "redacted",
+     "store": "redacted",
+     "quantity": 966.0,
+     "price": 0.1
+    }
+   ]
+  }
+ ],
+ "marketSummaries": [
+  {
+   "item": "MortarItem",
+   "itemPretty": "Mortar",
+   "currency": "Spectres",
+   "sellerCount": 2,
+   "buyerCount": 1,
+   "supplyQty": 15252.0,
+   "demandQty": 321.0,
+   "cheapestSell": 0.01,
+   "bestBuy": 0.01,
+   "sources": [
+    "live"
+   ]
+  },
+  {
+   "item": "SpoiledFoodItem",
+   "itemPretty": "Spoiled Food",
+   "currency": "Spectres",
+   "sellerCount": 1,
+   "buyerCount": 1,
+   "supplyQty": 12303.0,
+   "demandQty": 999.0,
+   "cheapestSell": 0.04,
+   "bestBuy": 0.05,
+   "sources": [
+    "live"
+   ]
+  }
+ ]
+}

@@ -200,7 +200,11 @@ def test_preview_route_requires_selection_and_returns_contract(
         params={"item": "IronIngotItem", "currency": "Credit"},
     )
     assert response.status_code == 200
-    assert response.json() == {
+    body = response.json()
+    # The historical norm rides beside the price (#8368), tested in test_norms.py.
+    assert "norm" in body and "normContext" in body
+    del body["norm"], body["normContext"]
+    assert body == {
         "view": "item-price-history",
         "item": "IronIngotItem",
         "currency": "Credit",

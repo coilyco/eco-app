@@ -1,0 +1,70 @@
+{
+ "view": "market",
+ "totalTrades": 23043,
+ "markets": [
+  {
+   "item": "CementItem",
+   "itemPretty": "Cement",
+   "currency": "2533707",
+   "buckets": [
+    {
+     "day": 13,
+     "median": 1.0,
+     "min": 1.0,
+     "max": 1.0,
+     "volume": 394.0,
+     "trades": 3
+    },
+    {
+     "day": 15,
+     "median": 0.8,
+     "min": 0.8,
+     "max": 0.8,
+     "volume": 100.0,
+     "trades": 1
+    }
+   ],
+   "medianPrice": 0.8,
+   "latestPrice": 0.6000000215919811,
+   "latestDay": 31,
+   "trend": "flat",
+   "trendDeltaPct": -2.758002983869672e-06,
+   "shortMedian": 0.6000000215919811,
+   "longMedian": 0.60000003814,
+   "totalVolume": 1343.0,
+   "totalTrades": 7
+  },
+  {
+   "item": "LeatherHideItem",
+   "itemPretty": "Leather Hide",
+   "currency": "2533707",
+   "buckets": [
+    {
+     "day": 7,
+     "median": 0.7999999834130435,
+     "min": 0.7999999834130435,
+     "max": 0.7999999834130435,
+     "volume": 46.0,
+     "trades": 1
+    },
+    {
+     "day": 10,
+     "median": 0.7,
+     "min": 0.7,
+     "max": 0.7,
+     "volume": 50.0,
+     "trades": 1
+    }
+   ],
+   "medianPrice": 0.7999999834130435,
+   "latestPrice": 0.5,
+   "latestDay": 24,
+   "trend": "falling",
+   "trendDeltaPct": -50.0,
+   "shortMedian": 0.5,
+   "longMedian": 1.0,
+   "totalVolume": 340.0,
+   "totalTrades": 7
+  }
+ ]
+}

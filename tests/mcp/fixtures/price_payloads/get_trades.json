@@ -1,0 +1,215 @@
+{
+ "totalTrades": 23043,
+ "detailedTrades": 535,
+ "rollupRows": 3171,
+ "rollupTrades": 22508,
+ "perTypeCounts": {
+  "CurrencyTrade": 3702,
+  "BarterTrade": 4
+ },
+ "counts": {
+  "exporterRows": 3706,
+  "tradeEvents": 23043,
+  "detailedRows": 535,
+  "rollupRows": 3171,
+  "rollupTrades": 22508,
+  "note": "perTypeCounts counts exporter rows, not trades: 3,706 rows = 535 detail rows (one trade each) + 3,171 hourly rollup rows covering 22,508 merged trades, so the ledger reports 23,043 trade events. Eco's own /info counter (get_economy.trades_total) counts a different population again and will not match."
+ },
+ "trades": [
+  {
+   "tradeType": "CurrencyTrade",
+   "time": 5008113.0,
+   "day": 57.96427083333333,
+   "buyer": "redacted",
+   "seller": "redacted",
+   "shopOwner": "redacted",
+   "item": "ToppedPorridgeItem",
+   "quantity": 6.0,
+   "currency": "2533707",
+   "currencyAmount": 0.0,
+   "unitPrice": null,
+   "store": "redacted",
+   "location": "redacted",
+   "direction": "redacted",
+   "eventCount": 1,
+   "aggregated": false
+  },
+  {
+   "tradeType": "CurrencyTrade",
+   "time": 4434738.0,
+   "day": 51.32798611111111,
+   "buyer": "redacted",
+   "seller": "redacted",
+   "shopOwner": "redacted",
+   "item": "CanItem",
+   "quantity": 248.0,
+   "currency": "2967954",
+   "currencyAmount": 34.720001221,
+   "unitPrice": 0.14000000492338707,
+   "store": "redacted",
+   "location": "redacted",
+   "direction": "redacted",
+   "eventCount": 1,
+   "aggregated": false
+  }
+ ],
+ "totalCurrencyVolume": 203252.50011192475,
+ "byItem": [
+  [
+   "PlasticItem",
+   6
+  ],
+  [
+   "RebarItem",
+   4
+  ]
+ ],
+ "byCurrency": [
+  [
+   "redacted",
+   142282.49987949897
+  ],
+  [
+   "redacted",
+   33817.590150829004
+  ]
+ ],
+ "topBuyers": [
+  [
+   "redacted",
+   4304.819992781
+  ],
+  [
+   "redacted",
+   4127.84004116
+  ]
+ ],
+ "topSellers": [
+  [
+   "redacted",
+   4722.639998615
+  ],
+  [
+   "redacted",
+   4384.369987963999
+  ]
+ ],
+ "priceSeries": {
+  "PlasticItem": [
+   [
+    19.0,
+    2.0
+   ],
+   [
+    20.0,
+    2.0
+   ]
+  ],
+  "RebarItem": [
+   [
+    16.0,
+    2.96999992208156
+   ],
+   [
+    21.0,
+    3.0
+   ]
+  ],
+  "CopperWiringItem": [
+   [
+    29.0,
+    1.31
+   ],
+   [
+    31.0,
+    1.31
+   ]
+  ],
+  "ReinforcedConcreteItem": [
+   [
+    16.0,
+    1.8
+   ],
+   [
+    23.0,
+    1.35
+   ]
+  ],
+  "PaperItem": [
+   [
+    15.0,
+    1.25
+   ],
+   [
+    16.0,
+    1.1
+   ]
+  ],
+  "CementItem": [
+   [
+    13.0,
+    1.0
+   ],
+   [
+    15.0,
+    0.8
+   ]
+  ],
+  "FramedGlassItem": [
+   [
+    21.0,
+    10.0
+   ],
+   [
+    32.0,
+    8.0
+   ]
+  ],
+  "LumberItem": [
+   [
+    10.0,
+    1.3
+   ],
+   [
+    12.0,
+    1.3
+   ]
+  ],
+  "ScholarsBasicUpgradeLvl4Item": [
+   [
+    5.0,
+    436.779998779
+   ],
+   [
+    9.0,
+    436.779998779
+   ]
+  ],
+  "BrickItem": [
+   [
+    5.0,
+    1.0
+   ],
+   [
+    6.0,
+    1.0
+   ]
+  ],
+  "CompositeCeibaLumberItem": [
+   [
+    31.0,
+    4.0
+   ]
+  ],
+  "Shipping_03Item": [
+   [
+    30.0,
+    375.0
+   ],
+   [
+    32.0,
+    375.0
+   ]
+  ]
+ }
+}

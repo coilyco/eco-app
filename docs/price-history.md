@@ -68,6 +68,28 @@ median over its own cross-cycle geometric mean, then the geometric mean per cycl
 missing item does not move it, and 1.0 is a typical cycle. It compares relative
 levels, never a cost in one currency. Tests: `tests/test_trades_norms.py`.
 
+## The norm on every listed price
+
+Kai's decision on teable:coilyco/eco-app#8368: wherever a tool or page lists an
+item price, the norm rides beside it. `eco_mcp_app/norms.py` owns the lookup, and
+the tool dispatcher attaches it to every route in `PRICE_FIELDS`. A new tool must
+join that map or `NO_PRICE_TOOLS`, or `tests/mcp/test_norms.py` fails.
+
+- **Live stage** is the highest upgrade in the current cycle's trade ledger. The
+  live cycle comes from the server's `/info` description. Both are cached ten
+  minutes, and a failed fetch leaves a note rather than failing the tool.
+- **Per object** `norm`: `basis` (`stage`, `all`, or null for no history) and
+  `n` always, then `fallback` (why the stage bucket was not used, under 5
+  trades), `cycles`, `referencePrice` (the basis figure times the live cycle's
+  basket index), `multiple` (this price over `referencePrice`, only when the
+  currency is the live primary), and the in-currency `median`, `p25`, `p75`,
+  `currency`, `currencyN` and `cycle` from the latest cycle it traded in.
+- **Per payload** `normContext`: `stage`, `cycle`, `referenceCurrency` and its
+  `referenceCurrencyId`, `caveat`, `source`, and `notes`.
+- An offer under its item's row shares the row's norm rather than repeating it.
+- Ledger prices carry currency ids. Until the id-to-name map is live
+  (eco-app#217), they get no `multiple` and no in-currency figure.
+
 ## See also
 
 - [trades.md](trades.md) - the ledger this derives from.

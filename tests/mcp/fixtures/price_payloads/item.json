@@ -1,0 +1,149 @@
+{
+ "item": "LumberItem",
+ "trades": [
+  {
+   "tradeType": "CurrencyTrade",
+   "time": 2996677.0,
+   "day": 34.683761574074076,
+   "buyer": "redacted",
+   "seller": "redacted",
+   "shopOwner": "redacted",
+   "item": "LumberItem",
+   "quantity": 20.0,
+   "currency": "2533707",
+   "currencyAmount": 16.0,
+   "unitPrice": 0.8,
+   "store": "redacted",
+   "location": "redacted",
+   "direction": "redacted",
+   "eventCount": 1,
+   "aggregated": false
+  },
+  {
+   "tradeType": "CurrencyTrade",
+   "time": 2994181.0,
+   "day": 34.65487268518518,
+   "buyer": "redacted",
+   "seller": "redacted",
+   "shopOwner": "redacted",
+   "item": "LumberItem",
+   "quantity": 20.0,
+   "currency": "2533707",
+   "currencyAmount": 16.0,
+   "unitPrice": 0.8,
+   "store": "redacted",
+   "location": "redacted",
+   "direction": "redacted",
+   "eventCount": 1,
+   "aggregated": false
+  }
+ ],
+ "crafts": [
+  {
+   "actionType": "ItemCraftedAction",
+   "time": 3477594.0,
+   "day": 40.24993055555556,
+   "citizen": "redacted",
+   "station": "SawmillItem",
+   "quantity": 1.0
+  },
+  {
+   "actionType": "ItemCraftedAction",
+   "time": 3427176.0,
+   "day": 39.66638888888889,
+   "citizen": "redacted",
+   "station": "SawmillItem",
+   "quantity": 1.0
+  }
+ ],
+ "feed": [
+  {
+   "kind": "craft",
+   "time": 3477594.0,
+   "day": 40.24993055555556,
+   "actor": "redacted",
+   "actionType": "ItemCraftedAction",
+   "station": "SawmillItem",
+   "quantity": 4.0,
+   "buyer": "redacted",
+   "seller": "redacted",
+   "currency": "",
+   "unitPrice": null,
+   "currencyAmount": 0.0,
+   "runCount": 4,
+   "spanSeconds": 378035.0
+  },
+  {
+   "kind": "craft",
+   "time": 3044504.0,
+   "day": 35.237314814814816,
+   "actor": "redacted",
+   "actionType": "ItemCraftedAction",
+   "station": "SawmillItem",
+   "quantity": 2.0,
+   "buyer": "redacted",
+   "seller": "redacted",
+   "currency": "",
+   "unitPrice": null,
+   "currencyAmount": 0.0,
+   "runCount": 2,
+   "spanSeconds": 27707.0
+  }
+ ],
+ "feedTruncated": false,
+ "summary": {
+  "crafters": [],
+  "supply": {
+   "storeCount": 13,
+   "totalQuantity": 5867.0,
+   "offers": [
+    {
+     "store": "redacted",
+     "owner": "redacted",
+     "price": 0.7,
+     "quantity": 0.0,
+     "currency": "Barter",
+     "source": "live"
+    },
+    {
+     "store": "redacted",
+     "owner": "redacted",
+     "price": 0.7,
+     "quantity": 185.0,
+     "currency": "Spectres",
+     "source": "live"
+    }
+   ],
+   "capped": false
+  },
+  "demand": {
+   "storeCount": 4,
+   "totalQuantity": 519.0,
+   "offers": [
+    {
+     "store": "redacted",
+     "owner": "redacted",
+     "price": 1.5,
+     "quantity": 0.0,
+     "currency": "Spectres",
+     "source": "live"
+    },
+    {
+     "store": "redacted",
+     "owner": "redacted",
+     "price": 1.4,
+     "quantity": 100.0,
+     "currency": "Barter",
+     "source": "live"
+    }
+   ],
+   "capped": false
+  },
+  "live": true
+ },
+ "worldClockS": null,
+ "tradeCount": 9,
+ "tradeVolume": 895.0,
+ "craftCount": 39,
+ "craftQuantity": 39.0
+}

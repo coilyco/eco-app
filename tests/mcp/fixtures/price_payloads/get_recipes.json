@@ -1,0 +1,133 @@
+{
+ "source": "Eco dedicated server AutoGen (Steam app 739590, build 24618181)",
+ "sourceKind": "autogen",
+ "exportedAtISO": null,
+ "serverSpecific": false,
+ "version": 0,
+ "counts": {
+  "recipes": 1,
+  "skills": 44,
+  "tags": 112,
+  "products": 1323,
+  "stations": 68
+ },
+ "recipes": [
+  {
+   "name": "redacted",
+   "displayName": "Lumber",
+   "product": {
+    "item": "LumberItem",
+    "displayName": "Lumber",
+    "quantity": 2.0,
+    "isTag": false
+   },
+   "ingredients": [
+    {
+     "item": "NailItem",
+     "displayName": "Nail",
+     "quantity": 2.0,
+     "isTag": false
+    },
+    {
+     "item": "FlaxseedOilItem",
+     "displayName": "Flaxseed Oil",
+     "quantity": 0.5,
+     "isTag": false
+    }
+   ],
+   "byproducts": [],
+   "station": "SawmillObject",
+   "stationDisplayName": "Sawmill Object",
+   "skill": {
+    "name": "redacted",
+    "level": 1
+   },
+   "laborCost": 60.0,
+   "craftMinutes": 0.32,
+   "tableTierRequired": null,
+   "variants": [
+    "redacted",
+    "redacted"
+   ],
+   "family": "redacted",
+   "isDefault": true,
+   "isBlueprint": false,
+   "cost": {
+    "recipe": "Lumber",
+    "product": "LumberItem",
+    "yield": 2.0,
+    "perUnitCost": 0.36666666965104167,
+    "totalCost": 0.7333333393020833,
+    "ingredientCost": 0.7333333393020833,
+    "laborCost": 0.0,
+    "timeCost": 0.0,
+    "laborCalories": 60.0,
+    "craftMinutes": 0.32,
+    "complete": true,
+    "unpricedInputs": [],
+    "ingredients": [
+     {
+      "item": "NailItem",
+      "displayName": "Nail",
+      "quantity": 2.0,
+      "isTag": false,
+      "unitCost": 0.05625,
+      "source": "craft",
+      "subtotal": 0.1125
+     },
+     {
+      "item": "FlaxseedOilItem",
+      "displayName": "Flaxseed Oil",
+      "quantity": 0.5,
+      "isTag": false,
+      "unitCost": 0.5750000119375,
+      "source": "market",
+      "subtotal": 0.28750000596875
+     }
+    ]
+   }
+  }
+ ],
+ "byProduct": {
+  "LumberItem": [
+   "redacted"
+  ]
+ },
+ "bySkill": {
+  "CarpentrySkill": [
+   "redacted"
+  ]
+ },
+ "byStation": {
+  "SawmillObject": [
+   "redacted"
+  ]
+ },
+ "skills": [
+  {
+   "displayName": "Carpentry",
+   "maxLevel": 7,
+   "name": "redacted",
+   "profession": "redacted",
+   "tags": [
+    "Carpenter Specialty",
+    "Specialty"
+   ],
+   "tier": 2
+  }
+ ],
+ "tags": {
+  "WoodBoard": [
+   "BoardItem",
+   "HardwoodBoardItem"
+  ]
+ },
+ "indexScope": "filtered",
+ "indexScopeNote": "byProduct, bySkill, byStation, tags and skills are restricted to the recipes in this response. Call without a filter for the whole graph.",
+ "costParams": {
+  "caloriePrice": 0.0,
+  "minutePrice": 0.0
+ },
+ "recipesMatched": 1,
+ "recipesReturned": 1
+}

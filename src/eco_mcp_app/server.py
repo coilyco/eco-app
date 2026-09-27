@@ -31,6 +31,7 @@ from . import currency as currency_mod
 from . import ecoregion as ecoregion_mod
 from . import fair_price as fair_price_mod
 from . import market as market_mod
+from . import norms as norms_mod
 from . import species as species_mod
 from . import vocab as vocab_mod
 from . import wave1_routes, wave2_routes, wave3_routes
@@ -2297,7 +2298,7 @@ def build_server(
         body = json.dumps({"entries": entries})
         return [ReadResourceContents(content=body, mime_type="application/json")]
 
-    async def _dispatch_call_tool(name: str, arguments: dict[str, Any]) -> CallToolResult:
+    async def _dispatch_call_tool_raw(name: str, arguments: dict[str, Any]) -> CallToolResult:
         if name == "explain_item":
             from .wikidata import build_ecopedia_card
 
@@ -3100,6 +3101,30 @@ def build_server(
                 TextContent(type="text", text=json.dumps(payload)),
             ],
         )
+
+    async def _dispatch_call_tool(name: str, arguments: dict[str, Any]) -> CallToolResult:
+        # One place, every tool: a listed item price carries its historical norm
+        # (teable:coilyco/eco-app#8368). See norms.py.
+        result = await _dispatch_call_tool_raw(name, arguments)
+        if name not in norms_mod.PRICE_FIELDS or result.isError:
+            return result
+        ctx = await norms_mod.live_context((arguments or {}).get("server"))
+        for index, block in enumerate(result.content):
+            if not isinstance(block, TextContent):
+                continue
+            try:
+                payload = json.loads(block.text)
+            except (TypeError, ValueError):
+                continue
+            if not norms_mod.annotate(name, payload, ctx):
+                break
+            if name == "get_stores" and _resolve_limit(arguments or {}, STORES_ROW_LIMIT) > 0:
+                _fit_directory(payload, STORES_MAX_JSON_BYTES)
+            result.content[index] = TextContent(type="text", text=json.dumps(payload, default=str))
+            if isinstance(result.structuredContent, dict):
+                result.structuredContent = payload
+            break
+        return result
 
     wave1_routes.register_wave1_routes(dual_routes, _dispatch_call_tool)
     wave2_routes.register_wave2_routes(dual_routes, _dispatch_call_tool)

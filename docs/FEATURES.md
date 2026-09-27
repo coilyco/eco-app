@@ -14,6 +14,9 @@ consolidation (coilysiren/inbox#101).
   `coilyco/templates`, so a router that already picked the tool can reply
   without an LLM, plus item and currency vocabularies as MCP resources so it
   can fill the arguments without one. See [dual-route-inventory.md](dual-route-inventory.md#reply-templates).
+- **Historical price norms** - every tool and data route that lists an item
+  price carries its norm from past cycles at the live upgrade stage, from
+  `data/eco_trades_norms.json.gz`. See [price-history.md](price-history.md).
 - **Privileged `/admin` MCP** - `src/eco_mcp_app/admin/`, flagged off in the
   ordinary app. See [admin-mcp.md](admin-mcp.md).
 - **React frontend** - `frontend/`, a Vite SPA the fused service serves at `/`,

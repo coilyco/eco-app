@@ -43,7 +43,7 @@ from starlette.responses import (
 from starlette.routing import BaseRoute, Mount, Route
 from starlette.staticfiles import StaticFiles
 
-from . import page_auth, seo
+from . import norms, page_auth, seo
 from . import users as users_mod
 from .admin import build_admin_server
 from .cost import CostParams
@@ -675,7 +675,7 @@ def create_app(route_registry: DualRouteRegistry | None = None) -> Starlette:
             pivot = await fetch_item_pivot(item, base_url=server_arg, api_key=_resolve_admin_key())
         except httpx.HTTPError as e:
             return JSONResponse({"error": str(e)}, status_code=502)
-        return JSONResponse(pivot.to_dict())
+        return JSONResponse(await _with_norms("/preview/item.json", pivot.to_dict(), server_arg))
 
     async def preview_price_history_json(request: Request) -> JSONResponse:
         """Current-cycle unit-price distribution and specialty unlock markers.
@@ -696,7 +696,13 @@ def create_app(route_registry: DualRouteRegistry | None = None) -> Starlette:
             base_url=request.query_params.get("server"),
             api_key=_resolve_admin_key(),
         )
-        return JSONResponse(payload)
+        server_arg = request.query_params.get("server")
+        return JSONResponse(await _with_norms("/preview/price-history.json", payload, server_arg))
+
+    async def _with_norms(route: str, payload: Any, server_arg: str | None) -> Any:
+        # The pages show these prices too, so they carry the same norm (#8368).
+        norms.annotate(route, payload, await norms.live_context(server_arg))
+        return payload
 
     def _extract_json_block(call_result: mt.CallToolResult) -> Any:
         # Each tool emits markdown + JSON TextContent blocks. Find the JSON

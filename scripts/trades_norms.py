@@ -8,10 +8,11 @@ docs/price-history.md. teable:coilyco-gaming/eco-app#6215.
 from __future__ import annotations
 
 import math
-import re
 import statistics
 from collections import Counter, defaultdict
 from datetime import UTC, date, datetime, timedelta
+
+from eco_mcp_app.norms import STAGES, upgrade_stage
 
 # Every cycle's players mint their own currencies, so these two never mark one.
 NOT_A_CURRENCY = frozenset({"Barter", "unknown"})
@@ -24,19 +25,9 @@ MIN_CYCLE_DAYS = 21
 BASKET_MIN_OBS = 5
 BASKET_CYCLE_SHARE = 0.75
 
-UPGRADE = re.compile(r"^(?:Scholars )?(Basic|Advanced|Modern) Upgrade ([1-4])$")
-TIERS = ("Basic", "Advanced", "Modern")
-STAGES = ("none", *(f"{tier} {n}" for tier in TIERS for n in range(1, 5)))
-
 
 def _ts(o: dict) -> datetime:
     return datetime.fromisoformat(o["ts"]).astimezone(UTC)
-
-
-def upgrade_stage(item: str) -> int:
-    """1-12 for Basic 1 through Modern 4, Scholars folded in; 0 for anything else."""
-    m = UPGRADE.match(item)
-    return TIERS.index(m[1]) * 4 + int(m[2]) if m else 0
 
 
 def _turnover(before: Counter[str], after: Counter[str]) -> float | None:
