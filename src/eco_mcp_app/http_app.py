@@ -31,6 +31,7 @@ import mcp.types as mt
 from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
 from starlette.applications import Starlette
 from starlette.datastructures import MutableHeaders
+from starlette.middleware.cors import CORSMiddleware
 from starlette.requests import Request
 from starlette.responses import (
     FileResponse,
@@ -91,6 +92,54 @@ class FrameAncestorsCSP:
             await send(message)
 
         await self.app(scope, receive, send_with_csp)
+
+
+class CoilycoDevCors:
+    """ASGI middleware - lets the coilyco.dev dashboard call `/mcp` and `/preview/`.
+
+    coilyco.dev/dash/eco is a static page that fetches from the viewer's
+    browser (teable:coilyco/eco-app#8362). Exactly one origin, never `*`, and
+    only the MCP mount plus the read-only `/preview/` data plane; `/page-auth`,
+    `/admin` and the SPA stay same-origin. The preflight is answered here
+    because every scoped route would 405 an OPTIONS. Headers mirror
+    infrastructure's `caddy/sites-manual/tailnet-api.caddy`.
+    """
+
+    ORIGINS = ("https://coilyco.dev",)
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+        self.cors = CORSMiddleware(
+            app,
+            allow_origins=self.ORIGINS,
+            allow_methods=("GET", "POST", "DELETE", "OPTIONS"),
+            allow_headers=(
+                "Content-Type",
+                "Accept",
+                "Mcp-Session-Id",
+                "Mcp-Protocol-Version",
+                "Last-Event-Id",
+            ),
+            expose_headers=("Mcp-Session-Id",),
+        )
+
+    @staticmethod
+    def _scoped(path: str) -> bool:
+        return path == "/mcp" or path.startswith(("/mcp/", "/preview/"))
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http" or not self._scoped(scope.get("path", "")):
+            await self.app(scope, receive, send)
+            return
+
+        # CORSMiddleware adds Vary only when it grants the origin, so a cache
+        # could otherwise replay an Origin-less response to the dashboard.
+        async def send_with_vary(message: Message) -> None:
+            if message["type"] == "http.response.start":
+                MutableHeaders(scope=message).add_vary_header("Origin")
+            await send(message)
+
+        await self.cors(scope, receive, send_with_vary)
 
 
 class NormalizeMcpPath:
@@ -745,6 +794,7 @@ def create_app(route_registry: DualRouteRegistry | None = None) -> Starlette:
     if admin_enabled:
         inner.add_middleware(NormalizeAdminPath)
     inner.add_middleware(FrameAncestorsCSP)
+    inner.add_middleware(CoilycoDevCors)
     return instrument_asgi(inner)
 
 

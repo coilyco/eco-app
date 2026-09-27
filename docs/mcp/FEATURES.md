@@ -6,6 +6,8 @@ Baseline inventory of headline features. Use to evaluate scope changes.
 
 MCP server exposing live data from Eco game servers. Production: `https://eco-mcp.coilysiren.me/mcp/`. Every tool returns markdown/text plus structured JSON; MCP Apps resources, widgets, and server-rendered cards were removed in [#113](https://forgejo.coilysiren.me/coilyco-gaming/eco-app/issues/113).
 
+**Cross-origin.** `/mcp` and the read-only `/preview/` data plane send CORS for exactly `https://coilyco.dev`, so the coilyco.dev/dash/eco page can call them from a browser (`CoilycoDevCors`, teable:coilyco/eco-app#8362). Every other route and origin stays same-origin.
+
 ## MCP tools
 
 Defined in [src/eco_mcp_app/server.py](../../src/eco_mcp_app/server.py) and the Wave 1 dual-route registry. Names are scoped to this MCP server and therefore omit a redundant Eco product prefix. Most accept an optional `server` argument, with each advertised input schema remaining authoritative. All return data-only results.
