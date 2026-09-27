@@ -68,6 +68,9 @@ class BoundedServerInput(ServerInput):
 # two nested entries each measured 11.5 KB on Cycle 14 (teable:coilyco/eco-app#8354).
 STORES_ROW_LIMIT = 5
 STORES_NESTED_LIMIT = 2
+# Whole filtered rows ran to 27 KB, so any bounded call is also held to this,
+# leaving room for the markdown block under 16 KB (teable:coilyco/eco-app#8359).
+STORES_MAX_JSON_BYTES = 13_000
 
 
 class StoresInput(ServerInput):

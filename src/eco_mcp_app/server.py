@@ -40,7 +40,7 @@ from .dual_routes import DualRouteRegistry
 from .logistics import fetch_logistics, logistics_markdown
 from .map import build_map_payload, fetch_map_bundle
 from .progression import fetch_history, history_markdown
-from .public_routes import STORES_NESTED_LIMIT, STORES_ROW_LIMIT
+from .public_routes import STORES_MAX_JSON_BYTES, STORES_NESTED_LIMIT, STORES_ROW_LIMIT
 from .reply_templates import with_reply_templates
 from .social import fetch_social, social_markdown
 from .stores import directory_markdown, fetch_directory
@@ -1486,6 +1486,23 @@ def _filter_directory(payload: dict[str, Any], store: str | None, item: str | No
     )
 
 
+def _fit_directory(payload: dict[str, Any], max_bytes: int) -> None:
+    """Drop whole rows from the end of the longer list until the JSON fits."""
+    dropped = 0
+    while len(json.dumps(payload)) > max_bytes:
+        stores, traders = payload.get("stores") or [], payload.get("traders") or []
+        longer = "stores" if len(stores) >= len(traders) else "traders"
+        if not payload.get(longer):
+            break
+        payload[longer] = payload[longer][:-1]
+        dropped += 1
+    if dropped:
+        payload.setdefault("warnings", []).append(
+            f"dropped {dropped} more row(s) to fit the response under {max_bytes:,} bytes; "
+            "narrow store or item, or pass limit=0 for everything"
+        )
+
+
 def _bound_rows(payload: dict[str, Any], limit: int, *keys: str) -> None:
     """Truncate unbounded detail arrays, and say what was dropped.
 
@@ -2574,6 +2591,8 @@ def build_server(
             elif limit > 0:
                 _shorten_directory_lists(directory_payload, STORES_NESTED_LIMIT)
             _bound_rows(directory_payload, limit, "stores", "traders")
+            if limit > 0:
+                _fit_directory(directory_payload, STORES_MAX_JSON_BYTES)
             return CallToolResult(
                 content=[
                     TextContent(type="text", text=directory_markdown(directory)),

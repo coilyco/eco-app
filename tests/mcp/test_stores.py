@@ -15,6 +15,7 @@ Covers:
 
 from __future__ import annotations
 
+import json
 from collections.abc import Iterator
 from typing import Any
 
@@ -444,3 +445,17 @@ def test_stores_input_defaults_to_a_small_page() -> None:
 
     assert StoresInput().limit == STORES_ROW_LIMIT
     assert StoresInput(store="x", item="y").store == "x"
+
+
+def test_a_bounded_directory_drops_whole_rows_to_fit_and_says_so() -> None:
+    from eco_mcp_app.server import _fit_directory
+
+    payload = _directory_rows()
+    for row in payload["stores"] + payload["traders"]:
+        row["pad"] = "x" * 400
+    _fit_directory(payload, 1200)
+    assert len(json.dumps(payload)) <= 1200
+    assert payload["stores"] or payload["traders"]
+    assert any("to fit the response" in w for w in payload["warnings"])
+    # Rows that stay are whole.
+    assert all(len(s["topItems"]) in (1, 4) for s in payload["stores"])
