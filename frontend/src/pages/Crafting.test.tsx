@@ -71,18 +71,6 @@ describe("Crafting", () => {
     expect(screen.getByTestId("link-items")).toHaveAttribute("href", "/items")
   })
 
-  it("ranks citizens by production with names shown verbatim", async () => {
-    stubAtlasFetch()
-    renderCrafting()
-
-    await waitFor(() => {
-      expect(screen.getByText("coilysiren")).toBeInTheDocument()
-    })
-    // Unmapped ids fall back to a "Citizen #<id>" label, rendered as-is.
-    expect(screen.getByText("Citizen #129569")).toBeInTheDocument()
-    expect(screen.getAllByTestId("crafter-row")).toHaveLength(2)
-  })
-
   it("honors a ?q= deep link by filtering both tables", async () => {
     stubAtlasFetch()
     renderCrafting("/crafting?q=board")

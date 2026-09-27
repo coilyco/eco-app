@@ -46,42 +46,6 @@ const PLAYERS = [
   { name: "ekans", active: false, roles: [], specialties: [] },
   { name: "hammerhand", active: true, roles: [], specialties: [] },
 ]
-const PROGRESSION = {
-  fetchedAtISO: "2026-06-12T13:00:00+00:00",
-  sourceBaseUrl: "http://x:3001",
-  totalEvents: 3,
-  perActionCounts: { GainSpecialty: 2, SpecialtyLevelUp: 1 },
-  citizens: [
-    {
-      name: "coilysiren",
-      eventCount: 3,
-      firstDay: 1,
-      lastDay: 3,
-      characterLevel: 4,
-      levelUpCount: 1,
-      professions: [{ name: "Carpenter", pretty: "Carpenter" }],
-      specialties: [{ name: "BasicCarpentry", pretty: "Basic Carpentry", level: 5 }],
-      timeline: [
-        { day: 3, time: 300000, kind: "specialty_levelup", skill: "BasicCarpentry", pretty: "Basic Carpentry", level: 5 },
-        { day: 1, time: 100000, kind: "specialty", skill: "BasicCarpentry", pretty: "Basic Carpentry", level: 1 },
-      ],
-    },
-  ],
-  trends: { specialty: [[1, 2]] },
-  bySpecialty: [
-    ["BasicCarpentry", 2],
-    // Raw Eco id form of the universal skills — must be filtered from the
-    // progression rank list too (eco-app#94).
-    ["SelfImprovement", 9],
-    ["Survivalist", 8],
-  ],
-  byProfession: [["Carpenter", 1]],
-  classCompletions: [],
-  topLevelers: [["coilysiren", 1]],
-  dailySeries: {},
-  warnings: [],
-}
-
 const VALUE_RECIPES = {
   fetchedAtISO: "2026-07-07T13:00:00+00:00",
   source: "test",
@@ -379,9 +343,6 @@ function stubJobsFetch() {
       else if (url.endsWith("/professions")) body = PROFESSIONS
       else if (url.endsWith("/specialties")) body = SPECIALTIES
       else if (url.endsWith("/players")) body = PLAYERS
-      // The SPA opts in to per-citizen timelines; MCP callers get the summary
-      // layer by default (eco-app#232).
-      else if (url.includes("/preview/progression.json")) body = PROGRESSION
       else if (url.includes("/preview/recipes.json?cost=1")) body = recipesBody
       else if (url.endsWith("/preview/logistics.json")) body = VALUE_LOGISTICS
       else if (url.endsWith("/preview/market.json")) body = VALUE_MARKET
@@ -467,9 +428,6 @@ describe("Jobs", () => {
     fireEvent.click(screen.getByRole("button", { name: /Carpentry/ }))
     expect(screen.getAllByText("coilysiren").length).toBe(before + 1)
     expect(screen.queryByText("ekans")).not.toBeInTheDocument()
-    fireEvent.click(screen.getByRole("checkbox", { name: /Show people outside/ }))
-    expect(screen.getAllByText("ekans")).toHaveLength(2)
-    expect(screen.getByTestId("uncovered-job")).toHaveTextContent("No Active or Long Term holder")
   })
 
   it("renders profession, specialty, and level-gated talent branches", async () => {
@@ -520,24 +478,6 @@ describe("Jobs", () => {
     ])
   })
 
-  it("folds the server-wide progression layer and leaderboards into the page", async () => {
-    stubJobsFetch()
-    renderJobs()
-
-    await waitFor(() => {
-      expect(screen.getByTestId("jobs-progression")).toBeInTheDocument()
-    })
-    // The merged trajectory layer carries the server-wide trends + leaderboards
-    // that used to live on the standalone /progression page.
-    expect(screen.getByText("How the world got here")).toBeInTheDocument()
-    expect(screen.getByTestId("trend-grid")).toBeInTheDocument()
-    expect(screen.getByText("Most-gained specialties")).toBeInTheDocument()
-    expect(screen.getByText("Busiest levelers")).toBeInTheDocument()
-    expect(screen.getAllByTestId("rank-row").length).toBeGreaterThan(0)
-    // There is no standalone progression page to link out to anymore.
-    expect(screen.queryByRole("link", { name: /progression history/i })).not.toBeInTheDocument()
-  })
-
   it("excludes the universal starter skills from every jobs surface", async () => {
     stubJobsFetch()
     renderJobs()
@@ -548,7 +488,7 @@ describe("Jobs", () => {
     // Professions section: Self Improvement / Survivalist cards gone.
     expect(screen.queryByRole("button", { name: /Self Improvement/ })).not.toBeInTheDocument()
     expect(screen.queryByRole("button", { name: /Survivalist/ })).not.toBeInTheDocument()
-    // Specialties + per-player rows + progression rank list: no trace anywhere.
+    // Specialties + per-player rows: no trace anywhere.
     expect(screen.queryByText("Self Improvement")).not.toBeInTheDocument()
     expect(screen.queryByText("Survivalist")).not.toBeInTheDocument()
     // The real professions and specialties still render.
@@ -556,19 +496,7 @@ describe("Jobs", () => {
     expect(screen.getAllByText("Basic Carpentry").length).toBeGreaterThan(0)
   })
 
-  it("does not render per-player skill cards or timelines", async () => {
-    stubJobsFetch()
-    renderJobs()
-
-    await waitFor(() => {
-      expect(screen.getByTestId("jobs-progression")).toBeInTheDocument()
-    })
-    expect(screen.queryByTestId("player-history-toggle")).not.toBeInTheDocument()
-    expect(screen.queryByTestId("player-history")).not.toBeInTheDocument()
-    expect(screen.queryByRole("heading", { name: /^Players/ })).not.toBeInTheDocument()
-  })
-
-  it("hides the progression layer when progression is unavailable", async () => {
+  it("renders the current-state tables when the enrichment plane is unavailable", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn((input: RequestInfo | URL) => {
@@ -582,8 +510,7 @@ describe("Jobs", () => {
               : url.endsWith("/players")
                 ? PLAYERS
                 : null
-        // Progression fetch fails → the jobs page renders exactly as before.
-        if (body === null) return Promise.reject(new Error(`no progression: ${url}`))
+        if (body === null) return Promise.reject(new Error(`no enrichment: ${url}`))
         return Promise.resolve(
           new Response(JSON.stringify(body), {
             status: 200,
@@ -597,8 +524,6 @@ describe("Jobs", () => {
     await waitFor(() => {
       expect(screen.getByText("Professions")).toBeInTheDocument()
     })
-    expect(screen.queryByTestId("jobs-progression")).not.toBeInTheDocument()
-    expect(screen.queryByTestId("player-history-toggle")).not.toBeInTheDocument()
   })
 
   it("shows the degraded note when the API is unreachable", async () => {

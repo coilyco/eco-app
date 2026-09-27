@@ -157,8 +157,6 @@ export default function UsesResolve() {
             {!jobs ? <p className="empty-note">Specialty roster unavailable right now.</p> : jobs.mockData ? <p className="empty-note" data-testid="resolve-mock">The specialty roster is sample data, so it cannot identify a real crafter.</p> : requiredSkills.size === 0 ? <p className="empty-note" data-testid="resolve-no-skill">No specialty requirement is recorded for this recipe.</p> : crafters.length === 0 ? <p className="empty-note" data-testid="resolve-no-crafter">No observed specialty holder matches this recipe. This is not evidence that nobody can craft it.</p> : <ul className="rank-rows">{crafters.map((crafter) => <li key={`${crafter.name}-${crafter.specialty.specialty}`} data-testid="resolve-crafter"><div className="rank-row"><span className="rank-name">{crafter.name}<br /><span className="section-sub">{prettifyEcoName(crafter.specialty.specialty.replace(/Skill$/, ""))} level {crafter.specialty.level}</span></span><span className="rank-count">{crafter.active ? "active in snapshot" : "observed, not active"}</span></div></li>)}</ul>}
             {jobs && !jobs.mockData && <p className="section-sub">Roster evidence is an observed specialty snapshot. It does not prove availability, inventory, or willingness to craft.</p>}
           </section>
-
-          <section><Link className="button" to={`/uses/price?item=${encodeURIComponent(item)}`} data-testid="resolve-price-link">Open canonical price explanation →</Link></section>
         </>
       )}
     </Layout>

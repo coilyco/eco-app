@@ -632,33 +632,6 @@ export default function MapPage() {
 
           {snap && (
             <section>
-              <h2 className="section-title">Closest real-world ecoregions</h2>
-              <p className="intro">
-                <span>
-                  The map's biome mix, normalized to shape, matched against WWF terrestrial
-                  ecoregions by cosine similarity.
-                </span>
-              </p>
-              {snap.ecoregionMatches.length > 0 ? (
-                <ol className="eco-matches" data-testid="eco-matches">
-                  {snap.ecoregionMatches.map((m) => (
-                    <li key={m.name}>
-                      <div className="eco-match-head">
-                        <span className="eco-match-name">{m.name}</span>
-                        <span className="eco-match-sim">{m.similarity.toFixed(2)}</span>
-                      </div>
-                      <p className="eco-match-desc">{m.description}</p>
-                    </li>
-                  ))}
-                </ol>
-              ) : (
-                <p className="empty-note">No ecoregion fixture loaded.</p>
-              )}
-            </section>
-          )}
-
-          {snap && (
-            <section>
               <h2 className="section-title">Biodiversity status</h2>
               <SpeciesRiskSection risk={snap.speciesRisk} />
               <h3 className="subsection-title">Cycle drift</h3>

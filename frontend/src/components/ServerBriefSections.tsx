@@ -1,9 +1,8 @@
 import type { ReactNode } from "react"
-import { Link } from "react-router-dom"
 import { groupChains, type ServerBrief } from "../lib/serverBrief"
 
-// The reviewed half of the homepage (eco-app#8306): settings, mods, skill
-// trees, and notes, rendered from data/server_brief.json. Nothing here reads
+// The reviewed half of the homepage (eco-app#8306): settings, skill trees,
+// and notes, rendered from data/server_brief.json. Nothing here reads
 // live status, so all of it stays on screen through an outage.
 
 function SectionHeading({ id, title, sub }: { id: string; title: string; sub?: ReactNode }) {
@@ -38,41 +37,6 @@ export function ConfigsSection({ brief }: { brief: ServerBrief }) {
               ))}
             </dl>
           </div>
-        ))}
-      </div>
-    </section>
-  )
-}
-
-export function ModsSection({ brief }: { brief: ServerBrief }) {
-  const total = brief.mods.reduce((n, g) => n + g.items.length, 0)
-  return (
-    <section className="k-stack k-stack--4" aria-labelledby="home-mods">
-      <SectionHeading
-        id="home-mods"
-        title={`Mods, ${total} of them`}
-        sub={
-          <>
-            One line each. <Link to="/mods">The full catalog</Link> credits every author and
-            links every source.
-          </>
-        }
-      />
-      <div className="k-accordion" data-testid="home-mods">
-        {brief.mods.map((group, i) => (
-          <details key={group.group} className="k-accordion__item" open={i === 0}>
-            <summary className="k-accordion__summary">
-              {group.group} <span className="home-count">{group.items.length}</span>
-            </summary>
-            <ul className="k-accordion__body home-modlist">
-              {group.items.map((mod) => (
-                <li key={mod.name}>
-                  <strong>{mod.name}</strong>
-                  <span>{mod.summary}</span>
-                </li>
-              ))}
-            </ul>
-          </details>
         ))}
       </div>
     </section>

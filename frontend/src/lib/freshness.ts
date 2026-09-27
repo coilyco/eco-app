@@ -151,11 +151,6 @@ export const REFRESH_CONTRACTS = {
     staleAfterMs: 15 * MINUTE,
     rationale: "Species populations are sampled on a slow server cadence.",
   },
-  user: {
-    mode: "manual",
-    staleAfterMs: 15 * MINUTE,
-    rationale: "A dossier aggregates slow planes; a reader refreshes when they want to.",
-  },
   replay: {
     mode: "manual",
     staleAfterMs: 15 * MINUTE,

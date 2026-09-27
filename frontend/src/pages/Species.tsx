@@ -3,7 +3,7 @@ import ChartFrame from "../components/ChartFrame"
 import FreshnessNote from "../components/FreshnessNote"
 import Layout from "../components/Layout"
 import Loading from "../components/Loading"
-import { formatCount, safeHttpUrl } from "../lib/format"
+import { formatCount } from "../lib/format"
 import { fetchSpecies, type SpeciesPopulationSample, type SpeciesProfile } from "../lib/speciesApi"
 import { useFreshData } from "../lib/useFreshData"
 
@@ -75,7 +75,6 @@ export default function Species() {
 
   const loaded = !name || result?.name === name
   const profile = result?.name === name ? result.profile : null
-  const wikiUrl = safeHttpUrl(profile?.wikiUrl)
 
   return (
     <Layout>
@@ -99,31 +98,11 @@ export default function Species() {
         </p>
       )}
       {profile && (
-        <>
-          <section>
-            <h2 className="section-title">Population curve</h2>
-            <PopulationCurve samples={profile.population} />
-            {profile.error && <p className="empty-note">{profile.error}</p>}
-          </section>
-          {(profile.photoDataUri || profile.wikiExtract || profile.taxonomy.length > 0) && (
-            <section className="atlas-columns">
-              <div>
-                <h2 className="section-title">Field profile</h2>
-                {profile.photoDataUri && <img className="species-photo" src={profile.photoDataUri} alt={profile.name} />}
-                {profile.photoAttribution && <p className="section-sub">{profile.photoAttribution}</p>}
-                {profile.wikiExtract && <p>{profile.wikiExtract}</p>}
-                {wikiUrl && <a className="linklike" href={wikiUrl} target="_blank" rel="noreferrer">Read source</a>}
-              </div>
-              <div>
-                <h2 className="section-title">Taxonomy</h2>
-                <ul className="rows">
-                  {profile.taxonomy.map((row) => <li key={`${row.rank}-${row.name}`}><span>{row.rank}</span><span>{row.name}</span></li>)}
-                </ul>
-                {profile.conservationStatus && <p className="empty-note">Conservation status: {profile.conservationStatus}</p>}
-              </div>
-            </section>
-          )}
-        </>
+        <section>
+          <h2 className="section-title">Population curve</h2>
+          <PopulationCurve samples={profile.population} />
+          {profile.error && <p className="empty-note">{profile.error}</p>}
+        </section>
       )}
     </Layout>
   )

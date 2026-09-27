@@ -494,10 +494,6 @@ a.k-card:visited {
   border-bottom: 0;
 }
 
-.rows li.faded {
-  opacity: 0.55;
-}
-
 .rows .lvl {
   font-variant-numeric: tabular-nums;
   color: var(--ink-faint);
@@ -513,22 +509,6 @@ a.k-card:visited {
 
 .role-holder {
   font-weight: 600;
-}
-
-.warn-note {
-  margin: 0.35rem 0 0.55rem;
-  color: var(--meteor-deep);
-  font-size: var(--k-t-body);
-  font-weight: 600;
-}
-
-.jobs-people-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  margin-top: 0.65rem;
-  color: var(--ink-faint);
-  font-size: var(--k-t-body);
 }
 
 .species-risk-table td:first-child {
@@ -567,15 +547,6 @@ a.k-card:visited {
 .species-state-stale,
 .species-state-missing {
   color: var(--ink-faint);
-}
-
-.species-photo {
-  display: block;
-  width: min(100%, 32rem);
-  max-height: 24rem;
-  object-fit: cover;
-  border: 1px solid var(--card-border);
-  border-radius: var(--k-r-1);
 }
 
 .empty-note {
@@ -1161,38 +1132,6 @@ a.k-card:visited {
 /* Two-series legend for the turnout chart — identity is never colour-alone.
    Namespaced `civ-` so it never collides with the world surface's own
    `.chart-legend` / `.legend-swatch` list-style legend below. */
-.civ-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-  margin: 0 0 0.5rem;
-  font-size: var(--k-t-body);
-  color: var(--ink-faint);
-}
-
-.civ-legend-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-
-.civ-legend-swatch {
-  display: inline-block;
-  width: 16px;
-  height: 3px;
-  border-radius: 2px;
-}
-
-.civ-legend-swatch-dashed {
-  background-image: linear-gradient(
-    to right,
-    currentColor 0,
-    currentColor 60%,
-    transparent 60%,
-    transparent 100%
-  );
-  background-size: 8px 3px;
-}
 
 /* World-mutation timeline — a stacked bar of events per in-game day. Shares the
    price-chart's framed surface; its own recessive gridlines and legend below. */
@@ -1270,48 +1209,6 @@ a.k-card:visited {
 /* Progression / skills-history surface (eco-app#64). Trend small-multiples:
    one single-hue panel per event kind, so the grid reads on one --leaf hue
    without a categorical palette. */
-.prog-trend-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr));
-  gap: 0.75rem;
-}
-
-.prog-trend {
-  border: 1px solid var(--card-border);
-  border-radius: var(--k-r-1);
-  background: var(--k-content);
-  padding: 0.75rem;
-}
-
-.prog-trend-title {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.5rem;
-  font-size: var(--k-t-body);
-  font-weight: 600;
-  color: var(--ink-soft);
-  text-transform: capitalize;
-}
-
-.prog-trend-total {
-  font-variant-numeric: tabular-nums;
-  color: var(--leaf);
-  font-weight: 700;
-}
-
-.prog-trend-chart {
-  width: 100%;
-  height: auto;
-  margin-top: 0.4rem;
-}
-
-.prog-trend-single {
-  margin: 0.6rem 0 0.2rem;
-  color: var(--ink-faint);
-  font-size: var(--k-t-body);
-  font-variant-numeric: tabular-nums;
-}
 
 .prog-timeline {
   margin: 0.5rem 0 0;
@@ -1345,11 +1242,6 @@ a.k-card:visited {
    server-wide "how the world got here" block that sits below the current
    roster. Set off with a leaf rule so it reads as the temporal companion to
    the current-state tables above it, not a stapled second page. */
-.jobs-progression {
-  margin-top: 2rem;
-  padding-top: 1.5rem;
-  border-top: 2px solid var(--leaf);
-}
 
 .subsection-title {
   margin: 1.4rem 0 0.6rem;
@@ -1452,52 +1344,6 @@ a.k-card:visited {
 }
 
 /* Ranked ecoregion matches — name + similarity on top, description below. */
-.eco-matches {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  counter-reset: eco-match;
-}
-
-.eco-matches li {
-  padding: 0.7rem 0.9rem;
-  border: 1px solid var(--card-border);
-  border-radius: var(--k-r-1);
-  background: var(--card);
-}
-
-.eco-match-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 1rem;
-}
-
-.eco-match-name {
-  font-weight: 600;
-  color: var(--ink);
-}
-
-.eco-match-name::before {
-  counter-increment: eco-match;
-  content: counter(eco-match) ". ";
-  color: var(--ink-faint);
-}
-
-.eco-match-sim {
-  font-variant-numeric: tabular-nums;
-  color: var(--leaf);
-  font-weight: 600;
-}
-
-.eco-match-desc {
-  margin: 0.35rem 0 0;
-  font-size: var(--k-t-body);
-  color: var(--ink-soft);
-}
 
 /* Boom / bust drift strip — two columns of ranked movers. */
 .eco-drift {
@@ -1703,19 +1549,6 @@ a.k-card:visited {
   border-color: var(--leaf-dim);
   color: var(--leaf);
   font-weight: 600;
-}
-
-.toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: var(--ink-faint);
-  font-size: var(--k-t-body);
-  cursor: pointer;
-}
-
-.toggle input {
-  accent-color: var(--leaf);
 }
 
 /* Feed pagination controls under the timeline. */
@@ -1969,29 +1802,6 @@ a.k-card:visited {
 
 .home-defrow dd {
   margin: 0;
-}
-
-.home-count {
-  color: var(--k-dim);
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-
-.home-modlist {
-  margin: 0;
-  list-style: none;
-  display: grid;
-  gap: var(--k-s-3) var(--k-s-5);
-  grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
-}
-
-.home-modlist li {
-  display: grid;
-  gap: 2px;
-}
-
-.home-modlist span {
-  color: var(--k-dim);
 }
 
 .home-tree {

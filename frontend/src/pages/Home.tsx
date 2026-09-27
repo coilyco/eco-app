@@ -23,7 +23,6 @@ import {
 } from "../lib/serverBrief"
 import {
   ConfigsSection,
-  ModsSection,
   NotesSection,
   SkillTreesSection,
 } from "../components/ServerBriefSections"
@@ -158,12 +157,6 @@ export default function Home() {
           </h1>
           <LivePill status={status} error={error} />
           <MeteorLine state={meteorState(status)} hasStatus={status !== null} />
-          {brief.nextCycle && (
-            <div className="k-note k-note--grant" data-testid="home-next-cycle">
-              <p className="k-note__label">Next cycle</p>
-              <p>{brief.nextCycle}</p>
-            </div>
-          )}
         </div>
 
         <section className="k-panel k-stack k-stack--4" aria-labelledby="home-join">
@@ -207,7 +200,6 @@ export default function Home() {
       )}
 
       <ConfigsSection brief={brief} />
-      <ModsSection brief={brief} />
       <SkillTreesSection brief={brief} />
       <NotesSection brief={brief} />
 

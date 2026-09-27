@@ -161,7 +161,6 @@ describe("Home", () => {
     expect(screen.getByTestId("home-live")).not.toHaveTextContent(/cycle \d/i)
     expect(screen.queryByTestId("home-meteor")).not.toBeInTheDocument()
     expect(screen.getByTestId("home-configs")).toHaveTextContent(SERVER_BRIEF.configs[0].group)
-    expect(screen.getByTestId("home-mods")).toHaveTextContent(SERVER_BRIEF.mods[0].items[0].name)
   })
 
   it("reads cycle, world size, and a destroyed meteor from live status", async () => {

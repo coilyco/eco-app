@@ -49,14 +49,12 @@ describe("Species page", () => {
     await waitFor(() => {
       expect(screen.getByTestId("species-population-curve")).toBeInTheDocument()
     })
-    // The SPA opts in to the inlined photo; MCP callers do not, because the
-    // base64 blows their response cap (eco-app#230).
+    // No photo on the page, so no ~285 KB inlined image (eco-app#230, #8385).
     expect(fetchMock).toHaveBeenCalledWith(
-      "/preview/get_species.json?name=WolfSpecies&include_image=1&limit=0",
+      "/preview/get_species.json?name=WolfSpecies&limit=0",
       expect.objectContaining({ signal: expect.any(AbortSignal) }),
     )
     expect(screen.getByRole("heading", { name: "Wolf" })).toBeInTheDocument()
     expect(screen.getByText(/40 current/)).toHaveTextContent("-60 this cycle")
-    expect(screen.getByText("Canis lupus")).toBeInTheDocument()
   })
 })

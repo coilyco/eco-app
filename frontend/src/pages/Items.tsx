@@ -32,9 +32,9 @@ function sortItems(items: ItemStat[], key: SortKey): ItemStat[] {
 }
 
 // Directory of every item ever bought, sold, or crafted. Each row deep-links to
-// the per-item pivot (/item?item=<id>). The ?q= name filter, the ?sort= column,
-// and the ?untraded= toggle are all deep-linkable. Untraded (craft-only) items
-// are hidden by default — most of the directory is noise for someone shopping.
+// the per-item pivot (/item?item=<id>). The ?q= name filter and the ?sort=
+// column are deep-linkable. Untraded (craft-only) items are always hidden —
+// most of the directory is noise for someone shopping.
 export default function Items() {
   // Refresh contract lives in freshness.ts, not here (eco-app#201).
   const itemsPlane = useFreshData("items", fetchItemIndex)
@@ -43,15 +43,12 @@ export default function Items() {
   const [params, setParams] = useSearchParams()
   const q = params.get("q") ?? ""
   const sort = (params.get("sort") ?? "activity") as SortKey
-  const showUntraded = params.get("untraded") === "show"
-
 
   // Preserve the other params when one control changes.
   const update = (patch: Record<string, string>) => {
     const next: Record<string, string> = {}
     if (q) next.q = q
     if (sort !== "activity") next.sort = sort
-    if (showUntraded) next.untraded = "show"
     for (const [k, v] of Object.entries(patch)) {
       if (v) next[k] = v
       else delete next[k]
@@ -60,17 +57,12 @@ export default function Items() {
   }
 
   const needle = q.trim().toLowerCase()
-  const hiddenUntraded = useMemo(
-    () => (index ? index.items.filter((r) => r.tradeCount === 0).length : 0),
-    [index],
-  )
   const visible = useMemo(() => {
     if (!index) return []
-    let rows = index.items
-    if (!showUntraded) rows = rows.filter((r) => r.tradeCount > 0)
+    let rows = index.items.filter((r) => r.tradeCount > 0)
     if (needle) rows = rows.filter((r) => prettifyEcoName(r.item).toLowerCase().includes(needle))
     return sortItems(rows, sort).slice(0, LIST_ROWS)
-  }, [index, needle, sort, showUntraded])
+  }, [index, needle, sort])
 
   return (
     <Layout fetchedAtISO={index?.fetchedAtISO}>
@@ -79,12 +71,6 @@ export default function Items() {
         <h1 className="hero-title">
           Every <span className="accent">item</span> the world has touched
         </h1>
-        {index && (
-          <p className="hero-pill" data-testid="items-pill">
-            <span className="pulse-dot" aria-hidden="true" />
-            {formatCount(index.totalItems)} distinct items ever bought, sold, or crafted
-          </p>
-        )}
         {!index && error && (
           <p className="hero-pill hero-pill-muted" data-testid="items-error">
             item directory unavailable right now
@@ -135,15 +121,6 @@ export default function Items() {
                 </button>
               ))}
             </div>
-            <label className="toggle" data-testid="untraded-toggle">
-              <input
-                type="checkbox"
-                checked={showUntraded}
-                onChange={(e) => update({ untraded: e.target.checked ? "show" : "" })}
-              />
-              Show untraded
-              {hiddenUntraded > 0 ? ` (${formatCount(hiddenUntraded)} hidden)` : ""}
-            </label>
           </section>
 
           <section>
@@ -208,7 +185,7 @@ export default function Items() {
             </Link>
             <Link className="k-card dir-card" to="/crafting" data-testid="link-crafting">
               <h2>Crafting atlas →</h2>
-              <p>What the world is making — top items, stations, and crafters.</p>
+              <p>What the world is making — top items and stations.</p>
             </Link>
           </section>
         </>

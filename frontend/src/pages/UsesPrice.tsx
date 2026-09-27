@@ -6,7 +6,6 @@ import FreshnessNote from "../components/FreshnessNote"
 import Layout from "../components/Layout"
 import ItemPrice from "../components/ItemPrice"
 import PriceHistoryPanel from "../components/PriceHistoryPanel"
-import { fetchFairPrice, type FairPriceResult } from "../lib/fairPriceApi"
 import { fetchJsonOrNull } from "../lib/api"
 import {
   fetchLogistics,
@@ -71,7 +70,6 @@ type CostRecipeIndex = {
   fetchedAtISO: string
   warnings: string[]
   recipes: CostRecipe[]
-  costParams?: { caloriePrice: number; minutePrice: number }
 }
 
 type MarketOption = {
@@ -92,13 +90,6 @@ const TREND: Record<MarketTrend, TrendMeta> = {
   insufficient: { glyph: "·", label: "thin", color: "var(--ink-faint)" },
 }
 
-const VERDICT: Record<string, { glyph: string; label: string; color: string }> = {
-  overpriced: { glyph: "▲", label: "overpriced", color: "var(--meteor)" },
-  underpriced: { glyph: "▼", label: "underpriced", color: "var(--leaf)" },
-  fair: { glyph: "▬", label: "fair", color: "var(--ink-faint)" },
-  inconclusive: { glyph: "·", label: "inconclusive", color: "var(--ink-faint)" },
-}
-
 function signedPrice(n: number, currency: string): string {
   const sign = n > 0 ? "+" : ""
   return `${sign}${formatMoney(n)} ${currency}`
@@ -114,16 +105,6 @@ function TrendTag({ trend, delta }: { trend: MarketTrend; delta: number | null }
     <span className="trend-tag" style={{ color: t.color }} data-testid="price-trend">
       <span aria-hidden="true">{t.glyph}</span> {t.label}
       {pct}
-    </span>
-  )
-}
-
-function VerdictTag({ verdict }: { verdict: string | null }) {
-  if (!verdict) return null
-  const v = VERDICT[verdict] ?? VERDICT.inconclusive
-  return (
-    <span className="verdict-tag" style={{ color: v.color }} data-testid="price-fred-verdict">
-      <span aria-hidden="true">{v.glyph}</span> {v.label}
     </span>
   )
 }
@@ -190,8 +171,8 @@ function MarketSummary({ row }: { row: ItemMarket }) {
 }
 
 // The flagship "How should I price X?" page (eco-app#104). It reads the live
-// market band, the current shelf comparison, the fair-price bonus for FRED-
-// pegged items, and the recipe cost roll-up when available. Each fetch is
+// market band, the current shelf comparison, and the recipe cost roll-up when
+// available. Each fetch is
 // independent so a missing plane degrades in place instead of blanking the page.
 export default function UsesPrice() {
   const [params, setParams] = useSearchParams()
@@ -225,12 +206,10 @@ export default function UsesPrice() {
   }))
   const market = spinePlane.data?.market ?? null
   const logistics = spinePlane.data?.logistics ?? null
-  const [fairPrice, setFairPrice] = useState<FairPriceResult | null>(null)
   const [recipes, setRecipes] = useState<CostRecipeIndex | null>(null)
   const [priceHistory, setPriceHistory] = useState<ItemPriceHistory | null>(null)
   const loaded = !spinePlane.loading
   const [detailLoadedFor, setDetailLoadedFor] = useState("")
-  const [fairPriceFor, setFairPriceFor] = useState("")
   const [recipesFor, setRecipesFor] = useState("")
   const [priceHistoryFor, setPriceHistoryFor] = useState("")
 
@@ -261,18 +240,8 @@ export default function UsesPrice() {
     const controller = new AbortController()
     const s = controller.signal
     const recipeUrl = `/preview/recipes.json?cost=1&product=${encodeURIComponent(item)}`
-    Promise.all([
-      fetchFairPrice(item.endsWith("Item") ? item.slice(0, -4) : item, s).then(
-        (result) => {
-          setFairPrice(result)
-          setFairPriceFor(item)
-        },
-        () => {
-          setFairPrice(null)
-          setFairPriceFor(item)
-        },
-      ),
-      fetchJsonOrNull<CostRecipeIndex>(recipeUrl, s).then(
+    fetchJsonOrNull<CostRecipeIndex>(recipeUrl, s)
+      .then(
         (result) => {
           setRecipes(result)
           setRecipesFor(item)
@@ -281,10 +250,10 @@ export default function UsesPrice() {
           setRecipes(null)
           setRecipesFor(item)
         },
-      ),
-    ]).finally(() => {
-      if (!s.aborted) setDetailLoadedFor(item)
-    })
+      )
+      .finally(() => {
+        if (!s.aborted) setDetailLoadedFor(item)
+      })
     return () => controller.abort()
   }, [item])
 
@@ -314,14 +283,6 @@ export default function UsesPrice() {
       nextItem ? { item: nextItem, ...(nextCurrency ? { currency: nextCurrency } : {}) } : {},
       { replace: false },
     )
-  }
-
-  const pickCurrency = (nextCurrency: string) => {
-    if (!item) return
-    const next = new URLSearchParams(params)
-    next.set("item", item)
-    next.set("currency", nextCurrency)
-    setParams(next, { replace: false })
   }
 
   const options = useMemo(() => {
@@ -383,7 +344,6 @@ export default function UsesPrice() {
   const band = marketRow ? bandFor(marketRow) : null
 
   const detailReady = !item || detailLoadedFor === item
-  const currentFairPrice = fairPriceFor === item ? fairPrice : null
   const currentRecipes = recipesFor === item ? recipes : null
   const currentPriceHistory =
     priceHistoryFor === `${item}\u0000${selectedCurrency}` ? priceHistory : null
@@ -421,7 +381,7 @@ export default function UsesPrice() {
   const currentCount = marketRow ? marketRow.totalTrades : (cheapest?.offers.length ?? 0) + (resale?.offers.length ?? 0)
 
   return (
-    <Layout fetchedAtISO={market?.fetchedAtISO ?? logistics?.fetchedAtISO ?? currentFairPrice?.fetchedAtISO}>
+    <Layout fetchedAtISO={market?.fetchedAtISO ?? logistics?.fetchedAtISO}>
       <section className="hero hero-compact">
         <p className="hero-kicker">
           <Link to="/uses" className="linklike" data-testid="back-to-uses">
@@ -539,24 +499,6 @@ export default function UsesPrice() {
 
       {item && (
         <>
-          {marketRowsForItem.length > 1 && (
-            <section data-testid="price-currency-picker">
-              <h2 className="section-title">Currency</h2>
-              <div className="filter-row">
-                {marketRowsForItem.map((row) => (
-                  <button
-                    key={row.currency}
-                    className={`button${row.currency === currency ? " button-primary" : ""}`}
-                    onClick={() => pickCurrency(row.currency)}
-                    aria-pressed={row.currency === currency}
-                  >
-                    {row.currency} · {formatCount(row.totalTrades)} trades
-                  </button>
-                ))}
-              </div>
-            </section>
-          )}
-
           {!selectedCurrency ? (
             <section>
               <p className="empty-note" data-testid="price-history-no-currency">
@@ -629,25 +571,6 @@ export default function UsesPrice() {
                     </tbody>
                   </table>
                 </>
-              )}
-              {currentFairPrice && !currentFairPrice.error && (
-                <p className="hero-pill" data-testid="price-fred">
-                  <span className="pulse-dot" aria-hidden="true" />
-                  {currentFairPrice.displayName} benchmark{" "}
-                  {currentFairPrice.latestValue != null ? formatMoney(currentFairPrice.latestValue) : "—"}{" "}
-                  {currentFairPrice.displayUnit || ""}
-                  {currentFairPrice.inGameVerdict ? (
-                    <>
-                      {" "}
-                      · <VerdictTag verdict={currentFairPrice.inGameVerdict} />
-                    </>
-                  ) : null}
-                </p>
-              )}
-              {currentFairPrice && currentFairPrice.error && currentFairPrice.error !== "unknown_item" && (
-                <p className="empty-note" data-testid="price-fred-empty">
-                  FRED benchmark unavailable right now, so this band is market-only.
-                </p>
               )}
             </div>
             <div>
@@ -887,52 +810,6 @@ export default function UsesPrice() {
                 </>
               )}
             </div>
-          </section>
-
-          <section data-testid="price-assumptions">
-            <h2 className="section-title">Evidence and assumptions</h2>
-            <ul className="rank-rows">
-              <li>
-                <div className="rank-row">
-                  <span className="rank-name">Observed market</span>
-                  <span className="rank-count">
-                    {marketRow
-                      ? `${formatCount(marketRow.totalTrades)} trades across ${formatCount(marketRow.buckets.length)} recorded day${marketRow.buckets.length === 1 ? "" : "s"}`
-                      : "No recorded trades for this item"}
-                  </span>
-                </div>
-              </li>
-              <li>
-                <div className="rank-row">
-                  <span className="rank-name">Craft model</span>
-                  <span className="rank-count">
-                    {bestRecipe
-                      ? `${bestRecipe.displayName} is the lowest complete known recipe. Alternate recipes can differ.`
-                      : "No complete baseline recipe is available."}
-                  </span>
-                </div>
-              </li>
-              <li>
-                <div className="rank-row">
-                  <span className="rank-name">Labor valuation</span>
-                  <span className="rank-count">
-                    {currentRecipes?.costParams
-                      ? `${formatMoney(currentRecipes.costParams.caloriePrice)} ${moneyUnit}/calorie and ${formatMoney(currentRecipes.costParams.minutePrice)} ${moneyUnit}/minute`
-                      : "The recipe plane did not publish labor and time rates."}
-                  </span>
-                </div>
-              </li>
-              <li>
-                <div className="rank-row">
-                  <span className="rank-name">Shelf provenance</span>
-                  <span className="rank-count">
-                    {logistics?.live
-                      ? "Live offers are marked live. Remaining rows are history-derived."
-                      : "Shelf rows are history-derived until a live shelf snapshot is available."}
-                  </span>
-                </div>
-              </li>
-            </ul>
           </section>
         </>
       )}

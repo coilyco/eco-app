@@ -18,8 +18,7 @@ const LIST_ROWS = 200
 // Filters: ?q= (product + ingredient name search, the default), ?skill= (the
 // profession gate), ?station=, and ?ingredient= — the reverse lookup, "what can
 // I make with X", the highest-value filter, reached by clicking an ingredient
-// on the detail page. ?tier= (table tier) lights up only once the cost engine
-// (eco-app#98 C) fills tableTierRequired; it is null across the vanilla seed.
+// on the detail page.
 
 // Craft time reads better as a coarse duration than a raw "0.64 min".
 function craftTime(minutes: number): string {
@@ -57,8 +56,6 @@ export default function Recipes() {
   const skill = params.get("skill") ?? ""
   const station = params.get("station") ?? ""
   const ingredient = params.get("ingredient") ?? ""
-  const tier = params.get("tier") ?? ""
-
 
   // Preserve the other params when one control changes.
   const update = (patch: Record<string, string>) => {
@@ -67,7 +64,6 @@ export default function Recipes() {
     if (skill) next.skill = skill
     if (station) next.station = station
     if (ingredient) next.ingredient = ingredient
-    if (tier) next.tier = tier
     for (const [k, v] of Object.entries(patch)) {
       if (v) next[k] = v
       else delete next[k]
@@ -83,17 +79,6 @@ export default function Recipes() {
       .sort((a, b) => a.label.localeCompare(b.label))
   }, [index])
 
-  // Distinct non-null table tiers — empty on the vanilla seed, so the facet
-  // stays hidden until the cost engine derives tiers (eco-app#98 C).
-  const tierOptions = useMemo(() => {
-    if (!index) return []
-    const tiers = new Set<number>()
-    for (const r of index.recipes) {
-      if (r.tableTierRequired != null) tiers.add(r.tableTierRequired)
-    }
-    return [...tiers].sort((a, b) => a - b)
-  }, [index])
-
   const needle = q.trim().toLowerCase()
   const visible = useMemo(() => {
     if (!index) return []
@@ -101,7 +86,6 @@ export default function Recipes() {
     if (skill) rows = rows.filter((r) => r.skill?.name === skill)
     if (station) rows = rows.filter((r) => r.station === station)
     if (ingredient) rows = rows.filter((r) => r.ingredients.some((i) => i.item === ingredient))
-    if (tier) rows = rows.filter((r) => String(r.tableTierRequired) === tier)
     if (needle) {
       rows = rows.filter((r) => {
         if (r.displayName.toLowerCase().includes(needle)) return true
@@ -109,10 +93,10 @@ export default function Recipes() {
       })
     }
     return rows.slice(0, LIST_ROWS)
-  }, [index, skill, station, ingredient, tier, needle])
+  }, [index, skill, station, ingredient, needle])
 
   const total = index?.recipes.length ?? 0
-  const anyFilter = Boolean(q || skill || station || ingredient || tier)
+  const anyFilter = Boolean(q || skill || station || ingredient)
 
   return (
     <Layout fetchedAtISO={index?.fetchedAtISO}>
@@ -121,13 +105,6 @@ export default function Recipes() {
         <h1 className="hero-title">
           Every way to <span className="accent">craft</span> in Eco
         </h1>
-        {index && (
-          <p className="hero-pill" data-testid="recipes-pill">
-            <span className="pulse-dot" aria-hidden="true" />
-            {formatCount(index.counts.recipes)} recipes · {formatCount(index.counts.products)}{" "}
-            products · {formatCount(index.counts.stations)} stations
-          </p>
-        )}
         {!index && error && (
           <p className="hero-pill hero-pill-muted" data-testid="recipes-error">
             recipe directory unavailable right now
@@ -191,22 +168,6 @@ export default function Recipes() {
                 </option>
               ))}
             </select>
-            {tierOptions.length > 0 && (
-              <select
-                className="filter-select"
-                value={tier}
-                onChange={(e) => update({ tier: e.target.value })}
-                data-testid="recipes-tier-filter"
-                aria-label="Filter by table tier"
-              >
-                <option value="">Any tier</option>
-                {tierOptions.map((t) => (
-                  <option key={t} value={String(t)}>
-                    Tier {t}
-                  </option>
-                ))}
-              </select>
-            )}
             {anyFilter && (
               <button
                 className="button"
@@ -298,7 +259,7 @@ export default function Recipes() {
             </Link>
             <Link className="k-card dir-card" to="/crafting" data-testid="link-crafting">
               <h2>Crafting atlas →</h2>
-              <p>What the world is actually making — top items, stations, and crafters.</p>
+              <p>What the world is actually making — top items and stations.</p>
             </Link>
           </section>
         </>

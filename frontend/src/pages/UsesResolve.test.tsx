@@ -45,7 +45,6 @@ describe("UsesResolve", () => {
     expect(screen.getByTestId("resolve-offers")).toHaveTextContent("Buy from Forge")
     expect(screen.getByTestId("resolve-market")).toHaveTextContent("9 Credit median")
     expect(screen.getByTestId("resolve-crafter")).toHaveTextContent("Ava")
-    expect(screen.getByTestId("resolve-price-link")).toHaveAttribute("href", "/uses/price?item=IronIngotItem")
   })
 
   it("makes mock specialty data explicitly non-actionable", async () => {

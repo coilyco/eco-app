@@ -8,7 +8,6 @@ import FreshnessNote from "../components/FreshnessNote"
 import Layout from "../components/Layout"
 import { fetchMarket, type ItemMarket, type MarketTrend } from "../lib/marketApi"
 import { fetchStores } from "../lib/storesApi"
-import { fetchCurrency } from "../lib/currencyApi"
 import { fetchLogistics, type GapReason, type SupplyGap } from "../lib/logisticsApi"
 import { fetchTradesLedger, type Trade as TradeRow } from "../lib/tradesApi"
 import { fetchWatchers, type WatcherHit } from "../lib/watchersApi"
@@ -23,7 +22,6 @@ const LOGI_ROWS = 8
 // (the backend caps it at SUPPLY_GAP_ROWS) rather than clipping to LOGI_ROWS, so
 // 20+ gaps surface when the server has them.
 const GAP_ROWS = 40
-const TOP_PARTIES = 15
 const LEDGER_ROWS = 60
 
 // Prices carry fractional cents; formatCount rounds to whole units, so trade
@@ -235,30 +233,6 @@ function WatcherList({ hits }: { hits: WatcherHit[] }) {
   )
 }
 
-// Ranked bar list of [name, currencyAmount] parties — top buyers / sellers from
-// the trades ledger. Names arrive already resolved from the server's id→name
-// join, so they show verbatim (no Eco-id prettifying).
-function TraderList({ rows }: { rows: Array<[string, number]> }) {
-  const top = rows.slice(0, TOP_PARTIES)
-  const max = Math.max(...top.map(([, amt]) => amt), 1)
-  if (top.length === 0) {
-    return <p className="empty-note">No currency movement recorded.</p>
-  }
-  return (
-    <ul className="rank-rows">
-      {top.map(([name, amt]) => (
-        <li key={name}>
-          <div className="rank-row" data-testid="party-row">
-            <span className="rank-name"><EcoRichText text={name} /></span>
-            <span className="rank-count">{formatCount(amt)}</span>
-            <span className="rank-bar" style={{ width: `${(amt / max) * 100}%` }} />
-          </div>
-        </li>
-      ))}
-    </ul>
-  )
-}
-
 function matchesTrade(t: TradeRow, needle: string): boolean {
   if (!needle) return true
   const hay = [stripEcoMarkup(t.seller), stripEcoMarkup(t.buyer), prettifyEcoName(t.item), t.currency]
@@ -269,7 +243,7 @@ function matchesTrade(t: TradeRow, needle: string): boolean {
 
 export default function Trade() {
   // Refresh contract lives in freshness.ts, not here (eco-app#201). This is a
-  // `live` composite: two of its six planes advance continuously and a trader
+  // `live` composite: two of its five planes advance continuously and a trader
   // leaves the page open while deciding, so the board keeps up rather than
   // going quietly stale under them.
   //
@@ -278,21 +252,19 @@ export default function Trade() {
   // (or [] for watchers) and its panel degrades in place. The trades ledger
   // (folded in from the former /trades page, eco-app#90) is one more such
   // plane: the market plane carries the price-intelligence view, the ledger
-  // the row-level trades and their party leaderboards.
+  // the row-level trades.
   const tradePlane = useFreshData("trade", async (signal) => {
-    const [market, stores, currency, logistics, ledger, watchers] = await Promise.all([
+    const [market, stores, logistics, ledger, watchers] = await Promise.all([
       fetchMarket(signal).catch(() => null),
       fetchStores(signal).catch(() => null),
-      fetchCurrency(signal).catch(() => null),
       fetchLogistics(signal).catch(() => null),
       fetchTradesLedger(signal).catch(() => null),
       fetchWatchers(signal).catch((): WatcherHit[] => []),
     ])
-    return { market, stores, currency, logistics, ledger, watchers }
+    return { market, stores, logistics, ledger, watchers }
   })
   const market = tradePlane.data?.market ?? null
   const stores = tradePlane.data?.stores ?? null
-  const currency = tradePlane.data?.currency ?? null
   const logistics = tradePlane.data?.logistics ?? null
   const ledger = tradePlane.data?.ledger ?? null
   const watchers = tradePlane.data?.watchers ?? []
@@ -324,11 +296,7 @@ export default function Trade() {
     [markets],
   )
   const mostTraded = useMemo(() => markets.slice(0, TOP_TRADED), [markets])
-  const totalVolume = useMemo(() => markets.reduce((sum, m) => sum + m.totalVolume, 0), [markets])
 
-  // The ledger's own aggregates are the authoritative volume + trade count for
-  // the hero pill: the market plane's per-item volumes read empty on servers
-  // that trade but have no priced markets yet (eco-app#90).
   const visibleTrades = useMemo(
     () => (ledger ? ledger.trades.filter((t) => matchesTrade(t, needle)).slice(0, LEDGER_ROWS) : []),
     [ledger, needle],
@@ -364,13 +332,9 @@ export default function Trade() {
     () => (stores ? [...stores.stores].sort((a, b) => b.totalVolume - a.totalVolume).slice(0, DIR_ROWS) : []),
     [stores],
   )
-  const topTraders = useMemo(
-    () => (stores ? [...stores.traders].sort((a, b) => b.totalVolume - a.totalVolume).slice(0, DIR_ROWS) : []),
-    [stores],
-  )
 
   const nothing =
-    loaded && !market && !stores && !currency && !logistics && !ledger && watchers.length === 0
+    loaded && !market && !stores && !logistics && !ledger && watchers.length === 0
 
   return (
     <Layout fetchedAtISO={market?.fetchedAtISO ?? stores?.fetchedAtISO}>
@@ -383,14 +347,6 @@ export default function Trade() {
           The whole market on one always-on page — movers, price history, every store, and the
           logistics of what to do next. The website answer to Discord's ephemeral DM embeds.
         </p>
-        {(market || ledger) && (
-          <p className="hero-pill" data-testid="trade-pill">
-            <span className="pulse-dot" aria-hidden="true" />
-            {formatCount(markets.length)} markets ·{" "}
-            {formatCount(ledger?.totalCurrencyVolume ?? totalVolume)} volume ·{" "}
-            {formatCount(ledger?.totalTrades ?? market?.totalTrades ?? 0)} trades
-          </p>
-        )}
         {nothing && (
           <p className="hero-pill hero-pill-muted" data-testid="trade-error">
             trade data unavailable right now — check back once the game server has traded
@@ -409,41 +365,6 @@ export default function Trade() {
         <p className="empty-note" data-testid="trade-loading">
           Loading the market…
         </p>
-      )}
-
-      {/* Currency strip — money-supply summary. */}
-      {currency && (
-        <section data-testid="currency-strip">
-          <h2 className="section-title">
-            Money supply{" "}
-            <span className="section-sub">
-              ({formatCount(currency.currencies.length)} currenc
-              {currency.currencies.length === 1 ? "y" : "ies"} in circulation)
-            </span>
-          </h2>
-          <div className="stats">
-            <div className="stat">
-              <p className="stat-value">{formatCount(currency.currencies.length)}</p>
-              <p className="stat-label">Currencies</p>
-            </div>
-            <div className="stat">
-              <p className="stat-value">
-                {formatCount(currency.currencies.reduce((s, c) => s + c.mintedAmount, 0))}
-              </p>
-              <p className="stat-label">Total minted</p>
-            </div>
-            <div className="stat">
-              <p className="stat-value">
-                {formatCount(currency.currencies.reduce((s, c) => s + c.tradeVolume, 0))}
-              </p>
-              <p className="stat-label">Traded volume</p>
-            </div>
-            <div className="stat">
-              <p className="stat-value">{formatCount(currency.daysElapsed)}</p>
-              <p className="stat-label">Days elapsed</p>
-            </div>
-          </div>
-        </section>
       )}
 
       {/* Market overview — movers + most-traded. */}
@@ -643,29 +564,6 @@ export default function Trade() {
               </ul>
             )}
           </div>
-          <div>
-            <h2 className="section-title">
-              Traders <span className="section-sub">({formatCount(stores.totalTraders)})</span>
-            </h2>
-            {topTraders.length === 0 ? (
-              <p className="empty-note">No traders recorded yet.</p>
-            ) : (
-              <ul className="rank-rows" data-testid="trader-list">
-                {topTraders.map((tr) => {
-                  const max = Math.max(...topTraders.map((x) => x.totalVolume), 1)
-                  return (
-                    <li key={tr.citizenId || tr.name}>
-                      <div className="rank-row" data-testid="trader-dir-row">
-                        <span className="rank-name"><EcoRichText text={tr.name} /></span>
-                        <span className="rank-count">{formatCount(tr.totalVolume)}</span>
-                        <span className="rank-bar" style={{ width: `${(tr.totalVolume / max) * 100}%` }} />
-                      </div>
-                    </li>
-                  )
-                })}
-              </ul>
-            )}
-          </div>
         </section>
       )}
 
@@ -685,12 +583,6 @@ export default function Trade() {
               )
             </span>
           </h2>
-          {(ledger.rollupTrades ?? 0) > 0 && (
-            <p className="section-sub" data-testid="ledger-rollup-note">
-              {formatCount(ledger.rollupTrades ?? 0)} older trades are aggregated into {formatCount(ledger.rollupRows ?? 0)}
-              {" "}hourly rows and excluded from party, item, and unit-price attribution.
-            </p>
-          )}
           {visibleTrades.length === 0 ? (
             <p className="empty-note">No trades match.</p>
           ) : (
@@ -733,16 +625,6 @@ export default function Trade() {
               </tbody>
             </table>
           )}
-          <div className="atlas-columns">
-            <div>
-              <h3 className="card-title">Top sellers</h3>
-              <TraderList rows={ledger.topSellers} />
-            </div>
-            <div>
-              <h3 className="card-title">Top buyers</h3>
-              <TraderList rows={ledger.topBuyers} />
-            </div>
-          </div>
           {ledger.warnings.length > 0 && (
             <ul className="warn-list" data-testid="ledger-warnings">
               {ledger.warnings.map((w) => (

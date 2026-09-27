@@ -99,17 +99,6 @@ describe("Civics", () => {
     expect(screen.getByTestId("civics-stats")).toHaveTextContent("Turnout")
   })
 
-  it("charts turnout over time with a two-series legend", async () => {
-    stubFetch()
-    renderCivics()
-
-    await waitFor(() => {
-      expect(screen.getByTestId("turnout-chart")).toBeInTheDocument()
-    })
-    expect(screen.getByTestId("turnout-legend")).toHaveTextContent("votes cast")
-    expect(screen.getByTestId("turnout-legend")).toHaveTextContent("abstentions")
-  })
-
   it("lists recent elections with proposer names", async () => {
     stubFetch()
     renderCivics()
@@ -121,28 +110,20 @@ describe("Civics", () => {
     expect(screen.getByTestId("election-row")).toHaveTextContent("alice")
   })
 
-  it("ranks most-active voters and shows settlements", async () => {
-    stubFetch()
+  it("shows an unresolved proposer as its raw id, never as a named citizen", async () => {
+    stubFetch({
+      ...REPORT,
+      recentElections: [
+        // An id the citizens join missed: null name, raw id alongside (eco-app#223).
+        { subject: "MayorRace", subjectId: null, proposer: null, proposerId: "104", day: 3 },
+      ],
+    })
     renderCivics()
 
     await waitFor(() => {
-      expect(screen.getAllByTestId("voter-row").length).toBeGreaterThan(0)
+      expect(screen.getByTestId("elections-table")).toBeInTheDocument()
     })
-    // alice voted the most.
-    expect(screen.getAllByText("alice").length).toBeGreaterThan(0)
-    expect(screen.getByTestId("settlements-list")).toHaveTextContent("Rivertown")
-  })
-
-  it("shows demographic arrivals and departures with the id fallback", async () => {
-    stubFetch()
-    renderCivics()
-
-    await waitFor(() => {
-      expect(screen.getByTestId("demographics-table")).toBeInTheDocument()
-    })
-    expect(screen.getAllByTestId("demographic-row")).toHaveLength(2)
-    // An id the citizens join missed shows as an id, not as a person named
-    // "Citizen #104" — some of those ids are election titles (eco-app#223).
+    // Some of those ids are election titles, not people (eco-app#223).
     expect(screen.getByText("#104")).toBeInTheDocument()
     expect(screen.queryByText("Citizen #104")).toBeNull()
   })

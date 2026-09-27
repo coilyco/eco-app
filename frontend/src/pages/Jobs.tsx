@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react"
-import ChartFrame from "../components/ChartFrame"
 import type { ReactNode } from "react"
 import { Link } from "react-router-dom"
 import EcoRichText from "../components/EcoRichText"
@@ -16,19 +15,14 @@ import {
 import { fetchTradesLedger } from "../lib/tradesApi"
 import type { ProfessionStat, SpecialtyStat } from "../lib/jobsApi"
 import { useFreshData } from "../lib/useFreshData"
-import {
-  fetchProgressionHistory,
-  KIND_LABELS,
-  TREND_ORDER,
-} from "../lib/progressionApi"
 
 // Survivalist and Self Improvement are the universal starter skills — every
 // citizen has them, so they carry no signal and only clutter the roster
 // (eco-app#94). We filter them out of every jobs surface (professions,
-// specialties, per-player skill lists, and the progression rank lists) in one
-// place here. Matching on the prettified, whitespace-collapsed name catches
-// both the jobs API's display names ("Self Improvement") and the progression
-// endpoint's raw Eco ids ("SelfImprovement", "SurvivalistSkill").
+// specialties, per-player skill lists, and skill trees) in one place here.
+// Matching on the prettified, whitespace-collapsed name catches both the jobs
+// API's display names ("Self Improvement") and raw Eco ids
+// ("SelfImprovement", "SurvivalistSkill").
 const UNIVERSAL_SKILLS = new Set(["self improvement", "survivalist"])
 const VALUE_ROWS = 5
 const LIQUIDITY_FLOOR = 100
@@ -65,13 +59,6 @@ function isUniversalSkill(name: string): boolean {
   return UNIVERSAL_SKILLS.has(norm)
 }
 
-interface RankRow {
-  key: string
-  name: string
-  count: number
-  note?: ReactNode
-}
-
 interface ValueRow {
   key: string
   item: string
@@ -81,8 +68,6 @@ interface ValueRow {
   confidence: "complete" | "incomplete"
   note: ReactNode
 }
-
-type RankedRow = RankRow | ValueRow
 
 interface ProfessionValueBoard {
   key: string
@@ -157,17 +142,14 @@ function RoleBadges({ roles }: { roles: string[] }) {
 function ProfessionCard({
   stat,
   rolesByPlayer,
-  showAllPeople,
 }: {
   stat: ProfessionStat
   rolesByPlayer: ReadonlyMap<string, string[]>
-  showAllPeople: boolean
 }) {
   const [open, setOpen] = useState(false)
-  const visiblePlayers = stat.players.filter(
-    (player) => showAllPeople || coveredByRole(rolesByPlayer.get(player) ?? []),
+  const visiblePlayers = stat.players.filter((player) =>
+    coveredByRole(rolesByPlayer.get(player) ?? []),
   )
-  const uncovered = stat.total > 0 && stat.covered === 0
   return (
     <li className={`card card-tight${stat.total === 0 ? " dim" : ""}`}>
       <button className="prof-btn" onClick={() => setOpen((v) => !v)} aria-expanded={open}>
@@ -176,17 +158,12 @@ function ProfessionCard({
           ( {stat.covered} / {stat.total} covered )
         </span>
       </button>
-      {uncovered && (
-        <p className="warn-note" data-testid="uncovered-job">
-          ⚠ No Active or Long Term holder
-        </p>
-      )}
       {open && (
         <div className="detail">
           {visiblePlayers.length > 0 ? (
             <ul className="rows">
               {visiblePlayers.map((p) => (
-                <li key={p} className={coveredByRole(rolesByPlayer.get(p) ?? []) ? "role-holder" : "faded"}>
+                <li key={p} className="role-holder">
                   <span><EcoRichText text={p} /></span>
                   <span className="role-badges">
                     <RoleBadges roles={rolesByPlayer.get(p) ?? []} />
@@ -205,9 +182,8 @@ function ProfessionCard({
   )
 }
 
-function SpecialtyCard({ stat, showAllPeople }: { stat: SpecialtyStat; showAllPeople: boolean }) {
-  const visibleHolders = stat.holders.filter((holder) => showAllPeople || coveredByRole(holder.roles))
-  const uncovered = stat.total > 0 && stat.covered === 0
+function SpecialtyCard({ stat }: { stat: SpecialtyStat }) {
+  const visibleHolders = stat.holders.filter((holder) => coveredByRole(holder.roles))
   return (
     <li className={`card${stat.total === 0 ? " dim" : ""}`}>
       <h3 className="card-title">
@@ -217,14 +193,9 @@ function SpecialtyCard({ stat, showAllPeople }: { stat: SpecialtyStat; showAllPe
         </span>
       </h3>
       <p className="kicker">{stat.profession}</p>
-      {uncovered && (
-        <p className="warn-note" data-testid="uncovered-specialty">
-          ⚠ No Active or Long Term holder
-        </p>
-      )}
       <ul className="rows">
         {visibleHolders.map((h) => (
-          <li key={h.player} className={coveredByRole(h.roles) ? "role-holder" : "faded"}>
+          <li key={h.player} className="role-holder">
             <span><EcoRichText text={h.player} /></span>
             <span className="role-badges">
               <RoleBadges roles={h.roles} />
@@ -240,88 +211,17 @@ function SpecialtyCard({ stat, showAllPeople }: { stat: SpecialtyStat; showAllPe
   )
 }
 
-// One small-multiple sparkline of a single progression trend series (events of
-// one kind per in-game day). Small multiples — one single-hue chart per kind —
-// deliberately sidestep the multi-series categorical-color problem: every panel
-// reads on the same --leaf hue, and its title names the single series (no legend
-// box needed). Folded into /jobs from the former /progression page (eco-app#90).
-function TrendSparkline({
-  label,
-  points,
-}: {
-  label: string
-  points: Array<[number, number]>
-}) {
-  const width = 300
-  const height = 96
-  const pad = 16
-  const total = points.reduce((sum, [, c]) => sum + c, 0)
-
-  let body
-  if (points.length < 2) {
-    // A single day (or none) can't draw a line; show the headline count instead.
-    body = (
-      <p className="prog-trend-single" data-testid="trend-single">
-        {formatCount(total)} total{points.length === 1 ? ` · day ${points[0][0]}` : ""}
-      </p>
-    )
-  } else {
-    const days = points.map(([d]) => d)
-    const counts = points.map(([, c]) => c)
-    const minDay = Math.min(...days)
-    const maxDay = Math.max(...days)
-    const maxCount = Math.max(...counts)
-    const daySpan = maxDay - minDay || 1
-    const countSpan = maxCount || 1
-    const x = (d: number) => pad + ((d - minDay) / daySpan) * (width - 2 * pad)
-    const y = (c: number) => height - pad - (c / countSpan) * (height - 2 * pad)
-    const line = points.map(([d, c]) => `${x(d).toFixed(1)},${y(c).toFixed(1)}`).join(" ")
-    const area = `${x(minDay).toFixed(1)},${(height - pad).toFixed(1)} ${line} ${x(
-      maxDay,
-    ).toFixed(1)},${(height - pad).toFixed(1)}`
-    body = (
-      <ChartFrame above={[`peak ${formatCount(maxCount)}`]} start={`day ${minDay}`} end={`day ${maxDay}`}>
-      <svg
-        className="prog-trend-chart"
-        viewBox={`0 0 ${width} ${height}`}
-        preserveAspectRatio="xMidYMid meet"
-        role="img"
-        aria-label={`${KIND_LABELS[label] ?? label} per in-game day`}
-        data-testid="trend-chart"
-      >
-        <polygon points={area} fill="var(--leaf-wash)" stroke="none" />
-        <polyline points={line} fill="none" stroke="var(--leaf)" strokeWidth="2" />
-      </svg>
-      </ChartFrame>
-    )
-  }
-
-  return (
-    <div className="prog-trend" data-testid="trend-panel">
-      <div className="prog-trend-title">
-        {KIND_LABELS[label] ?? label}
-        <span className="prog-trend-total">{formatCount(total)}</span>
-      </div>
-      {body}
-    </div>
-  )
-}
-
-// Ranked bar list of [name, count] pairs. `pretty` prettifies Eco skill ids;
-// citizen-name lists (already resolved server-side) pass pretty={false}.
 function RankList({
   rows,
   emptyNote,
-  pretty = true,
   formatValue = formatCount,
 }: {
-  rows: RankedRow[]
+  rows: ValueRow[]
   emptyNote: string
-  pretty?: boolean
   formatValue?: (n: number) => string
 }) {
   const top = rows.slice(0, 15)
-  const valueFor = (row: RankedRow) => ("count" in row ? row.count : row.score)
+  const valueFor = (row: ValueRow) => row.score
   const max = Math.max(...top.map(valueFor), 1)
   if (top.length === 0) {
     return <p className="empty-note">{emptyNote}</p>
@@ -331,13 +231,9 @@ function RankList({
       {top.map((row) => (
         <li key={row.key}>
           <div className="rank-row" data-testid="rank-row">
-            {"item" in row ? (
-              <Link className="rank-name linklike" to={row.href} data-testid="opportunity-price-link">
-                {row.name}
-              </Link>
-            ) : (
-              <span className="rank-name">{pretty ? prettifyEcoName(row.name) : row.name}</span>
-            )}
+            <Link className="rank-name linklike" to={row.href} data-testid="opportunity-price-link">
+              {row.name}
+            </Link>
             <span className="rank-count">{formatValue(valueFor(row))}</span>
             <span className="rank-bar" style={{ width: `${(valueFor(row) / max) * 100}%` }} />
           </div>
@@ -357,53 +253,27 @@ function ValueTag({ reason }: { reason: GapReason }) {
   )
 }
 
-function makeRankRow(
-  key: string,
-  name: string,
-  count: number,
-  note?: ReactNode,
-): RankRow {
-  return { key, name, count, note }
-}
-
 export default function Jobs() {
   const { data, error, loading } = useJobsData()
-  // Progression is the temporal layer of this page (eco-app#90): the current
-  // roster shows who does what now, progression shows how they got there. It is
-  // a best-effort enrichment — a failure leaves the current-state tables exactly
-  // as they were before this surface existed, so we swallow errors.
-  const [showAllPeople, setShowAllPeople] = useState(false)
 
-  // Refresh contract lives in freshness.ts, not here (eco-app#201). The
-  // progression layer and the value spine are one plane: both are enrichment
-  // over the current-state tables, and a failure in either leaves those tables
-  // exactly as they were before these surfaces existed.
+  // Refresh contract lives in freshness.ts, not here (eco-app#201). The value
+  // spine is enrichment over the current-state tables, and a failure leaves
+  // those tables exactly as they were before this surface existed.
   const jobsPlane = useFreshData("jobs", async (signal) => {
-    const [progression, recipeIndex, logistics, market, trades] = await Promise.all([
-      fetchProgressionHistory(signal).catch(() => null),
+    const [recipeIndex, logistics, market, trades] = await Promise.all([
       fetchRecipeIndexWithCost(signal).catch(() => null),
       fetchLogistics(signal).catch(() => null),
       fetchMarket(signal).catch(() => null),
       fetchTradesLedger(signal).catch(() => null),
     ])
-    return { progression, recipeIndex, logistics, market, trades }
+    return { recipeIndex, logistics, market, trades }
   })
-  const progression = jobsPlane.data?.progression ?? null
   const recipeIndex = jobsPlane.data?.recipeIndex ?? null
   const logistics = jobsPlane.data?.logistics ?? null
   const market = jobsPlane.data?.market ?? null
   const trades = jobsPlane.data?.trades ?? null
   const valueLoaded = !jobsPlane.loading
 
-
-  const trendPanels = useMemo(() => {
-    if (!progression) return []
-    return TREND_ORDER.filter((kind) => (progression.trends[kind]?.length ?? 0) > 0).map(
-      (kind) => ({ kind, points: progression.trends[kind] }),
-    )
-  }, [progression])
-
-  const hasHistory = (progression?.totalEvents ?? 0) > 0
 
   // Drop universal starter skills from the current-state surfaces (eco-app#94).
   const professions = useMemo(
@@ -518,10 +388,6 @@ export default function Jobs() {
       .sort((a, b) => a.label.localeCompare(b.label))
   }, [recipeIndex])
 
-  // Same exclusion for the progression rank lists (name-keyed leaderboards).
-  const dropUniversal = (rows: Array<[string, number]>) =>
-    rows.filter(([name]) => !isUniversalSkill(name))
-
   return (
     <Layout>
       {data?.mockData && (
@@ -536,18 +402,6 @@ export default function Jobs() {
       </section>
 
       <section className="intro">
-        <p>
-          Who does what on the Eco server and how they got there. Active and Long Term are literal
-          Eco demographic roles. Their union is the default job-coverage roster.
-        </p>
-        <label className="jobs-people-toggle">
-          <input
-            type="checkbox"
-            checked={showAllPeople}
-            onChange={(event) => setShowAllPeople(event.target.checked)}
-          />{" "}
-          Show people outside Active and Long Term
-        </label>
         <FreshnessNote
           plane="jobs"
           loadedAt={jobsPlane.loadedAt}
@@ -556,69 +410,6 @@ export default function Jobs() {
           onRefresh={jobsPlane.refresh}
         />
       </section>
-
-      {/* The server-wide trajectory layer: how the current roster below formed.
-          Moved above the current-state tables so the history reads first
-          (eco-app#94); folded in from the former /progression page (eco-app#90). */}
-      {hasHistory && (
-        <section className="jobs-progression" data-testid="jobs-progression">
-          <h2 className="section-title">
-            How the world got here{" "}
-            <span className="section-sub">
-              ({formatCount(progression!.totalEvents)} recorded skill events —{" "}
-              {formatCount(progression!.citizens.length)} citizens)
-            </span>
-          </h2>
-
-          {trendPanels.length > 0 && (
-            <div className="prog-trend-grid" data-testid="trend-grid">
-              {trendPanels.map(({ kind, points }) => (
-                <TrendSparkline key={kind} label={kind} points={points} />
-              ))}
-            </div>
-          )}
-
-          <div className="atlas-columns">
-            <div>
-              <h3 className="subsection-title">Most-gained specialties</h3>
-              <RankList
-                rows={dropUniversal(progression!.bySpecialty).map(([name, count]) =>
-                  makeRankRow(name, name, count),
-                )}
-                emptyNote="No specialties gained yet."
-              />
-            </div>
-            <div>
-              <h3 className="subsection-title">Busiest levelers</h3>
-              <RankList
-                rows={progression!.topLevelers.map(([name, count]) => makeRankRow(name, name, count))}
-                emptyNote="No level-ups recorded yet."
-                pretty={false}
-              />
-            </div>
-          </div>
-
-          {dropUniversal(progression!.classCompletions).length > 0 && (
-            <>
-              <h3 className="subsection-title">Classes completed</h3>
-              <RankList
-                rows={dropUniversal(progression!.classCompletions).map(([name, count]) =>
-                  makeRankRow(name, name, count),
-                )}
-                emptyNote="No classes completed yet."
-              />
-            </>
-          )}
-
-          {progression!.warnings.length > 0 && (
-            <ul className="warn-list" data-testid="progression-warnings">
-              {progression!.warnings.map((w) => (
-                <li key={w}>⚠ {w}</li>
-              ))}
-            </ul>
-          )}
-        </section>
-      )}
 
       {loading && (
         <p className="loading" data-testid="loading">
@@ -659,7 +450,6 @@ export default function Jobs() {
                     <RankList
                       rows={board.rows}
                       emptyNote={`No liquid supply-gap crafts for ${board.label} yet.`}
-                      pretty={false}
                       formatValue={formatMoney}
                     />
                   </section>
@@ -672,12 +462,7 @@ export default function Jobs() {
             <h2 className="section-title">Professions</h2>
             <ul className="cards">
               {professions.map((s) => (
-                <ProfessionCard
-                  key={s.profession}
-                  stat={s}
-                  rolesByPlayer={rolesByPlayer}
-                  showAllPeople={showAllPeople}
-                />
+                <ProfessionCard key={s.profession} stat={s} rolesByPlayer={rolesByPlayer} />
               ))}
             </ul>
           </section>
@@ -702,7 +487,7 @@ export default function Jobs() {
             <h2 className="section-title">Specialties</h2>
             <ul className="cards">
               {specialties.map((s) => (
-                <SpecialtyCard key={s.specialty} stat={s} showAllPeople={showAllPeople} />
+                <SpecialtyCard key={s.specialty} stat={s} />
               ))}
             </ul>
           </section>

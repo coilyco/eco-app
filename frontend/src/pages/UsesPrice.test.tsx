@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react"
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { MemoryRouter } from "react-router-dom"
 import UsesPrice from "./UsesPrice"
@@ -93,31 +93,9 @@ const LOGISTICS = {
   warnings: [],
 }
 
-const FAIR_PRICE = {
-  view: "fair_price",
-  fetchedAtISO: "2026-07-07T13:00:00+00:00",
-  item: "IronIngot",
-  seriesId: "PIORECRUSDM",
-  displayName: "iron ore",
-  displayUnit: "USD / metric ton",
-  frequency: "M",
-  latestValue: 120,
-  latestDate: "2026-07-01",
-  changes: { "1m": 5, "3m": 10, "12m": 20 },
-  changesLabel: "monthly",
-  narrative: "Real iron ore: 120 USD / metric ton.",
-  cached: false,
-  error: null,
-  inGameMedian: 9,
-  inGameCurrency: "Credit",
-  inGameTrend: "rising",
-  inGameVerdict: "fair",
-}
-
 const RECIPE_COST = {
   fetchedAtISO: "2026-07-07T13:00:00+00:00",
   warnings: [],
-  costParams: { caloriePrice: 0, minutePrice: 0 },
   recipes: [
     {
       name: "IronIngotRecipe",
@@ -234,12 +212,10 @@ const PRICE_HISTORY = {
 function stubFetch(route: {
   market?: unknown
   logistics?: unknown
-  fairPrice?: unknown
   recipes?: unknown
   priceHistory?: unknown
   marketOk?: boolean
   logisticsOk?: boolean
-  fairPriceOk?: boolean
   recipesOk?: boolean
   priceHistoryOk?: boolean
 }) {
@@ -258,14 +234,6 @@ function stubFetch(route: {
         return Promise.resolve(
           new Response(JSON.stringify(route.logistics ?? {}), {
             status: route.logisticsOk === false ? 404 : 200,
-            headers: { "Content-Type": "application/json" },
-          }),
-        )
-      }
-      if (url.includes("/preview/fair_price.json")) {
-        return Promise.resolve(
-          new Response(JSON.stringify(route.fairPrice ?? {}), {
-            status: route.fairPriceOk === false ? 404 : 200,
             headers: { "Content-Type": "application/json" },
           }),
         )
@@ -306,7 +274,7 @@ afterEach(() => {
 
 describe("UsesPrice", () => {
   it("lists candidate items when no item is selected", async () => {
-    stubFetch({ market: MARKET, logistics: LOGISTICS, fairPrice: FAIR_PRICE, recipes: RECIPE_COST })
+    stubFetch({ market: MARKET, logistics: LOGISTICS, recipes: RECIPE_COST })
     renderPage()
 
     await waitFor(() => {
@@ -315,8 +283,8 @@ describe("UsesPrice", () => {
     expect(screen.getAllByTestId("pick-item")[0]).toHaveTextContent("Iron Ingot")
   })
 
-  it("renders the market, shelf, fair-price, and craft-cost panels for a selected item", async () => {
-    stubFetch({ market: MARKET, logistics: LOGISTICS, fairPrice: FAIR_PRICE, recipes: RECIPE_COST })
+  it("renders the market, shelf, and craft-cost panels for a selected item", async () => {
+    stubFetch({ market: MARKET, logistics: LOGISTICS, recipes: RECIPE_COST })
     renderPage("/uses/price?item=IronIngotItem")
 
     await waitFor(() => {
@@ -324,18 +292,15 @@ describe("UsesPrice", () => {
     })
     expect(screen.getByTestId("price-pill")).toHaveTextContent("9 Credit median")
     expect(screen.getByTestId("price-band-pill")).toHaveTextContent("IQR")
-    expect(screen.getByTestId("price-fred")).toHaveTextContent("iron ore benchmark")
     expect(screen.getByTestId("price-trend")).toHaveTextContent("rising")
     expect(screen.getByTestId("price-comparison-table")).toBeInTheDocument()
     expect(screen.getByTestId("price-cost-table")).toBeInTheDocument()
     expect(screen.getByTestId("price-suggestion-list")).toHaveTextContent("Target ask")
-    expect(screen.getByTestId("price-assumptions")).toHaveTextContent("Observed market")
-    expect(screen.getByTestId("price-assumptions")).toHaveTextContent("Labor valuation")
     expect(within(screen.getByTestId("price-comparison-table")).getAllByTestId("price-sell-row")).toHaveLength(1)
   })
 
   it("retains Jobs demand and margin context beside the pricing evidence", async () => {
-    stubFetch({ market: MARKET, logistics: LOGISTICS, fairPrice: FAIR_PRICE, recipes: RECIPE_COST })
+    stubFetch({ market: MARKET, logistics: LOGISTICS, recipes: RECIPE_COST })
     renderPage(
       "/uses/price?item=IronIngotItem&source=jobs&demandQty=20&demandReason=no_supply&confidence=complete&margin=4.5",
     )
@@ -350,7 +315,7 @@ describe("UsesPrice", () => {
   })
 
   it("keeps incomplete opportunity evidence explicitly low confidence", async () => {
-    stubFetch({ market: MARKET, logistics: LOGISTICS, fairPrice: FAIR_PRICE, recipes: RECIPE_COST })
+    stubFetch({ market: MARKET, logistics: LOGISTICS, recipes: RECIPE_COST })
     renderPage(
       "/uses/price?item=IronIngotItem&source=jobs&demandQty=7&demandReason=thin_supply&confidence=incomplete",
     )
@@ -366,7 +331,6 @@ describe("UsesPrice", () => {
     stubFetch({
       market: MARKET,
       logistics: LOGISTICS,
-      fairPrice: FAIR_PRICE,
       recipes: RECIPE_COST,
       priceHistory: PRICE_HISTORY,
     })
@@ -388,35 +352,6 @@ describe("UsesPrice", () => {
     expect(screen.getByTestId("price-unlocks")).toHaveTextContent("Advanced Smelting")
     expect(screen.getByTestId("price-unlocks")).toHaveTextContent("first observed day 3")
     expect(screen.getByTestId("price-unlocks")).toHaveTextContent("Iron Ingot Blast Recipe")
-  })
-
-  it("lets the player select a currency without blending markets", async () => {
-    const gold = {
-      ...MARKET.markets[0],
-      currency: "Gold",
-      medianPrice: 2,
-      latestPrice: 2,
-      totalTrades: 2,
-      totalVolume: 2,
-    }
-    stubFetch({
-      market: { ...MARKET, markets: [...MARKET.markets, gold] },
-      logistics: LOGISTICS,
-      fairPrice: FAIR_PRICE,
-      recipes: RECIPE_COST,
-    })
-    renderPage("/uses/price?item=IronIngotItem&currency=Credit")
-
-    await waitFor(() => {
-      expect(screen.getByTestId("price-currency-picker")).toBeInTheDocument()
-    })
-    fireEvent.click(screen.getByRole("button", { name: /Gold · 2 trades/ }))
-    await waitFor(() => {
-      expect(fetch).toHaveBeenCalledWith(
-        expect.stringContaining("currency=Gold"),
-        expect.objectContaining({ signal: expect.any(AbortSignal) }),
-      )
-    })
   })
 
   it("keeps thin and stale samples explicit", async () => {
@@ -441,7 +376,6 @@ describe("UsesPrice", () => {
     stubFetch({
       market: MARKET,
       logistics: LOGISTICS,
-      fairPrice: FAIR_PRICE,
       recipes: RECIPE_COST,
       priceHistory: thin,
     })
@@ -471,7 +405,6 @@ describe("UsesPrice", () => {
     stubFetch({
       market: MARKET,
       logistics: LOGISTICS,
-      fairPrice: FAIR_PRICE,
       recipes: RECIPE_COST,
       priceHistory: multimodal,
     })
@@ -508,7 +441,6 @@ describe("UsesPrice", () => {
     stubFetch({
       market: MARKET,
       logistics: LOGISTICS,
-      fairPrice: FAIR_PRICE,
       recipes: RECIPE_COST,
       priceHistory: empty,
     })
@@ -546,7 +478,6 @@ describe("UsesPrice", () => {
     stubFetch({
       market: MARKET,
       logistics: LOGISTICS,
-      fairPrice: FAIR_PRICE,
       recipes: RECIPE_COST,
       priceHistory: unobserved,
     })
@@ -584,7 +515,6 @@ describe("UsesPrice", () => {
     stubFetch({
       market: MARKET,
       logistics: LOGISTICS,
-      fairPrice: FAIR_PRICE,
       recipes: RECIPE_COST,
       priceHistory: outlier,
     })
@@ -602,7 +532,6 @@ describe("UsesPrice", () => {
     stubFetch({
       market: MARKET,
       logistics: LOGISTICS,
-      fairPrice: FAIR_PRICE,
       recipes: {},
       recipesOk: false,
     })
@@ -618,7 +547,6 @@ describe("UsesPrice", () => {
     stubFetch({
       market: MARKET,
       logistics: {},
-      fairPrice: FAIR_PRICE,
       recipes: RECIPE_COST,
       logisticsOk: false,
     })

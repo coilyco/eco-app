@@ -282,11 +282,10 @@ describe("Map page", () => {
     expect(raster).toHaveStyle({ opacity: "0" })
   })
 
-  it("keeps ecoregion matches and removes Mutation timeline plus everything below it", async () => {
+  it("removes Mutation timeline plus everything below it", async () => {
     stubFetch()
     renderPage()
-    await waitFor(() => expect(screen.getByTestId("eco-matches")).toBeInTheDocument())
-    expect(screen.getByTestId("eco-matches")).toHaveTextContent("Indo-Pacific archipelago")
+    await waitFor(() => expect(screen.getByTestId("species-risk")).toBeInTheDocument())
     expect(screen.queryByText("Mutation timeline")).not.toBeInTheDocument()
     expect(screen.queryByText("By category")).not.toBeInTheDocument()
     expect(screen.queryByText("Top world-shapers")).not.toBeInTheDocument()

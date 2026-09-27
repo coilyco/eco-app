@@ -93,9 +93,8 @@ describe("Recipes", () => {
     renderRecipes()
 
     await waitFor(() => {
-      expect(screen.getByTestId("recipes-pill")).toHaveTextContent("2 recipes")
+      expect(screen.getAllByTestId("recipe-row")).toHaveLength(2)
     })
-    expect(screen.getAllByTestId("recipe-row")).toHaveLength(2)
     expect(screen.getByText("Steel Axe").closest("a")).toHaveAttribute(
       "href",
       "/item?id=SteelAxe#recipe-SteelAxeRecipe",

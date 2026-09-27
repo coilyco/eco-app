@@ -141,40 +141,6 @@ const STORES = {
   warnings: [],
 }
 
-const CURRENCY = {
-  fetchedAtISO: "2026-06-12T13:00:00+00:00",
-  sourceBaseUrl: "http://x:3001",
-  daysElapsed: 12,
-  adminOk: true,
-  activeCurrenciesSeries: [],
-  personalWealthSeries: [],
-  governmentHoldingsSeries: [],
-  currencies: [
-    {
-      name: "Credit",
-      isMinted: true,
-      mintedAmount: 10000,
-      mintEvents: 3,
-      tradeCount: 40,
-      tradeVolume: 5000,
-      createdBy: "coilysiren",
-    },
-    {
-      name: "Wildwood Note",
-      isMinted: false,
-      mintedAmount: 0,
-      mintEvents: 0,
-      tradeCount: 2,
-      tradeVolume: 80,
-      createdBy: null,
-    },
-  ],
-  tradeRowsTotal: 42,
-  tradeCurrencyColumnSeen: true,
-  availableCurrencyDatasets: [],
-  warnings: [],
-}
-
 // Mirrors the real backend `LogisticsReport.to_dict()` (logistics.py): boards
 // carry nested `offers` / `buyFrom` / `sellTo`, and supply gaps carry a
 // structured `reason` plus the per-citizen `buyers` demand (eco-app#77).
@@ -294,8 +260,7 @@ const WATCHERS_REPORT = {
   ],
 }
 
-// The trades ledger folded into /trade (eco-app#90): its totalCurrencyVolume
-// (4907) and totalTrades (335) are the hero pill's authoritative volume + count.
+// The trades ledger folded into /trade (eco-app#90).
 const TRADES = {
   fetchedAtISO: "2026-06-12T13:00:00+00:00",
   sourceBaseUrl: "http://x:3001",
@@ -376,7 +341,6 @@ function stub(
   overrides: {
     market?: unknown
     stores?: unknown
-    currency?: unknown
     logistics?: unknown
     trades?: unknown
     watchers?: unknown
@@ -385,7 +349,6 @@ function stub(
   const planes: Record<string, unknown> = {
     "market.json": overrides.market ?? MARKET,
     "stores.json": overrides.stores ?? STORES,
-    "currency.json": overrides.currency ?? CURRENCY,
     "logistics.json": overrides.logistics ?? LOGISTICS,
     "get_trades.json": overrides.trades ?? TRADES,
     "watchers.json": overrides.watchers ?? { hits: [] },
@@ -418,19 +381,14 @@ afterEach(() => {
 })
 
 describe("Trade", () => {
-  it("renders the overview, currency strip, movers, drill chart, and cross-links", async () => {
+  it("renders the movers, drill chart, and cross-links", async () => {
     stub()
     renderTrade()
 
-    await waitFor(() => {
-      expect(screen.getByTestId("trade-pill")).toHaveTextContent("3 markets")
-    })
-    // Volume + trade count come from the folded-in ledger, not the market plane.
-    expect(screen.getByTestId("trade-pill")).toHaveTextContent("4,907 volume")
-    expect(screen.getByTestId("trade-pill")).toHaveTextContent("335 trades")
-    expect(screen.getByTestId("currency-strip")).toHaveTextContent("2 currencies")
     // Rising / falling movers land in their own lists.
-    expect(within(screen.getByTestId("risers")).getByText("Iron Ingot")).toBeInTheDocument()
+    await waitFor(() => {
+      expect(within(screen.getByTestId("risers")).getByText("Iron Ingot")).toBeInTheDocument()
+    })
     expect(within(screen.getByTestId("fallers")).getByText("Wheat")).toBeInTheDocument()
     // Default drill is the busiest market (Iron Ingot), charted.
     const drill = screen.getByTestId("drill")
@@ -439,7 +397,7 @@ describe("Trade", () => {
     expect(screen.getByTestId("link-jobs")).toHaveAttribute("href", "/jobs")
   })
 
-  it("folds the row-level trades ledger and party leaderboards into the page", async () => {
+  it("folds the row-level trades ledger into the page", async () => {
     stub()
     renderTrade()
 
@@ -449,10 +407,7 @@ describe("Trade", () => {
     // Newest-first row-level trades.
     expect(screen.getAllByTestId("trade-row").length).toBeGreaterThan(0)
     expect(screen.getByTestId("trades-table")).toHaveTextContent("ekans")
-    // Top sellers / buyers leaderboards ride along.
-    expect(screen.getAllByTestId("party-row").length).toBeGreaterThan(0)
     expect(screen.getByText("Detailed trades ledger")).toBeInTheDocument()
-    expect(screen.getByTestId("ledger-rollup-note")).toHaveTextContent("333 older trades")
   })
 
   it("deep-links a drill target via ?q=", async () => {
@@ -480,7 +435,7 @@ describe("Trade", () => {
     expect(screen.getByTestId("trade-filter")).toHaveValue("Wheat")
   })
 
-  it("renders the store & trader directory", async () => {
+  it("renders the store directory", async () => {
     stub()
     renderTrade()
 
@@ -488,7 +443,6 @@ describe("Trade", () => {
       expect(screen.getByTestId("directory")).toBeInTheDocument()
     })
     expect(within(screen.getByTestId("store-list")).getByText("Iron Emporium")).toBeInTheDocument()
-    expect(screen.getAllByTestId("trader-dir-row")).toHaveLength(2)
   })
 
   it("renders the logistics board when the plane has landed", async () => {
@@ -564,7 +518,6 @@ describe("Trade", () => {
     stub({
       market: NOT_FOUND,
       stores: NOT_FOUND,
-      currency: NOT_FOUND,
       logistics: NOT_FOUND,
       trades: NOT_FOUND,
       watchers: NOT_FOUND,
