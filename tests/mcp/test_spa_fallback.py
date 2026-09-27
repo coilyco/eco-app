@@ -131,3 +131,15 @@ def test_no_build_returns_build_hint(tmp_path: Path, monkeypatch: pytest.MonkeyP
     r = client.get("/trade")
     assert r.status_code == 404
     assert "frontend-build" in r.text
+
+
+def test_the_shell_revalidates_and_hashed_assets_cache_forever(dist: Path) -> None:
+    """A stale shell after a deploy names assets that are gone (eco-app#8324)."""
+    (dist / "assets" / "index-3f9a1c.js").write_text("console.log(1)")
+    client = TestClient(create_app())
+    for path in ("/", "/trade", "/index.html"):
+        assert client.get(path).headers["cache-control"] == "no-cache", path
+    asset = client.get("/assets/index-3f9a1c.js")
+    assert asset.status_code == 200
+    assert asset.headers["cache-control"] == "public, max-age=31536000, immutable"
+    assert "cache-control" not in client.get("/assets/missing.js").headers

@@ -326,6 +326,23 @@ async def preview_user_json(request: Request) -> JSONResponse:
     return JSONResponse(_sanitize_nonfinite(dossier))
 
 
+# The shell names the hashed bundle, so a stale shell after a deploy points at
+# assets that no longer exist. It revalidates every load against its ETag, and
+# the content-hashed assets never change. teable:coilyco/eco-app#8324.
+SHELL_CACHE_CONTROL = "no-cache"
+ASSET_CACHE_CONTROL = "public, max-age=31536000, immutable"
+
+
+class HashedAssets(StaticFiles):
+    """Vite's content-hashed `/assets`, cacheable forever."""
+
+    async def get_response(self, path: str, scope: Scope) -> Response:
+        response = await super().get_response(path, scope)
+        if response.status_code == 200:
+            response.headers["Cache-Control"] = ASSET_CACHE_CONTROL
+        return response
+
+
 def create_app(route_registry: DualRouteRegistry | None = None) -> Starlette:
     init_telemetry()
     dual_routes = route_registry if route_registry is not None else DualRouteRegistry()
@@ -384,6 +401,7 @@ def create_app(route_registry: DualRouteRegistry | None = None) -> Starlette:
         need the crawler to run the bundle first.
         """
         response = FileResponse(frontend_index)
+        response.headers["Cache-Control"] = SHELL_CACHE_CONTROL
         verdict = seo.classify(path, query)
         if verdict.canonical:
             response.headers["Link"] = f'<{verdict.canonical}>; rel="canonical"'
@@ -428,7 +446,10 @@ def create_app(route_registry: DualRouteRegistry | None = None) -> Starlette:
         # serving regardless of the rules below.
         candidate = (frontend_dist / path).resolve()
         if candidate.is_file() and candidate.is_relative_to(frontend_dist.resolve()):
-            return FileResponse(candidate)
+            served = FileResponse(candidate)
+            if candidate.suffix == ".html":
+                served.headers["Cache-Control"] = SHELL_CACHE_CONTROL
+            return served
         if _is_never_a_spa_route(path):
             return PlainTextResponse("Not found", status_code=404)
         target = seo.redirect_target(path)
@@ -715,7 +736,7 @@ def create_app(route_registry: DualRouteRegistry | None = None) -> Starlette:
     if admin_enabled:
         routes.append(Mount("/admin", app=handle_admin_mcp))
     if (frontend_dist / "assets").is_dir():
-        routes.append(Mount("/assets", app=StaticFiles(directory=frontend_dist / "assets")))
+        routes.append(Mount("/assets", app=HashedAssets(directory=frontend_dist / "assets")))
     if DEBUG:
         routes.append(livereload_route)
     routes.append(Route("/{path:path}", spa_fallback, methods=["GET"]))
