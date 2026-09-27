@@ -32,9 +32,12 @@ import time
 from collections import defaultdict
 from pathlib import Path
 
+from scripts.trades_norms import norms
+
 CHANNEL_ID = "1300205194386079866"
 REPO = Path(__file__).resolve().parent.parent
 DEFAULT_OUT = REPO / "data" / "eco_trades_baseline.json.gz"
+NORMS_OUT = REPO / "data" / "eco_trades_norms.json.gz"
 AUTOGEN = REPO / "data" / "eco_autogen_data.json.gz"
 
 LINE = re.compile(
@@ -142,13 +145,14 @@ def _item_ids(autogen: Path) -> dict[str, str]:
     return ids
 
 
-def build(raw: Path, autogen: Path = AUTOGEN) -> tuple[dict, list[str]]:
-    ids = _item_ids(autogen)
+def parse(*raws: Path) -> tuple[list[dict], dict[str, int], list[str]]:
+    """Every trade line in one or more raw dumps, each message once, plus the parse
+    counters and unread lines."""
     seen: set[str] = set()
     messages = skipped = mismatch = 0
     bad: list[str] = []
     obs: list[dict] = []
-    for line in raw.open():
+    for line in (ln for raw in raws for ln in raw.open()):
         m = json.loads(line)
         if m["id"] in seen:
             continue
@@ -195,6 +199,14 @@ def build(raw: Path, autogen: Path = AUTOGEN) -> tuple[dict, list[str]]:
                             "ts": m["timestamp"],
                         }
                     )
+    counts = {"messages": messages, "skipped": skipped, "mismatch": mismatch}
+    return obs, counts, bad
+
+
+def build(raw: Path, autogen: Path = AUTOGEN) -> tuple[dict, list[str]]:
+    ids = _item_ids(autogen)
+    obs, counts, bad = parse(raw)
+    messages, skipped, mismatch = counts["messages"], counts["skipped"], counts["mismatch"]
     by_item: dict[str, list[dict]] = defaultdict(list)
     currencies: dict[str, int] = defaultdict(int)
     for o in obs:
@@ -249,19 +261,65 @@ def main() -> None:
     b = sub.add_parser("build", help="aggregate a raw dump into the baseline file")
     b.add_argument("raw", type=Path)
     b.add_argument("--output", type=Path, default=DEFAULT_OUT)
+    n = sub.add_parser("norms", help="cycle- and upgrade-stage-relative norms")
+    n.add_argument("raw", type=Path, nargs="+")
+    n.add_argument("--latest-cycle", type=int, required=True)
+    n.add_argument("--output", type=Path, default=NORMS_OUT)
     args = ap.parse_args()
     if args.cmd == "fetch":
         fetch(args.raw)
         return
+    if args.cmd == "norms":
+        _write(args.output, build_norms(args.raw, args.latest_cycle))
+        return
     out, bad = build(args.raw)
-    body = json.dumps(out, separators=(",", ":"), ensure_ascii=False).encode()
-    # Gzipped like eco_autogen_data.json.gz: 3.9 MB of generated JSON nobody reads by hand.
-    if args.output.suffix == ".gz":
-        body = gzip.compress(body, compresslevel=9, mtime=0)
-    args.output.write_bytes(body)
-    print(json.dumps(out["source"], indent=1))
+    _write(args.output, out)
     if bad:
         print(f"{len(bad)} unparsed lines, first: {bad[:3]}", file=sys.stderr)
+
+
+def _write(path: Path, out: dict) -> None:
+    body = json.dumps(out, separators=(",", ":"), ensure_ascii=False).encode()
+    # Gzipped like eco_autogen_data.json.gz: 3.9 MB of generated JSON nobody reads by hand.
+    if path.suffix == ".gz":
+        body = gzip.compress(body, compresslevel=9, mtime=0)
+    path.write_bytes(body)
+    print(json.dumps(out["source"], indent=1))
+
+
+def build_norms(raws: list[Path], latest_cycle: int) -> dict:
+    obs, counts, bad = parse(*raws)
+    result = norms(obs, latest_cycle)
+    stamps = [o["ts"] for o in obs]
+    return {
+        "_comment": (
+            "Per-item price norms per cycle and per upgrade stage within a cycle, from the "
+            "full #eco-trades history. Generated, not authored: see docs/price-history.md."
+        ),
+        "source": {
+            "channel": "#eco-trades (Sirens Discord)",
+            "messages": counts["messages"],
+            "observations": len(obs),
+            "unparsedLines": len(bad),
+            "firstTrade": min(stamps)[:10] if stamps else None,
+            "lastTrade": max(stamps)[:10] if stamps else None,
+            "latestCycleAnchor": latest_cycle,
+            "cycleBoundaries": (
+                "Inferred, no canonical start list exists. Each boundary is the day currency "
+                "turnover peaks (the prior week's currencies end, the next week's begin), "
+                "snapped to the end of an idle gap when one is within 3 days. Each cycle's "
+                "`boundary` names the method. Cycles are numbered back from the anchor."
+            ),
+            "stageLag": (
+                "A stage is the highest upgrade traded so far in the cycle, so it trails the "
+                "world's true tech level by the time between an upgrade's first craft and its "
+                "first trade. `stageOnsetDay` gives when each stage was first traded."
+            ),
+            "basket": result["basket"],
+        },
+        "cycles": result["cycles"],
+        "items": result["items"],
+    }
 
 
 if __name__ == "__main__":
