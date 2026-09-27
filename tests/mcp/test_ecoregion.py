@@ -12,8 +12,10 @@ routes, so we verify:
 
 from __future__ import annotations
 
+import asyncio
 import json
 import math
+import time
 
 import httpx
 import mcp.types as mt
@@ -517,3 +519,35 @@ async def test_mcp_tool_call_end_to_end(monkeypatch: pytest.MonkeyPatch) -> None
     assert "Biome composition" in md
     assert payload["view"] == "eco_ecoregion"
     assert result.root.meta is None
+
+
+# The species fan-out stays inside one budget and says what it dropped (#8321).
+async def test_species_fetch_counts_what_the_budget_ran_out_on(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def fake(_base: str, name: str, _key: str) -> list[tuple[int, float]]:
+        if name == "Slow":
+            await asyncio.sleep(5)
+        return [(0, 1.0), (600, 2.0)]
+
+    monkeypatch.setattr(eco, "fetch_species_samples", fake)
+    monkeypatch.setattr(eco, "_SPECIES_BUDGET_S", 0.2)
+    started = time.monotonic()
+    series, unfetched = await eco._fetch_species_series("http://x", ["Deer", "Slow", "Wolf"], "k")
+    assert time.monotonic() - started < 1.0
+    assert list(series) == ["Deer", "Wolf"]
+    assert unfetched == 1
+
+
+async def test_species_fetch_runs_concurrently(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def fake(_base: str, _name: str, _key: str) -> list[tuple[int, float]]:
+        await asyncio.sleep(0.1)
+        return [(0, 1.0)]
+
+    monkeypatch.setattr(eco, "fetch_species_samples", fake)
+    names = [f"S{i}" for i in range(16)]
+    started = time.monotonic()
+    series, unfetched = await eco._fetch_species_series("http://x", names, "k")
+    # Sequential would be 1.6s. Eight at a time is two waves.
+    assert time.monotonic() - started < 0.8
+    assert len(series) == 16 and unfetched == 0

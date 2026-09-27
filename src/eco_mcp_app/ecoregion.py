@@ -19,6 +19,7 @@ call-tool path and the HTTP ``/preview`` route.
 
 from __future__ import annotations
 
+import asyncio
 import csv
 import io
 import json
@@ -727,6 +728,7 @@ def build_payload(
     saltwater_percent: float = 0.0,
     freshwater_percent: float = 0.0,
     species_risk: list[SpeciesRisk] | None = None,
+    species_unfetched: int = 0,
 ) -> dict[str, Any]:
     """Assemble the serializable payload used by both the Jinja card and JSON content.
 
@@ -806,6 +808,8 @@ def build_payload(
             "bust": [_drift_entry(d) for d in bust],
             "speciesSeen": species_seen,
             "speciesWithDrift": species_with_drift,
+            # Species the fetch budget ran out on, so a partial drift is never silent.
+            "speciesUnfetched": species_unfetched,
         },
         "speciesRisk": {
             "sourceState": (
@@ -841,6 +845,41 @@ def build_payload(
     }
 
 
+# Sequential per-species calls on a cold cache outran the 120s MCP transport.
+# Bounded fan-out under one budget. teable:coilyco/eco-app#8321.
+_SPECIES_CONCURRENCY = 8
+_SPECIES_BUDGET_S = 30.0
+
+
+async def _fetch_species_series(
+    base_url: str, names: list[str], api_key: str
+) -> tuple[dict[str, list[tuple[int, float]]], int]:
+    """Fetch every species' samples within the budget. Returns the series that
+    arrived and how many species the budget ran out on."""
+    gate = asyncio.Semaphore(_SPECIES_CONCURRENCY)
+
+    async def one(name: str) -> tuple[str, list[tuple[int, float]] | None]:
+        async with gate:
+            try:
+                return name, await fetch_species_samples(base_url, name, api_key)
+            except httpx.HTTPError:
+                return name, None
+
+    tasks = [asyncio.create_task(one(name)) for name in names]
+    if not tasks:
+        return {}, 0
+    done, pending = await asyncio.wait(tasks, timeout=_SPECIES_BUDGET_S)
+    for task in pending:
+        task.cancel()
+    series: dict[str, list[tuple[int, float]]] = {}
+    for task in tasks:
+        if task in done:
+            name, samples = task.result()
+            if samples:
+                series[name] = samples
+    return series, len(pending)
+
+
 async def gather_ecoregion_payload(
     info_url: str,
     *,
@@ -870,19 +909,13 @@ async def gather_ecoregion_payload(
     species_with_drift = 0
     admin_available = False
     species_risk: list[SpeciesRisk] = []
+    species_unfetched = 0
 
     if api_key:
         try:
             names = await fetch_specieslist(base_url, api_key)
             admin_available = True
-            series: dict[str, list[tuple[int, float]]] = {}
-            for name in names:
-                try:
-                    samples = await fetch_species_samples(base_url, name, api_key)
-                except httpx.HTTPError:
-                    continue
-                if samples:
-                    series[name] = samples
+            series, species_unfetched = await _fetch_species_series(base_url, names, api_key)
             species_seen = len(series)
             boom, bust = rank_drift(series)
             species_with_drift = len(boom) + len(bust)
@@ -898,6 +931,7 @@ async def gather_ecoregion_payload(
         species_seen=species_seen,
         species_with_drift=species_with_drift,
         admin_available=admin_available,
+        species_unfetched=species_unfetched,
         source_url=info_url,
         saltwater_percent=water["saltwater"],
         freshwater_percent=water["freshwater"],
