@@ -192,7 +192,7 @@ function SpeciesRiskSection({ risk }: { risk: SpeciesRisk }) {
         {formatCount(risk.atRiskCount)} at-risk species · {formatCount(risk.species.length)} tracked
       </p>
       <div className="ledger-scroll">
-        <table className="ledger-table species-risk-table">
+        <table tabIndex={0} className="ledger-table species-risk-table">
           <thead>
             <tr>
               <th>Species</th>

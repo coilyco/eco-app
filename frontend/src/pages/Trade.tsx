@@ -544,7 +544,7 @@ export default function Trade() {
             {logistics.arbitrage.length > 0 && (
               <>
                 <h3 className="card-title">Arbitrage spreads</h3>
-                <table className="ledger-table" data-testid="arbitrage-table">
+                <table tabIndex={0} className="ledger-table" data-testid="arbitrage-table">
                   <thead>
                     <tr>
                       <th>Item</th>
@@ -674,7 +674,7 @@ export default function Trade() {
           {visibleTrades.length === 0 ? (
             <p className="empty-note">No trades match.</p>
           ) : (
-            <table className="ledger-table" data-testid="trades-table">
+            <table tabIndex={0} className="ledger-table" data-testid="trades-table">
               <thead>
                 <tr>
                   <th>Day</th>
@@ -748,11 +748,11 @@ export default function Trade() {
       {loaded && (
         <section className="k-card-grid k-card-grid--condensed dir-cards">
           <Link className="k-card dir-card" to="/crafting" data-testid="link-crafting">
-            <h3>Crafting atlas →</h3>
+            <h2>Crafting atlas →</h2>
             <p>Where the traded goods come from — what's made, where, and from what.</p>
           </Link>
           <Link className="k-card dir-card" to="/jobs" data-testid="link-jobs">
-            <h3>Jobs →</h3>
+            <h2>Jobs →</h2>
             <p>Who can make the traded goods — professions, specialties, and skill history.</p>
           </Link>
         </section>

@@ -243,7 +243,7 @@ export default function Civics() {
                 Recent elections{" "}
                 <span className="section-sub">(newest {Math.min(RECENT, report.recentElections.length)})</span>
               </h2>
-              <table className="ledger-table" data-testid="elections-table">
+              <table tabIndex={0} className="ledger-table" data-testid="elections-table">
                 <thead>
                   <tr>
                     <th>Day</th>
@@ -298,7 +298,7 @@ export default function Civics() {
                 Recent arrivals &amp; departures{" "}
                 <span className="section-sub">(citizens joining / leaving)</span>
               </h2>
-              <table className="ledger-table" data-testid="demographics-table">
+              <table tabIndex={0} className="ledger-table" data-testid="demographics-table">
                 <thead>
                   <tr>
                     <th>Day</th>
@@ -331,7 +331,7 @@ export default function Civics() {
 
           <section className="k-card-grid k-card-grid--condensed dir-cards">
             <Link className="k-card dir-card" to="/info" data-testid="link-info">
-              <h3>Info →</h3>
+              <h2>Info →</h2>
               <p>The live snapshot — elected titles, active laws, and the world at a glance.</p>
             </Link>
           </section>

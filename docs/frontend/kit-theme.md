@@ -61,10 +61,7 @@ flair comes from the kit rather than from eco-app CSS.
 
 ## Checked
 
-Against the running SPA at 1280px, 390px, and 320px, on live data and with the
-API forced to fail: no horizontal overflow, no text pair under 4.5:1 (3:1 for
-large text) on `/`, `/info`, `/trade`, or `/jobs`, and a visible focus ring
-under keyboard.
+The kit's CI checks run on eco-app too. See [kit-checks.md](kit-checks.md).
 
 ## Not done yet
 

@@ -234,7 +234,7 @@ export default function Recipe() {
               to={itemHref(recipe.product.item)}
               data-testid="recipe-market-link"
             >
-              <h3>{recipe.product.displayName} on the market →</h3>
+              <h2>{recipe.product.displayName} on the market →</h2>
               <p>
                 Current price, who's been crafting it, and where to buy or sell it — the item's
                 full market history.
@@ -245,7 +245,7 @@ export default function Recipe() {
               to={`/uses/resolve?item=${encodeURIComponent(recipe.product.item)}`}
               data-testid="recipe-resolver-link"
             >
-              <h3>Make, buy, or find a crafter →</h3>
+              <h2>Make, buy, or find a crafter →</h2>
               <p>Compare recipe requirements, current offers, and observed specialty holders.</p>
             </Link>
             <Link
@@ -253,7 +253,7 @@ export default function Recipe() {
               to={`/recipes?ingredient=${encodeURIComponent(recipe.product.item)}`}
               data-testid="recipe-consumers-link"
             >
-              <h3>What it's used in →</h3>
+              <h2>What it's used in →</h2>
               <p>Every recipe that takes {recipe.product.displayName} as an ingredient.</p>
             </Link>
           </section>

@@ -162,7 +162,7 @@ export default function Items() {
                 No items match.
               </p>
             ) : (
-              <table className="ledger-table" data-testid="items-table">
+              <table tabIndex={0} className="ledger-table" data-testid="items-table">
                 <thead>
                   <tr>
                     <th>Item</th>
@@ -203,11 +203,11 @@ export default function Items() {
 
           <section className="k-card-grid k-card-grid--condensed dir-cards">
             <Link className="k-card dir-card" to="/trade" data-testid="link-trade">
-              <h3>Trade →</h3>
+              <h2>Trade →</h2>
               <p>The market and the full ledger — every individual trade, with price over time.</p>
             </Link>
             <Link className="k-card dir-card" to="/crafting" data-testid="link-crafting">
-              <h3>Crafting atlas →</h3>
+              <h2>Crafting atlas →</h2>
               <p>What the world is making — top items, stations, and crafters.</p>
             </Link>
           </section>

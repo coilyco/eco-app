@@ -73,7 +73,7 @@ export default function UsesArbitrage() {
           <h2 className="section-title">
             Arbitrage spreads <span className="section-sub">(ranked by opportunity)</span>
           </h2>
-          <table className="ledger-table" data-testid="arb-table">
+          <table tabIndex={0} className="ledger-table" data-testid="arb-table">
             <thead>
               <tr>
                 <th>Item</th>
@@ -116,11 +116,11 @@ export default function UsesArbitrage() {
       {loaded && (
         <section className="k-card-grid k-card-grid--condensed dir-cards">
           <Link className="k-card dir-card" to="/uses/buy-sell" data-testid="link-buy-sell">
-            <h3>Where to buy / sell →</h3>
+            <h2>Where to buy / sell →</h2>
             <p>Price one item across every shelf — the cheapest to buy, the best to sell into.</p>
           </Link>
           <Link className="k-card dir-card" to="/trade" data-testid="link-trade">
-            <h3>Trade &amp; logistics →</h3>
+            <h2>Trade &amp; logistics →</h2>
             <p>The whole market — movers, price history, stores, and the full ledger.</p>
           </Link>
         </section>

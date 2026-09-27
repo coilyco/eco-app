@@ -131,11 +131,11 @@ export default function UsesDemand() {
       {loaded && (
         <section className="k-card-grid k-card-grid--condensed dir-cards">
           <Link className="k-card dir-card" to="/uses/buy-sell" data-testid="link-buy-sell">
-            <h3>Where to buy / sell →</h3>
+            <h2>Where to buy / sell →</h2>
             <p>Pick an item and see the cheapest shelves to buy from and the best to sell into.</p>
           </Link>
           <Link className="k-card dir-card" to="/trade" data-testid="link-trade">
-            <h3>Trade &amp; logistics →</h3>
+            <h2>Trade &amp; logistics →</h2>
             <p>The whole market — movers, price history, stores, and the full ledger.</p>
           </Link>
         </section>

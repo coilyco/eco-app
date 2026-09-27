@@ -541,6 +541,10 @@ export default function Jobs() {
         </div>
       )}
 
+      <section className="hero hero-compact">
+        <h1 className="hero-title">Jobs</h1>
+      </section>
+
       <section className="intro">
         <p>
           Who does what on the Eco server and how they got there. Active and Long Term are literal

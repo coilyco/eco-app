@@ -165,7 +165,7 @@ export default function Home() {
           )}
         </div>
 
-        <aside className="k-panel k-stack k-stack--4" aria-labelledby="home-join">
+        <section className="k-panel k-stack k-stack--4" aria-labelledby="home-join">
           <h2 id="home-join" className="k-h3">
             Join the server
           </h2>
@@ -180,7 +180,7 @@ export default function Home() {
               Eco on Steam
             </a>
           </p>
-        </aside>
+        </section>
       </section>
 
       {/* Only with live status: six Unknown tiles read as a broken page, and the

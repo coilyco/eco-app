@@ -1,5 +1,6 @@
 import type { ReactNode } from "react"
 import { stripEcoMarkupInline } from "../lib/format"
+import { legibleColor } from "../lib/legibleColor"
 
 const COLOR_TAG = /<color\s*=\s*([^>]+)>|<\/color\s*>/gi
 const HEX_COLOR = /^#[0-9a-f]{3,8}$/i
@@ -31,7 +32,8 @@ const NAMED_COLORS = new Set([
 // Unity's named colours are tuned for the game's own panels, and the dark ones
 // (blue, navy, maroon) vanish on this site's ground. The server name itself is
 // <color=green>Eco</color> via <color=blue>Sirens</color>, so those map onto the
-// theme instead. Player-picked hex values stay exactly as written.
+// theme instead. Every other colour keeps its hue and is lightened only as far
+// as 4.5:1 on our lightest surface needs (lib/legibleColor.ts).
 const THEMED_COLORS: Record<string, string> = {
   green: "var(--k-brand)",
   blue: "var(--k-accent)",
@@ -41,6 +43,27 @@ const THEMED_COLORS: Record<string, string> = {
   maroon: "var(--k-cost)",
 }
 
+// The rest of Unity's named set, as CSS defines them, so they can be lifted to
+// legibility like a hex value rather than passed through as a keyword.
+const NAMED_HEX: Record<string, string> = {
+  aqua: "#00ffff",
+  black: "#000000",
+  brown: "#a52a2a",
+  cyan: "#00ffff",
+  fuchsia: "#ff00ff",
+  grey: "#808080",
+  lightblue: "#add8e6",
+  lime: "#00ff00",
+  magenta: "#ff00ff",
+  olive: "#808000",
+  orange: "#ffa500",
+  purple: "#800080",
+  silver: "#c0c0c0",
+  teal: "#008080",
+  white: "#ffffff",
+  yellow: "#ffff00",
+}
+
 interface Frame {
   color?: string
   children: ReactNode[]
@@ -48,9 +71,9 @@ interface Frame {
 
 function safeColor(raw: string): string | undefined {
   const color = raw.trim().replace(/^['"]|['"]$/g, "").toLowerCase()
-  if (HEX_COLOR.test(color) && [4, 5, 7, 9].includes(color.length)) return color
+  if (HEX_COLOR.test(color) && [4, 5, 7, 9].includes(color.length)) return legibleColor(color)
   if (!NAMED_COLORS.has(color)) return undefined
-  return THEMED_COLORS[color] ?? color
+  return THEMED_COLORS[color] ?? legibleColor(NAMED_HEX[color] ?? color)
 }
 
 function appendText(frame: Frame, text: string) {

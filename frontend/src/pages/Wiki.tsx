@@ -35,28 +35,29 @@ export default function Wiki() {
           A compact in-app index of the official stable English wiki, centered on the
           systems Eco players use most.
         </p>
-        <p className="catalog-note">
+        <p className="hero-note">
           Reviewed 2026-08-01. Eco Wiki content remains on Strange Loop Games' site and
           opens there. The official wiki is authoritative and may update after this index.
         </p>
       </section>
 
-      <section className="mod-catalog" aria-label="Eco Wiki topics">
-        <div className="mod-catalog-grid" data-testid="wiki-topics">
+      <section aria-label="Eco Wiki topics">
+        <ul className="k-card-grid" data-testid="wiki-topics">
           {WIKI_TOPICS.map((topic) => (
-            <article className="mod-catalog-card" key={topic.page}>
-              <h3>{topic.title}</h3>
-              <p>{topic.summary}</p>
+            <li className="k-card" key={topic.page}>
+              <h2 className="k-card__name">{topic.title}</h2>
+              <p className="k-card__claim">{topic.summary}</p>
               <a
+                className="k-btn k-btn--text wiki-link"
                 href={`${WIKI_ROOT}${encodeURIComponent(topic.page)}`}
                 target="_blank"
                 rel="noreferrer"
               >
                 Open stable wiki page ↗
               </a>
-            </article>
+            </li>
           ))}
-        </div>
+        </ul>
       </section>
     </Layout>
   )

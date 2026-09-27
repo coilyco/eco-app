@@ -128,7 +128,7 @@ export default function Replay() {
                 No events match.
               </p>
             ) : (
-              <table className="ledger-table" data-testid="replay-table">
+              <table tabIndex={0} className="ledger-table" data-testid="replay-table">
                 <thead>
                   <tr>
                     <th>Time (UTC)</th>
@@ -159,11 +159,11 @@ export default function Replay() {
 
           <section className="k-card-grid k-card-grid--condensed dir-cards">
             <Link className="k-card dir-card" to="/jobs" data-testid="link-jobs">
-              <h3>Jobs →</h3>
+              <h2>Jobs →</h2>
               <p>Who can make what — the professions and skills behind the people in this log.</p>
             </Link>
             <Link className="k-card dir-card" to="/trade" data-testid="link-trade">
-              <h3>Trade →</h3>
+              <h2>Trade →</h2>
               <p>The market and full ledger — every individual trade, who sold what to whom.</p>
             </Link>
           </section>

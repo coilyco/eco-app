@@ -355,7 +355,7 @@ a.k-card:visited {
 
 .stats {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(170px, 100%), 1fr));
   gap: 1rem;
 }
 
@@ -482,7 +482,7 @@ a.k-card:visited {
 
 .cards {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
   gap: 1rem;
   margin: 0;
   padding: 0;
@@ -495,10 +495,12 @@ a.k-card:visited {
   border: 1px solid var(--card-border);
   background: var(--card);
   backdrop-filter: blur(6px);
+  --k-content: var(--k-ground);
 }
 
-.card.dim {
-  opacity: 0.55;
+.card.dim,
+.card.dim .count {
+  color: var(--k-dim);
 }
 
 .card-tight {
@@ -645,7 +647,7 @@ a.k-card:visited {
   border: 1px solid var(--card-border);
   border-left: 3px solid var(--leaf-dim);
   border-radius: var(--k-r-1);
-  background: var(--card);
+  background: var(--k-content);
   font-size: var(--k-t-body);
   line-height: 1.45;
   color: var(--ink-soft);
@@ -662,7 +664,7 @@ a.k-card:visited {
 
 .skill-tree-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
   gap: 1rem;
 }
 
@@ -803,7 +805,7 @@ a.k-card:visited {
   padding: 0.65rem 1rem;
   border-radius: var(--k-r-1);
   border: 1px solid var(--card-border);
-  background: var(--k-ground);
+  background: var(--k-content);
   color: var(--ink);
   font: inherit;
   font-size: var(--k-t-body);
@@ -816,7 +818,7 @@ a.k-card:visited {
 
 .atlas-columns {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
   gap: 2rem;
 }
 
@@ -1108,7 +1110,7 @@ a.k-card:visited {
   height: auto;
   border: 1px solid var(--card-border);
   border-radius: var(--k-r-1);
-  background: var(--k-ground);
+  background: var(--k-content);
   padding: 0.5rem;
 }
 
@@ -1130,7 +1132,7 @@ a.k-card:visited {
   padding: 0.45rem;
   border: 1px solid var(--card-border);
   border-radius: var(--k-r-1);
-  background: var(--k-ground);
+  background: var(--k-content);
 }
 
 .price-history-chart .axis-label {
@@ -1338,14 +1340,14 @@ a.k-card:visited {
    without a categorical palette. */
 .prog-trend-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr));
   gap: 0.75rem;
 }
 
 .prog-trend {
   border: 1px solid var(--card-border);
   border-radius: var(--k-r-1);
-  background: var(--k-ground);
+  background: var(--k-content);
   padding: 0.75rem;
 }
 
@@ -1668,7 +1670,7 @@ a.k-card:visited {
   border-radius: var(--k-r-1);
   border: 1px solid var(--card-border);
   overflow: hidden;
-  background: var(--k-ground);
+  background: var(--k-content);
 }
 
 .map-base,
@@ -1782,7 +1784,7 @@ a.k-card:visited {
    sale now, who's buying. Collapses to one column on narrow screens. */
 .summary-cols {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
   gap: 2rem;
 }
 
@@ -1791,7 +1793,7 @@ a.k-card:visited {
   padding: 0.65rem 1rem;
   border-radius: var(--k-r-1);
   border: 1px solid var(--card-border);
-  background: var(--k-ground);
+  background: var(--k-content);
   color: var(--ink);
   font: inherit;
   font-size: var(--k-t-body);
@@ -1885,7 +1887,7 @@ a.k-card:visited {
    and quantity-prefixed component lists. */
 .recipe-facts {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr));
   gap: 1rem;
   margin-bottom: 1rem;
 }
@@ -1897,7 +1899,7 @@ a.k-card:visited {
   padding: 0.85rem 1rem;
   border: 1px solid var(--card-border);
   border-radius: var(--k-r-1);
-  background: var(--k-ground);
+  background: var(--k-content);
 }
 
 .fact-label {
@@ -1914,7 +1916,7 @@ a.k-card:visited {
 
 .recipe-bom {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
   gap: 2rem;
 }
 
@@ -2252,7 +2254,7 @@ a.k-card:visited {
 /* Pages not yet rebuilt on kit components still wear the kit through their
    own class names: the floor, radius, and type rules above, and these. */
 
-.dir-card h3 {
+.dir-card :is(h2, h3) {
   margin: 0;
   font-size: var(--k-t-lead);
 }
@@ -2308,4 +2310,15 @@ html {
   html {
     scroll-padding-top: 3.5rem;
   }
+}
+
+.hero-note {
+  margin: 0;
+  max-width: 68ch;
+  color: var(--k-dim);
+}
+
+.wiki-link {
+  margin-top: auto;
+  align-self: flex-start;
 }

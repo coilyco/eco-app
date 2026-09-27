@@ -571,7 +571,7 @@ export default function UsesPrice() {
                     {marketSummary(marketRow)}
                     {bandWidth !== null ? ` · IQR ${fmtPrice(bandWidth)} ${moneyUnit}` : ""}
                   </p>
-                  <table className="ledger-table" data-testid="price-band-table">
+                  <table tabIndex={0} className="ledger-table" data-testid="price-band-table">
                     <thead>
                       <tr>
                         <th>Day</th>
@@ -633,7 +633,7 @@ export default function UsesPrice() {
                       <TrendTag trend={marketRow.trend} delta={marketRow.trendDeltaPct} />
                     </p>
                   )}
-                  <table className="ledger-table" data-testid="price-comparison-table">
+                  <table tabIndex={0} className="ledger-table" data-testid="price-comparison-table">
                     <thead>
                       <tr>
                         <th>Side</th>
@@ -717,7 +717,7 @@ export default function UsesPrice() {
                       : "unpriced"}
                     {bestRecipe.cost?.complete ? "" : " · partial"}
                   </p>
-                  <table className="ledger-table" data-testid="price-cost-table">
+                  <table tabIndex={0} className="ledger-table" data-testid="price-cost-table">
                     <thead>
                       <tr>
                         <th>Ingredient</th>

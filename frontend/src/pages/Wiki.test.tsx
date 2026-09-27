@@ -13,7 +13,7 @@ describe("Eco Wiki snapshot", () => {
       </MemoryRouter>,
     )
 
-    const topics = within(screen.getByTestId("wiki-topics")).getAllByRole("article")
+    const topics = within(screen.getByTestId("wiki-topics")).getAllByRole("listitem")
     expect(topics).toHaveLength(14)
     expect(screen.getByRole("heading", { name: "Getting started" })).toBeInTheDocument()
     expect(screen.getByRole("heading", { name: "Modding" })).toBeInTheDocument()

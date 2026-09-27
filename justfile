@@ -62,6 +62,10 @@ frontend-build *ARGS:
 frontend-test *ARGS:
     @pnpm --dir frontend test "$@"
 
+# The coilyco kit's browser checks (axe, 16px floor, layering, overflow, weight) on every route. Native args - [--base URL] [--only /a,/b] [--json].
+frontend-kit-check *ARGS:
+    @pnpm --dir frontend kit-check "$@"
+
 # ESLint over frontend/src.
 frontend-lint *ARGS:
     @pnpm --dir frontend lint "$@"

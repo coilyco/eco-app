@@ -231,7 +231,7 @@ export default function UsesShopCheck() {
               No priced items recorded for this store yet.
             </p>
           ) : (
-            <table className="ledger-table" data-testid="shop-table">
+            <table tabIndex={0} className="ledger-table" data-testid="shop-table">
               <thead>
                 <tr>
                   <th>Item</th>

@@ -47,7 +47,7 @@ function OfferTable({
     return <p className="empty-note">No offers on this side right now.</p>
   }
   return (
-    <table className="ledger-table" data-testid={testid}>
+    <table tabIndex={0} className="ledger-table" data-testid={testid}>
       <thead>
         <tr>
           <th>Store</th>

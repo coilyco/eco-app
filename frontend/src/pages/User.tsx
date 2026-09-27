@@ -381,7 +381,7 @@ export default function User() {
           {dossier.jobs.specialties.length === 0 ? (
             <p className="empty-note">No learned specialties.</p>
           ) : (
-            <table className="ledger-table" data-testid="user-specialties">
+            <table tabIndex={0} className="ledger-table" data-testid="user-specialties">
               <thead>
                 <tr>
                   <th>Specialty</th>
@@ -411,7 +411,7 @@ export default function User() {
             <Stat value={formatCount(dossier.trades.trades.length)} label="Trades on record" />
           </div>
           {dossier.trades.trades.length > 0 && (
-            <table className="ledger-table" data-testid="user-trades">
+            <table tabIndex={0} className="ledger-table" data-testid="user-trades">
               <thead>
                 <tr>
                   <th>When</th>
@@ -447,7 +447,7 @@ export default function User() {
 
       {dossier?.currency && (
         <Section title="Currency holdings">
-          <table className="ledger-table" data-testid="user-holdings">
+          <table tabIndex={0} className="ledger-table" data-testid="user-holdings">
             <thead>
               <tr>
                 <th>Currency</th>
@@ -548,7 +548,7 @@ export default function User() {
             )}
           {dossier.progression.trajectory?.timeline &&
             dossier.progression.trajectory.timeline.length > 0 && (
-              <table className="ledger-table" data-testid="user-timeline">
+              <table tabIndex={0} className="ledger-table" data-testid="user-timeline">
                 <thead>
                   <tr>
                     <th>When</th>
