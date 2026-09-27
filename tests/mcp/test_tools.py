@@ -8,7 +8,12 @@ from typing import Any
 import mcp.types as mt
 import pytest
 
-from eco_mcp_app.server import KNOWN_PUBLIC_SERVERS, PUBLIC_SERVERS_OUTPUT_SCHEMA, build_server
+from eco_mcp_app.server import (
+    DISABLED_TOOLS,
+    KNOWN_PUBLIC_SERVERS,
+    PUBLIC_SERVERS_OUTPUT_SCHEMA,
+    build_server,
+)
 
 
 @pytest.mark.asyncio
@@ -20,7 +25,6 @@ async def test_list_tools_advertises_all_tools() -> None:
     assert names == {
         "get_server_status",
         "list_public_servers",
-        "get_economy",
         "get_map",
         "get_milestones",
         "get_species",
@@ -33,7 +37,6 @@ async def test_list_tools_advertises_all_tools() -> None:
         "get_progression",
         "get_social",
         "find_trade",
-        "fair_price",
         "get_government",
         "get_civics",
         "get_region",
@@ -149,3 +152,20 @@ def test_downsample_leaves_short_series_untouched() -> None:
     thinned, was_thinned = _downsample(points, 120)
     assert was_thinned is False
     assert thinned == points
+
+
+@pytest.mark.asyncio
+async def test_disabled_tools_are_unlisted_and_refused() -> None:
+    mcp = build_server()
+    list_handler = mcp.request_handlers[mt.ListToolsRequest]
+    listed = await list_handler(mt.ListToolsRequest(method="tools/list"))
+    assert not DISABLED_TOOLS & {tool.name for tool in listed.root.tools}
+    call = mcp.request_handlers[mt.CallToolRequest]
+    for name in sorted(DISABLED_TOOLS):
+        result = await call(
+            mt.CallToolRequest(
+                method="tools/call", params=mt.CallToolRequestParams(name=name, arguments={})
+            )
+        )
+        assert result.root.isError is True
+        assert result.root.content[0].text == f"{name} is disabled until it is fixed."

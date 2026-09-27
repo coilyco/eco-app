@@ -2005,7 +2005,15 @@ SERVER_INSTRUCTIONS = (
 )
 
 
-def build_server(route_registry: DualRouteRegistry | None = None) -> Server:
+# Tools that never served their purpose, hidden from tools/list and refused by
+# name until fixed. Delete a name to re-enable it. teable:coilyco/eco-app#8345, #8346.
+DISABLED_TOOLS: frozenset[str] = frozenset({"get_economy", "fair_price"})
+
+
+def build_server(
+    route_registry: DualRouteRegistry | None = None,
+    disabled_tools: frozenset[str] = DISABLED_TOOLS,
+) -> Server:
     """Construct the MCP Server with all handlers registered.
 
     Separated from `serve()` so it can be mounted in both the stdio transport
@@ -2176,7 +2184,8 @@ def build_server(route_registry: DualRouteRegistry | None = None) -> Server:
         duplicates = sorted(tool.name for tool in registered_tools if tool.name in existing_names)
         if duplicates:
             raise ValueError(f"dual routes duplicate existing MCP tools: {', '.join(duplicates)}")
-        return with_reply_templates([*tools, *registered_tools])
+        listed = [tool for tool in [*tools, *registered_tools] if tool.name not in disabled_tools]
+        return with_reply_templates(listed)
 
     # Argument vocabularies for model-free callers (sirens-echo#8249). No
     # annotations, so no client pulls them into a prompt as grounding.
@@ -3013,6 +3022,11 @@ def build_server(route_registry: DualRouteRegistry | None = None) -> Server:
 
     @server.call_tool()
     async def call_tool(name: str, arguments: dict[str, Any]) -> CallToolResult:
+        if name in disabled_tools:
+            return CallToolResult(
+                content=[TextContent(type="text", text=f"{name} is disabled until it is fixed.")],
+                isError=True,
+            )
         if dual_routes.has_tool(name):
             result = await dual_routes.call_mcp(name, arguments)
         else:

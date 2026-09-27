@@ -53,7 +53,7 @@ async def _advertised_tools() -> list[mt.Tool]:
     than registry entries, so enumerating the registry alone misses them. It
     missed get_social, which is one this record is about.
     """
-    mcp_server = build_server()
+    mcp_server = build_server(disabled_tools=frozenset())
     handler = mcp_server.request_handlers[mt.ListToolsRequest]
     result = await handler(mt.ListToolsRequest(method="tools/list"))
     return list(result.root.tools)

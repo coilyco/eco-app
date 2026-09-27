@@ -72,7 +72,7 @@ async def test_wave2_routes_share_success_payloads(name: str, path: str) -> None
     assert rest.status_code == 200
     assert rest.json() == expected
 
-    mcp = build_server(registry)
+    mcp = build_server(registry, disabled_tools=frozenset())
     call_handler = mcp.request_handlers[mt.CallToolRequest]
     called = await call_handler(
         mt.CallToolRequest(
@@ -103,7 +103,7 @@ async def test_wave2_required_and_constrained_inputs_have_transport_parity() -> 
         == 422
     )
 
-    mcp = build_server(registry)
+    mcp = build_server(registry, disabled_tools=frozenset())
     call_handler = mcp.request_handlers[mt.CallToolRequest]
     missing = await call_handler(
         mt.CallToolRequest(
@@ -147,7 +147,7 @@ async def test_wave2_downstream_failure_has_transport_parity() -> None:
     assert rest.status_code == 502
     assert rest.json() == error_payload
 
-    mcp = build_server(registry)
+    mcp = build_server(registry, disabled_tools=frozenset())
     call_handler = mcp.request_handlers[mt.CallToolRequest]
     called = await call_handler(
         mt.CallToolRequest(
@@ -174,7 +174,7 @@ async def test_wave2_unexpected_failure_stays_public_safe() -> None:
     assert rest.status_code == 500
     assert rest.json() == expected
 
-    mcp = build_server(registry)
+    mcp = build_server(registry, disabled_tools=frozenset())
     call_handler = mcp.request_handlers[mt.CallToolRequest]
     called = await call_handler(
         mt.CallToolRequest(
@@ -189,7 +189,7 @@ async def test_wave2_unexpected_failure_stays_public_safe() -> None:
 
 @pytest.mark.asyncio
 async def test_wave2_tools_are_discovered_once_with_typed_outputs() -> None:
-    mcp = build_server()
+    mcp = build_server(disabled_tools=frozenset())
     list_handler = mcp.request_handlers[mt.ListToolsRequest]
     listed = await list_handler(mt.ListToolsRequest(method="tools/list"))
     tools = [tool for tool in listed.root.tools if tool.name in WAVE2_TOOL_NAMES]

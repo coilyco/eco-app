@@ -343,7 +343,7 @@ async def test_tool_registered_and_calls_through(monkeypatch: pytest.MonkeyPatch
         return_value=_monthly_obs_response(values)
     )
 
-    mcp = build_server()
+    mcp = build_server(disabled_tools=frozenset())
     # Tool listing includes fair_price.
     list_handler = mcp.request_handlers[mt.ListToolsRequest]
     listed = await list_handler(mt.ListToolsRequest(method="tools/list"))
@@ -376,7 +376,7 @@ async def test_unknown_items_are_successful_empty_states_across_transports(item:
     from eco_mcp_app.http_app import create_app
     from eco_mcp_app.server import build_server
 
-    mcp = build_server()
+    mcp = build_server(disabled_tools=frozenset())
     call_handler = mcp.request_handlers[mt.CallToolRequest]
     req = mt.CallToolRequest(
         method="tools/call",

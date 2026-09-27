@@ -515,7 +515,7 @@ async def test_fair_price_tool_merges_in_game(
         return_value=httpx.Response(200, json=_CITIZENS_JSON)
     )
 
-    mcp = build_server()
+    mcp = build_server(disabled_tools=frozenset())
     handler = mcp.request_handlers[mt.CallToolRequest]
     req = mt.CallToolRequest(
         method="tools/call",

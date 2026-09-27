@@ -358,7 +358,7 @@ def test_compute_handles_missing_economy_desc() -> None:
 
 @pytest.mark.asyncio
 async def test_list_tools_includes_get_economy() -> None:
-    mcp = build_server()
+    mcp = build_server(disabled_tools=frozenset())
     handler = mcp.request_handlers[mt.ListToolsRequest]
     result = await handler(mt.ListToolsRequest(method="tools/list"))
     names = {tool.name for tool in result.root.tools}
@@ -371,7 +371,7 @@ async def test_call_get_economy_returns_htmx_fragment() -> None:
     respx.get(DEFAULT_ECO_INFO_URL).mock(return_value=httpx.Response(200, json=_info_body()))
     _mock_all_datasets({name: [1.0, 2.0, 3.0] for name in ECONOMY_DATASETS})
 
-    mcp = build_server()
+    mcp = build_server(disabled_tools=frozenset())
     handler = mcp.request_handlers[mt.CallToolRequest]
     req = mt.CallToolRequest(
         method="tools/call",
@@ -402,7 +402,7 @@ async def test_call_get_economy_returns_htmx_fragment() -> None:
 async def test_call_get_economy_handles_info_failure() -> None:
     respx.get(DEFAULT_ECO_INFO_URL).mock(side_effect=httpx.ConnectError("refused"))
 
-    mcp = build_server()
+    mcp = build_server(disabled_tools=frozenset())
     handler = mcp.request_handlers[mt.CallToolRequest]
     req = mt.CallToolRequest(
         method="tools/call",
