@@ -52,6 +52,32 @@ describe("Info", () => {
     )
   })
 
+  it("says the meteor is destroyed instead of counting down to it", async () => {
+    const destroyed = {
+      ...SAMPLE_STATUS,
+      cycle: { ...SAMPLE_STATUS.cycle, daysUntilMeteor: null },
+      achievements: [
+        { name: "Saved the World", text: "Destroyed the meteor on a server.\nDestroyed the meteor on Day 57, 23:13" },
+      ],
+    }
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify(destroyed), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      ),
+    )
+
+    renderServer()
+
+    await waitFor(() => {
+      expect(screen.getByTestId("meteor-destroyed")).toHaveTextContent("Destroyed on day 57 at 23:13.")
+    })
+    expect(screen.queryByText(/a meteor is coming/i)).not.toBeInTheDocument()
+  })
+
   it("inspects another public Eco server through the shared preview endpoint", async () => {
     const fetchMock = vi.fn().mockImplementation(() =>
       Promise.resolve(

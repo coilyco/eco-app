@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { MemoryRouter } from "react-router-dom"
 import Home from "./Home"
 import { SAMPLE_STATUS } from "../test/fixtures"
+import { SERVER_BRIEF } from "../lib/serverBrief"
 
 function renderHome() {
   return render(
@@ -138,5 +139,63 @@ describe("Home", () => {
     })
     expect(screen.getByTestId("dir-info")).toBeInTheDocument()
     expect(screen.queryByTestId("info-badges")).not.toBeInTheDocument()
+  })
+
+  it("keeps the brief, the join steps, and the invite on screen when live status fails", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("boom")))
+
+    renderHome()
+
+    await waitFor(() => {
+      expect(screen.getByTestId("home-live")).toHaveTextContent("Live status is unavailable")
+    })
+    expect(screen.getByRole("heading", { level: 1, name: "Eco via Sirens" })).toBeInTheDocument()
+    // The reviewed copy carries the invite, so the CTA survives an outage.
+    expect(screen.getByRole("link", { name: "Join the Discord" })).toHaveAttribute(
+      "href",
+      SERVER_BRIEF.join.discordUrl,
+    )
+    // Per-cycle facts never fall back to a stale copy. With no live status the
+    // whole strip steps aside rather than showing a row of Unknowns.
+    expect(screen.queryByTestId("home-facts")).not.toBeInTheDocument()
+    expect(screen.getByTestId("home-live")).not.toHaveTextContent(/cycle \d/i)
+    expect(screen.queryByTestId("home-meteor")).not.toBeInTheDocument()
+    expect(screen.getByTestId("home-configs")).toHaveTextContent(SERVER_BRIEF.configs[0].group)
+    expect(screen.getByTestId("home-mods")).toHaveTextContent(SERVER_BRIEF.mods[0].items[0].name)
+  })
+
+  it("reads cycle, world size, and a destroyed meteor from live status", async () => {
+    const live = {
+      ...SAMPLE_STATUS,
+      server: {
+        ...SAMPLE_STATUS.server,
+        description: "Eco via Sirens | Cycle 14 | High Collab | 100 x 100",
+        detailedDescription: "Cycle 14. 60-day meteor.",
+      },
+      cycle: { ...SAMPLE_STATUS.cycle, daysUntilMeteor: null },
+      achievements: [
+        { name: "Saved the World", text: "Destroyed the meteor on Day 57, 23:13" },
+      ],
+    }
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify(live), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      ),
+    )
+
+    renderHome()
+
+    await waitFor(() => {
+      expect(screen.getByTestId("home-meteor")).toHaveTextContent("Meteor destroyed on day 57 at 23:13")
+    })
+    const facts = screen.getByTestId("home-facts")
+    expect(facts).toHaveTextContent("Cycle14")
+    expect(facts).toHaveTextContent("World size100 × 100")
+    expect(facts).toHaveTextContent("Meteor60 days")
+    expect(facts).toHaveTextContent("CollaborationHigh")
   })
 })

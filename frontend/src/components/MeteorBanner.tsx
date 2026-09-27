@@ -1,15 +1,36 @@
-import type { EcoCycle } from "../lib/api"
+import type { EcoCycle, EcoStatus } from "../lib/api"
 import { formatDayHour, meteorProgressPercent } from "../lib/format"
+import { meteorDestroyed } from "../lib/serverBrief"
 
 // The meteor is the heartbeat of an Eco cycle: the single shared deadline
 // the whole server organizes around. It gets the loudest visual on the page.
 // The caption names both the day and the hour (eco-app#97) via the shared
 // world-clock helper, folding the /info TimeSinceStart snapshot.
-export default function MeteorBanner({ cycle }: { cycle: EcoCycle }) {
+export default function MeteorBanner({
+  cycle,
+  achievements,
+}: {
+  cycle: EcoCycle
+  achievements?: EcoStatus["achievements"]
+}) {
   // TimeSinceStart is absent from Eco 0.13's /info, so the world clock is
   // routinely unknown (eco-app#214). Drop the clause rather than caption
   // "day 0, 0h", which reads as a fresh restart.
   const dayHour = cycle.timeSinceStartS === null ? null : formatDayHour(cycle.timeSinceStartS)
+  // After the meteor is destroyed /info drops the countdown, and "a meteor is
+  // coming, 0%" would be a false fact on a public page. The world achievement
+  // is the only record of it.
+  const destroyed = meteorDestroyed(achievements)
+  if (destroyed) {
+    return (
+      <section className="meteor meteor-clear" data-testid="meteor-destroyed">
+        <p className="meteor-count">The meteor is destroyed</p>
+        <p className="meteor-caption">
+          {`Destroyed on day ${destroyed.day}${destroyed.time ? ` at ${destroyed.time}` : ""}.`}
+        </p>
+      </section>
+    )
+  }
   if (!cycle.hasMeteor) {
     return (
       <section className="meteor meteor-clear">

@@ -2038,3 +2038,160 @@ a.k-card:visited {
 .freshness-error {
   color: var(--meteor-deep);
 }
+
+/* --- Homepage command center (eco-app#8306) ---------------------------- */
+/* Kit components carry the look. These rules only lay them out, so every
+   colour below is a kit semantic token or eco-app's meteor alias. */
+
+.home-hero {
+  padding-block: var(--k-s-4) var(--k-s-2);
+}
+
+.home-hero .k-display {
+  margin: 0;
+  text-wrap: balance;
+}
+
+.home-h2 {
+  margin: 0;
+}
+
+.home-sub {
+  margin: 0;
+  max-width: 68ch;
+  color: var(--k-dim);
+}
+
+.k-note > p {
+  margin: 0;
+}
+
+.home-meteor {
+  margin: 0;
+  font-size: var(--k-t-lead);
+  font-weight: 700;
+  color: var(--k-text);
+}
+
+.home-meteor--warn {
+  color: var(--meteor);
+}
+
+.home-meteor--safe {
+  color: var(--k-brand);
+}
+
+.home-join-steps {
+  margin: 0;
+  padding-left: 1.4em;
+  display: grid;
+  gap: var(--k-s-2);
+}
+
+.home-join-steps strong {
+  color: var(--k-brand);
+}
+
+.home-unknown {
+  color: var(--k-dim);
+  font-weight: 600;
+}
+
+.home-grid {
+  display: grid;
+  gap: var(--k-s-4);
+  grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
+  align-items: start;
+}
+
+.home-grid--trees {
+  grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
+}
+
+.home-grid .k-h3 {
+  margin: 0;
+}
+
+/* One row per setting, so a long value wraps under its own label instead of
+   the whole list sharing one label column. */
+.home-deflist {
+  grid-template-columns: 1fr;
+  gap: var(--k-s-3);
+}
+
+.home-defrow {
+  display: grid;
+  gap: 2px;
+}
+
+.home-defrow dd {
+  margin: 0;
+}
+
+.home-count {
+  color: var(--k-dim);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.home-modlist {
+  margin: 0;
+  list-style: none;
+  display: grid;
+  gap: var(--k-s-3) var(--k-s-5);
+  grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
+}
+
+.home-modlist li {
+  display: grid;
+  gap: 2px;
+}
+
+.home-modlist span {
+  color: var(--k-dim);
+}
+
+.home-tree {
+  padding: var(--k-s-4);
+  border: var(--k-edge-w) solid var(--k-line-quiet);
+  border-radius: var(--k-r-1);
+  background: var(--k-surface);
+}
+
+.home-tree__root {
+  margin: 0 0 var(--k-s-2);
+  font-weight: 700;
+  color: var(--k-brand);
+}
+
+.home-tree__branches {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: var(--k-s-2);
+}
+
+.home-tree__branches li {
+  display: flex;
+  flex-wrap: wrap;
+  padding-left: var(--k-s-1);
+  gap: var(--k-s-1) var(--k-s-2);
+  align-items: baseline;
+}
+
+.home-tree__step {
+  display: inline-flex;
+  gap: var(--k-s-2);
+  align-items: baseline;
+}
+
+.home-tree__arrow {
+  color: var(--k-accent);
+}
+
+.home-skill--pick,
+.home-chip-pick {
+  color: var(--k-context);
+  font-weight: 700;
+}

@@ -74,7 +74,7 @@ export default function Info() {
 
       {status && (
         <>
-          <MeteorBanner cycle={status.cycle} />
+          <MeteorBanner cycle={status.cycle} achievements={status.achievements} />
           <StatGrid status={status} />
           <section aria-labelledby="online-players-heading">
             <h2 className="section-title" id="online-players-heading">

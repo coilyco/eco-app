@@ -18,7 +18,8 @@ consolidation (coilysiren/inbox#101).
   ordinary app. See [admin-mcp.md](admin-mcp.md).
 - **React frontend** - `frontend/`, a Vite SPA the fused service serves at `/`,
   styled by the coilyco kit under an Eco green theme. See
-  [frontend/kit-theme.md](frontend/kit-theme.md).
+  [frontend/kit-theme.md](frontend/kit-theme.md). The homepage is the server's
+  player-facing brief over live status, see [frontend/homepage.md](frontend/homepage.md).
 - **Jobs API** at `/jobs/api` and **Replay API** at `/replay/api`. See
   [progression.md](progression.md).
 - **Discord worker** - `src/eco_discord/`, a separate Pycord gateway process.
