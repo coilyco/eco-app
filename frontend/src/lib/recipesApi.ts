@@ -62,7 +62,9 @@ export interface RecipeSkillDef {
   displayName: string
   profession: string | null
   maxLevel: number
-  talents: RecipeSkillTalent[]
+  // The AutoGen graph the server now ships carries no talents, so this is
+  // absent on live data. Treat a missing list as "none recorded".
+  talents?: RecipeSkillTalent[]
 }
 
 export interface RecipeCounts {
@@ -133,13 +135,15 @@ async function getJson<T>(path: string, signal?: AbortSignal): Promise<T> {
 }
 
 export async function fetchRecipeIndex(signal?: AbortSignal): Promise<RecipeIndex> {
-  return await getJson<RecipeIndex>("/preview/recipes.json", signal)
+  // limit=0 asks for the whole graph. Without it the endpoint returns the MCP
+  // client's 25-recipe slice (wave3_routes.py), which is not the index.
+  return await getJson<RecipeIndex>("/preview/recipes.json?limit=0", signal)
 }
 
 export async function fetchRecipeIndexWithCost(
   signal?: AbortSignal,
 ): Promise<RecipeIndexWithCost | null> {
-  const body = await fetchJsonOrNull<RecipeIndexWithCost>("/preview/recipes.json?cost=1", signal)
+  const body = await fetchJsonOrNull<RecipeIndexWithCost>("/preview/recipes.json?cost=1&limit=0", signal)
   if (!body || !Array.isArray(body.recipes)) return null
   return body
 }

@@ -104,20 +104,23 @@ function SkillTreeCard({ tree }: { tree: SkillTree }) {
     <section className="skill-tree card" data-testid="skill-tree">
       <h3 className="card-title skill-tree-root">{tree.label}</h3>
       <ul className="skill-tree-branches">
-        {tree.specialties.map((skill) => (
+        {tree.specialties.map((skill) => {
+          const talents = skill.talents ?? []
+          return (
           <li key={skill.name}>
             <details className="skill-tree-specialty">
               <summary>
                 <span>{skill.displayName}</span>
                 <span className="section-sub">
-                  level {skill.maxLevel} · {formatCount(skill.talents.length)} talents
+                  level {skill.maxLevel}
+                  {talents.length > 0 && ` // ${formatCount(talents.length)} talents`}
                 </span>
               </summary>
-              {skill.talents.length === 0 ? (
+              {talents.length === 0 ? (
                 <p className="empty-note">No talent branches recorded for this specialty.</p>
               ) : (
                 <ul className="skill-tree-talents">
-                  {skill.talents.map((talent) => (
+                  {talents.map((talent) => (
                     <li key={talent.name}>
                       <span className="pill pill-active">level {talent.level}</span>
                       <span>
@@ -132,7 +135,8 @@ function SkillTreeCard({ tree }: { tree: SkillTree }) {
               )}
             </details>
           </li>
-        ))}
+          )
+        })}
       </ul>
     </section>
   )

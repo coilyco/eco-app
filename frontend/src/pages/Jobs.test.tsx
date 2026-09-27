@@ -367,6 +367,8 @@ const VALUE_TRADES = {
   warnings: [],
 }
 
+let recipesBody: unknown = VALUE_RECIPES
+
 function stubJobsFetch() {
   vi.stubGlobal(
     "fetch",
@@ -380,7 +382,7 @@ function stubJobsFetch() {
       // The SPA opts in to per-citizen timelines; MCP callers get the summary
       // layer by default (eco-app#232).
       else if (url.includes("/preview/progression.json")) body = PROGRESSION
-      else if (url.includes("/preview/recipes.json?cost=1")) body = VALUE_RECIPES
+      else if (url.includes("/preview/recipes.json?cost=1")) body = recipesBody
       else if (url.endsWith("/preview/logistics.json")) body = VALUE_LOGISTICS
       else if (url.endsWith("/preview/market.json")) body = VALUE_MARKET
       else if (url.includes("/preview/get_trades.json")) body = VALUE_TRADES
@@ -406,6 +408,7 @@ function renderJobs() {
 afterEach(() => {
   cleanup()
   vi.restoreAllMocks()
+  recipesBody = VALUE_RECIPES
 })
 
 describe("Jobs", () => {
@@ -485,6 +488,36 @@ describe("Jobs", () => {
     expect(screen.getByText("Quick Joinery")).toBeInTheDocument()
     expect(screen.getByText("Craft carpentry recipes faster.")).toBeInTheDocument()
     expect(screen.getByText("level 3")).toBeInTheDocument()
+  })
+
+  it("renders skill trees from the live AutoGen shape, which carries no talents", async () => {
+    // 2026-09-27: live skills arrive without `talents`, and the page crashed on
+    // skill.talents.length.
+    recipesBody = {
+      ...VALUE_RECIPES,
+      skills: VALUE_RECIPES.skills.map(({ talents: _drop, ...skill }) => skill),
+    }
+    stubJobsFetch()
+    renderJobs()
+
+    await waitFor(() => {
+      expect(screen.getByTestId("jobs-skill-trees")).toBeInTheDocument()
+    })
+    expect(screen.getAllByTestId("skill-tree")).toHaveLength(2)
+    expect(screen.getAllByText("No talent branches recorded for this specialty.").length).toBeGreaterThan(0)
+  })
+
+  it("asks the recipe plane for the whole graph, not the MCP slice", async () => {
+    stubJobsFetch()
+    renderJobs()
+
+    await waitFor(() => {
+      expect(screen.getByTestId("jobs-skill-trees")).toBeInTheDocument()
+    })
+    const urls = vi.mocked(fetch).mock.calls.map(([input]) => String(input))
+    expect(urls.filter((u) => u.includes("/preview/recipes.json"))).toEqual([
+      "/preview/recipes.json?cost=1&limit=0",
+    ])
   })
 
   it("folds the server-wide progression layer and leaderboards into the page", async () => {
