@@ -11,11 +11,13 @@
   "OtlpProtocol": "HttpProtobuf",
   "OtlpHeaders": "",
 
-  // Per-signal endpoints. Use these when logs and metrics route to different backends
+  // Per-signal endpoints. Use these when logs and metrics route to different backends.
+  // Give the full URL with its path: the plugin sets the endpoint in code, and the OTLP
+  // exporter then posts to it as-is, without appending /v1/logs, /v1/metrics or /v1/traces.
   // (e.g. logs to SigNoz, metrics to VictoriaMetrics). Empty means "fall back to OtlpEndpoint above".
   //
   // SigNoz logs example:
-  //   "OtlpLogsEndpoint": "http://signoz-otel-collector.observability.svc:4318",
+  //   "OtlpLogsEndpoint": "http://signoz-otel-collector.observability.svc:4318/v1/logs",
   //   "OtlpLogsProtocol": "HttpProtobuf",
   //   "OtlpLogsHeaders": "",
   //
