@@ -99,8 +99,9 @@ It sits in `NO_PRICE_TOOLS`: its stages already are the norm, and an attached
 
 - **Resolution** takes an exact name or Eco id, then a plural's singular, then a
   bare metal word as its bar (`iron` is Iron Bar), and retries once without a
-  leading `a`, `the` or `my`. `solar panel` is an alias of Solar Generator.
-  Nothing is fuzzy-matched. A
+  leading `a`, `the` or `my`. `solar panel` is an alias of Solar Generator. An
+  item only the recipe graph knows resolves with `traded: false`, no stages, and
+  the reply "<Item> has no recorded trades." Nothing is fuzzy-matched. A
   miss returns `resolved: null` and no price, with `candidates` only when 2 to 5
   item names hold the word whole.
 - **Basis** is the cross-cycle stage median times the live basket index, the
@@ -124,6 +125,36 @@ It sits in `NO_PRICE_TOOLS`: its stages already are the norm, and an attached
   `item` fills from `eco://vocab/priced-items`, built by `Norms.vocabulary` from
   the same rules `resolve` applies. A word no entry matches takes the caller's
   model path, which the server instructions tell to report a miss and stop.
+
+## Upgrade shorthand
+
+Members write upgrades as `au3`, `SBU4`, `bu5` or `MU0`
+(teable:coilyco/eco-app#8425, spec by game-dev). `src/eco_mcp_app/upgrade_words.py`
+reads the whole token `(s)?([bam])u ?([0-5])`, case-insensitive: B, A and M are
+Basic, Advanced and Modern, and `s` is the Scholars module.
+
+- **As the item.** `xu1`-`xu4` is `<Tier> Upgrade n`, and `sxu1`-`sxu4` is
+  `Scholars <Tier> Upgrade n`. A bare `xu5` is a miss listing that tier's
+  specialist modules, past the 5-name cap. `<specialty> xu5` (`mining bu5`) names
+  one module, and two modules for one specialty (masonry at Advanced) stay a miss
+  listing both. A tiered module resolves in either word order (Basic Gathering
+  Upgrade is Gathering Basic Upgrade), and the exact order wins when both are
+  items. `xu0`, `sxu0` and `sxu5` name no item, and the reply says why. A
+  module is tiered only by a tier word in its name. Smelting, Farming and others
+  carry none and are left out rather than guessed.
+- **As a stage qualifier**, through the optional `stage` input or a token inside
+  the item phrase (`iron at au3`). `xu1`-`xu4` and `sxu1`-`sxu4` are that stage.
+  `xu0` is the stage before the tier (BU0 none, AU0 Basic 4, MU0 Advanced 4), and
+  `xu5` is the tier's 4, since a 5 is converted from a 4. The whole phrase is
+  tried as an item first, so `mining bu5` stays an item.
+- **The reply leads with the asked stage**, then says it is the market median at
+  that world stage, not the member's cost to craft with that module. The ladder
+  follows while the 280-character cap allows. Below the floor, the lead says the
+  item was never traded that early.
+- **Vocabularies.** `eco://vocab/priced-items` carries every norms and recipe
+  item, the shorthand aliases, and a pseudo-entry per no-item token (`MU0`,
+  `BU5`) so a caller passes it back and gets its meaning.
+  `eco://vocab/stages` maps each token to its stage for the `stage` argument.
 
 ## See also
 

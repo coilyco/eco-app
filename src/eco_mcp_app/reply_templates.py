@@ -56,6 +56,8 @@ REPLY_TEMPLATES: dict[str, list[dict[str, Any]]] = {
     ],
     # The payload carries the per-stage line itself, since a template has no loop.
     "price_by_stage": [
+        # Stage first, so a caller filling both takes the shorthand off the item.
+        {"when_args": ["stage", "item"], "text": "{{reply}}"},
         {"when_args": ["item"], "text": "{{reply}}"},
         # Last, so a caller without `when_unmatched` reaches it only after a miss.
         {"when_unmatched": ["item"], "text": "Couldn't match that to one Eco item."},

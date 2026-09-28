@@ -92,7 +92,8 @@ entry's `field`. Source: `src/eco_mcp_app/vocab.py`.
   `eco://vocab/currencies` (the live named-currency roster, an empty list
   when admin data is unreachable), plus `eco://vocab/priced-items` for
   `price_by_stage` alone (items with trade history, `iron` as an alias of Iron
-  Bar). All are `application/json`
+  Bar, and upgrade shorthand), and `eco://vocab/stages` for its `stage`
+  argument. All are `application/json`
   `{"entries": [{"id", "name", "aliases"}]}` with no annotations, so no
   client reads them as grounding.
 - **Fields** - `find_trade.item`, `price_by_stage.item` and `get_currency.currency` take `name`.

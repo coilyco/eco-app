@@ -2060,6 +2060,13 @@ def _eco_icon() -> Icon:
 # What this server is for, sent on the MCP handshake so a client can tell which
 # surface answers a question. Kept to what distinguishes this server from the
 # others on a roster, since it is carried in the prompt on every turn.
+def _recipe_items() -> list[dict[str, Any]]:
+    """The recipe graph's items, so price_by_stage knows an item that never traded."""
+    from .recipes import load_recipe_index
+
+    return vocab_mod.item_vocabulary(load_recipe_index())
+
+
 SERVER_INSTRUCTIONS = (
     "Live and historical data for the Sirens Eco game server, and reference "
     "data for Eco itself. Reach for this to answer what is happening in the "
@@ -2187,7 +2194,13 @@ def build_server(
             Resource(
                 uri=AnyUrl(vocab_mod.PRICED_ITEMS_URI),
                 name="eco-priced-item-vocabulary",
-                description="Every item with trade history, for price_by_stage's item argument.",
+                description="Every item price_by_stage resolves, shorthand included.",
+                mimeType="application/json",
+            ),
+            Resource(
+                uri=AnyUrl(vocab_mod.STAGES_URI),
+                name="eco-stage-vocabulary",
+                description="Every upgrade stage with its shorthand, for price_by_stage's stage.",
                 mimeType="application/json",
             ),
         ]
@@ -2203,7 +2216,11 @@ def build_server(
             entries = await _currency_vocabulary_entries()
         elif key == vocab_mod.PRICED_ITEMS_URI:
             price_norms = norms_mod.load()
-            entries = price_norms.vocabulary() if price_norms else []
+            entries = price_norms.vocabulary(_recipe_items()) if price_norms else []
+        elif key == vocab_mod.STAGES_URI:
+            from .upgrade_words import stage_vocabulary
+
+            entries = stage_vocabulary()
         else:
             raise ValueError(f"unknown resource {key}")
         body = json.dumps({"entries": entries})
@@ -2219,7 +2236,9 @@ def build_server(
                     isError=True,
                 )
             ctx = await norms_mod.live_context(args.get("server"))
-            stage_payload = price_norms.price_by_stage(args.get("item"), ctx)
+            stage_payload = price_norms.price_by_stage(
+                args.get("item"), ctx, stage=args.get("stage"), catalog=_recipe_items()
+            )
             return CallToolResult(
                 content=[
                     TextContent(type="text", text=norms_mod.price_by_stage_markdown(stage_payload)),

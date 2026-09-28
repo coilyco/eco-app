@@ -106,6 +106,14 @@ class PriceByStageInput(BaseModel):
             "Nothing is fuzzy-matched, so an unknown word returns no item rather than a guess."
         )
     )
+    stage: str | None = Field(
+        default=None,
+        description=(
+            "An upgrade stage to lead the answer with: shorthand such as au3, SBU4 or MU0, "
+            'or a ladder name such as "Advanced 2". Shorthand inside item works too, as in '
+            '"iron at au3".'
+        ),
+    )
     server: str | None = Field(
         default=None,
         description="Eco server whose live cycle sets the currency. Omit for the default.",
@@ -264,13 +272,14 @@ def register_wave2_routes(registry: DualRouteRegistry, invoke: ToolInvoker) -> N
         name="price_by_stage",
         title="Eco - median price per upgrade stage",
         description=(
-            "Answer what an Eco item is worth and what to pay or charge for it: its median "
-            "trade price at each upgrade stage (none, Basic 1 to Modern 4) across past cycles, "
-            "with the trade count behind each, in the live cycle's currency, and marked "
-            "estimates where trades are thin. Answers 'how much should I sell X for', 'what "
-            "should I pay for X', 'how much should I buy X for', 'what's a good price for X', "
-            "and 'what is X worth'. An item it cannot match returns no price. For which store "
-            "to buy from or sell to right now use find_trade."
+            "Answer what an Eco item is worth and what to pay or charge for it, upgrade "
+            "modules included (Basic Upgrade 4, au3, sbu4, mining bu5): its median trade price "
+            "at each upgrade stage (none, Basic 1 to Modern 4) across past cycles, with the "
+            "trade count behind each, in the live cycle's currency, and marked estimates where "
+            "trades are thin. Answers 'how much should I sell X for', 'what should I pay for "
+            "X', 'how much should I buy X for', 'what's a good price for X', 'what is X worth', "
+            "and 'what does X go for at au3'. An item it cannot match returns no price. For "
+            "which store to buy from or sell to right now use find_trade."
         ),
         rest_path=WAVE2_PATHS["price_by_stage"],
         input_model=PriceByStageInput,

@@ -13,7 +13,7 @@ import os
 import re
 import statistics
 import time
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass, field
 from functools import cache
 from typing import Any
@@ -35,6 +35,11 @@ _NUMERIC = re.compile(r"^\d+$")
 _CYCLE = re.compile(r"\bCycle\s+(\d+)", re.I)
 _TAGS = re.compile(r"<[^>]*>")
 _LVL = re.compile(r"\s*Lvl\s*(\d)")
+# Recipe-graph items as `eco://vocab/items` entries: an item there with no trades is
+# still an item, so it resolves with no price rather than as a miss (#8425).
+Catalog = Sequence[dict[str, Any]]
+# "mining bu5": a specialty word before a tier's 5 names one specialist module.
+_SPECIALTY = re.compile(r"^(.+?)\s+([bam])u ?5$", re.I)
 _DETERMINERS = frozenset({"a", "an", "the", "my", "some", "your", "our"})
 # Names members use that no item carries. Checked like a name, plurals included.
 _ALIASES = {"solar panel": "Solar Generator"}
@@ -196,11 +201,21 @@ class Norms:
         if rest and head.lower() in _DETERMINERS:
             bases.append(rest)
         for base in bases:
-            if name := self.key(base) or self._resolve_form(base.lower()):
+            if name := self.key(base) or self._resolve_form(base.lower(), self._by_lower):
                 return name
         return None
 
-    def _resolve_form(self, lowered: str) -> str | None:
+    def _bases(self, word: str | None) -> list[str]:
+        query = " ".join((word or "").split())
+        if not query:
+            return []
+        bases = [query]
+        head, _, rest = query.partition(" ")
+        if rest and head.lower() in _DETERMINERS:
+            bases.append(rest)
+        return bases
+
+    def _resolve_form(self, lowered: str, by_lower: dict[str, str]) -> str | None:
         forms = [lowered]
         if lowered.endswith("ies"):
             forms.append(lowered[:-3] + "y")
@@ -209,12 +224,55 @@ class Norms:
         if lowered.endswith("s"):
             forms.append(lowered[:-1])
         for form in forms:
-            if name := self._by_lower.get(form) or self._aliases.get(form):
+            if name := by_lower.get(form) or self._aliases.get(form):
                 return name
             # Only the metals are named `<Word> Bar`, and players say "iron" for the bar.
-            if " " not in form and (name := self._by_lower.get(f"{form} bar")):
+            if " " not in form and (name := by_lower.get(f"{form} bar")):
                 return name
         return None
+
+    def find(self, word: str | None, catalog: Catalog = ()) -> tuple[str | None, dict[str, Any]]:
+        """(item name, miss detail) for the whole phrase. The name is a norms item or,
+        failing that, a recipe-catalog item with no trades. Upgrade shorthand is read
+        first (teable:coilyco/eco-app#8425): `au3`, `mining bu5`, and the xu0/xu5 misses."""
+        from . import upgrade_words as uw
+
+        names = {
+            form.lower(): e["name"]
+            for e in catalog
+            for form in (e["name"], e["id"], *e.get("aliases", []))
+        }
+        names.update(self._by_lower)
+        modules_by_tier = uw.specialist_modules(set(names.values()))
+        for base in self._bases(word):
+            if uw.parse(base):
+                if (name := uw.generic_item(base)) and name in names.values():
+                    return name, {}
+                if note := uw.meaning(base):
+                    return None, {"note": note}
+                _, tier, _ = uw.parse(base) or (False, "", 0)
+                groups = modules_by_tier[tier].values()
+                shown = uw.canonical(base)
+                note = f"{shown} is a specialist {tier} upgrade. Name one, like mining {base}:"
+                return None, {"note": note, "candidates": sorted(n for g in groups for n in g)}
+            if m := _SPECIALTY.match(base):
+                head, tier = m[1], uw.TIERS[m[2].lower()]
+                modules = modules_by_tier[tier].get(head.lower(), [])
+                if len(modules) == 1:
+                    return modules[0], {}
+                if modules:
+                    note = f"{base} could be either:"
+                    return None, {"note": note, "candidates": sorted(modules)}
+            if name := self.key(base) or self._resolve_form(base.lower(), self._by_lower):
+                return name, {}
+            if name := self._resolve_form(base.lower(), names):
+                return name, {}
+            # Exact order won above, so a swap only reaches an item the exact order is not.
+            if (swapped := uw.swapped_tier(base)) and (
+                name := self._resolve_form(swapped.lower(), names)
+            ):
+                return name, {}
+        return None, {}
 
     def first_traded_stage(self, name: str) -> int | None:
         """The lowest stage the item ever traded at, in any currency or barter.
@@ -252,41 +310,71 @@ class Norms:
             out.append((i, value, i not in real))
         return out
 
-    def vocabulary(self) -> list[dict[str, Any]]:
-        """Every item `resolve` accepts, as `eco://vocab/priced-items` entries. The bare
-        metal word rides as an alias, so a caller matching words fills `item` exactly
-        when this tool would resolve it. A plural needs no entry: callers fold s/es."""
+    def vocabulary(self, catalog: Catalog = ()) -> list[dict[str, Any]]:
+        """Every item `find` accepts, as `eco://vocab/priced-items` entries: norms items,
+        recipe items with no trades, their shorthand, and the shorthand that names no
+        item. A caller matching words then fills `item` exactly when this tool would
+        resolve it. A plural needs no entry: callers fold s/es."""
+        from . import upgrade_words as uw
+
         ids = {n: i for i, n in self._by_id.items()}
+        ids.update({e["name"]: e["id"] for e in catalog if e["name"] not in ids})
+        names = sorted(set(self.items) | {e["name"] for e in catalog})
+        shorthand = uw.item_aliases(names)
         entries = []
-        for name in sorted(self.items):
+        for name in names:
             aliases = [ids[name]] if name in ids else []
+            aliases += shorthand.get(name, [])
             aliases += [a for a, n in self._aliases.items() if n == name]
             head, _, tail = name.rpartition(" ")
             if tail == "Bar" and head and " " not in head:
                 aliases.append(head)
             entries.append({"id": ids.get(name, name), "name": name, "aliases": aliases})
-        return entries
+        return entries + uw.pseudo_entries()
 
-    def candidates(self, word: str | None) -> list[str]:
+    def candidates(self, word: str | None, catalog: Catalog = ()) -> list[str]:
         """Item names holding the word whole, only when there are 2 to 5 of them."""
         query = " ".join((word or "").split())
         if not query:
             return []
         pattern = re.compile(rf"\b{re.escape(query)}\b", re.I)
-        hits = sorted(name for name in self.items if pattern.search(name))
+        names = set(self.items) | {e["name"] for e in catalog}
+        hits = sorted(name for name in names if pattern.search(name))
         return hits if 2 <= len(hits) <= 5 else []
 
-    def price_by_stage(self, word: str | None, ctx: LiveContext) -> dict[str, Any]:
+    def price_by_stage(
+        self,
+        word: str | None,
+        ctx: LiveContext,
+        stage: str | None = None,
+        catalog: Catalog = (),
+    ) -> dict[str, Any]:
         """The cross-cycle median per upgrade stage for one item, in the live currency.
 
         Basis is Jev's pick on #8423: the cross-cycle stage median times the live
         cycle's basketIndex, the same basis as `referencePrice`. Sold and Bought
         lines pool, one observation per trade line."""
-        name = self.resolve(word)
+        from . import upgrade_words as uw
+
+        name, miss = self.find(word, catalog)
+        qualifier = stage
+        # "iron at au3": the shorthand qualifies, the rest is the item (#8425).
+        if name is None and not miss and qualifier is None and word:
+            rest, token = uw.split_qualifier(word)
+            if token:
+                name, miss = self.find(rest, catalog)
+                qualifier = token
         if name is None:
-            missing = {"query": word, "resolved": None, "candidates": self.candidates(word)}
+            missing: dict[str, Any] = {
+                "query": word,
+                "resolved": None,
+                "candidates": miss.get("candidates", self.candidates(word, catalog)),
+            }
+            if "note" in miss:
+                missing["note"] = miss["note"]
             return {**missing, "reply": _stage_reply(missing)}
         item_id = next((i for i, n in self._by_id.items() if n == name), None)
+        item_id = item_id or next((e["id"] for e in catalog if e["name"] == name), None)
         out: dict[str, Any] = {
             "query": word,
             "resolved": name,
@@ -296,8 +384,17 @@ class Norms:
             "cycle": ctx.cycle,
             "liveStage": ctx.stage,
             "minN": MIN_N,
+            "traded": name in self.items,
             "stages": [],
         }
+        if qualifier is not None:
+            out["stageQuery"] = qualifier
+            out["stage"] = uw.parse_stage(qualifier)
+            if uw.parse(qualifier):
+                out["stageShorthand"] = uw.canonical(qualifier)
+        if name not in self.items:
+            out["reply"] = _stage_reply(out)
+            return out
         index = self.cycles.get(ctx.cycle or -1, {}).get("basketIndex")
         if not ctx.home:
             out["note"] = "norms describe the Sirens server only"
@@ -618,10 +715,13 @@ def _stage_reply(payload: dict[str, Any]) -> str:
     """The one-line answer `{{reply}}` templates. Kept terse so an item with every
     stage traded still fits the 280-character template cap."""
     if payload.get("resolved") is None:
-        text = f"Couldn't match {payload.get('query')!r} to one Eco item."
+        text = payload.get("note") or f"Couldn't match {payload.get('query')!r} to one Eco item."
         if payload.get("candidates"):
-            text += " Items with that word: " + ", ".join(payload["candidates"]) + "."
-        return text
+            joiner = " " if payload.get("note") else " Items with that word: "
+            text += joiner + ", ".join(payload["candidates"]) + "."
+        return str(text)
+    if not payload.get("traded", True):
+        return f"{payload['item']} has no recorded trades."
     if payload.get("note"):
         return f"{payload['item']}: {payload['note']}."
     if not payload["stages"]:
@@ -631,44 +731,69 @@ def _stage_reply(payload: dict[str, Any]) -> str:
     tiers: dict[str, list[str]] = {}
     for row in payload["stages"]:
         tier, _, number = row["stage"].partition(" ")
-        if row["median"] is None:
-            figure = "?"
-        elif row["estimated"]:
-            figure = f"~{row['median']:.2f}"
-        else:
-            figure = f"{row['median']:.2f} ({row['n']})"
-        tiers.setdefault(tier, []).append(f"{number} {figure}".lstrip())
+        tiers.setdefault(tier, []).append(f"{number} {_figure(row, short=True)}".lstrip())
     groups = [
         f"no upgrade {rows[0]}" if tier == "none" else f"{tier} " + ", ".join(rows)
         for tier, rows in tiers.items()
     ]
-    text = (
-        f"{payload['item']} median {payload['currency']} by stage (trades, ~est.): "
-        + ". ".join(groups)
-        + "."
-    )
     floor = payload.get("firstTradedStage")
-    if floor and floor != STAGES[0]:
-        text += f" None before {floor}."
+    tail = f" None before {floor}." if floor and floor != STAGES[0] else ""
+    head = f"{payload['item']} median {payload['currency']} by stage (trades, ~est.): "
+    lead = _stage_lead(payload)
+    if lead is None:
+        return head + ". ".join(groups) + "." + tail
+    # A qualifier leads, and the ladder follows while the cap allows.
+    text = lead
+    for count in range(len(groups), 0, -1):
+        longer = f"{lead} By stage (trades, ~est.): " + ". ".join(groups[:count]) + "."
+        if len(longer + tail) <= 280:
+            return longer + tail
     return text
+
+
+def _figure(row: dict[str, Any], short: bool = False) -> str:
+    if row["median"] is None:
+        return "?"
+    if row["estimated"]:
+        short_form = f"~{row['median']:.2f}"
+        return short_form if short else f"{short_form} estimated ({row['n']} trades)"
+    return (
+        f"{row['median']:.2f} ({row['n']})" if short else f"{row['median']:.2f} ({row['n']} trades)"
+    )
+
+
+def _stage_lead(payload: dict[str, Any]) -> str | None:
+    """The qualifier's own line: its median, or why there is none."""
+    if "stageQuery" not in payload:
+        return None
+    asked = payload.get("stage")
+    shown = f" ({payload['stageShorthand']})" if payload.get("stageShorthand") else ""
+    if asked is None:
+        return f"{payload['stageQuery']!r} is not an upgrade stage."
+    floor = payload.get("firstTradedStage")
+    if floor and STAGES.index(asked) < STAGES.index(floor):
+        return f"{payload['item']} was never traded before {floor}, so nothing at {asked}{shown}."
+    row = next((r for r in payload["stages"] if r["stage"] == asked), None)
+    if row is None or row["median"] is None:
+        return f"{payload['item']} has no price at {asked}{shown}."
+    return (
+        f"{payload['item']} at {asked}{shown}: {_figure(row)} median {payload['currency']}, "
+        "the market price at that world stage, not your cost to craft with that module."
+    )
 
 
 def price_by_stage_markdown(payload: dict[str, Any]) -> str:
     """The readable block for `price_by_stage`: one line per stage, nothing else priced."""
-    if payload.get("resolved") is None:
+    if payload.get("resolved") is None or not payload.get("traded", True):
         return str(payload["reply"])
     head = f"**{payload['item']}**, median trade price per upgrade stage"
     lines = [f"{head} in {payload['currency']}"]
     if payload.get("note"):
         lines.append(payload["note"])
+    if (lead := _stage_lead(payload)) is not None:
+        lines.append(lead)
     for row in payload["stages"]:
-        if row["median"] is None:
-            figure = "no price"
-        elif row["estimated"]:
-            figure = f"~{row['median']:.2f} estimated"
-        else:
-            figure = f"{row['median']:.2f}"
-        lines.append(f"- {row['stage']}: {figure} ({row['n']} trades)")
+        lines.append(f"- {row['stage']}: {_figure(row)}")
     floor = payload.get("firstTradedStage")
     if floor and floor != STAGES[0]:
         lines.append(f"Never traded before {floor}, so no price below it.")

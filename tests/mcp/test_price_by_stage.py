@@ -11,9 +11,9 @@ import mcp.types as mt
 import pytest
 from pydantic import AnyUrl
 
-from eco_mcp_app import norms
+from eco_mcp_app import norms, upgrade_words
 from eco_mcp_app.reply_templates import MAX_REPLY_CHARS, REPLY_TEMPLATES, render_reply
-from eco_mcp_app.server import build_server
+from eco_mcp_app.server import _recipe_items, build_server
 from eco_mcp_app.vocab import PRICED_ITEMS_URI
 
 LIVE = norms.LiveContext(stage="Modern 4", cycle=14)
@@ -227,12 +227,17 @@ def test_every_item_fits_the_template_cap(real: norms.Norms) -> None:
 
 
 def test_every_vocabulary_form_resolves_to_its_own_entry(real: norms.Norms) -> None:
-    entries = real.vocabulary()
-    assert len(entries) == len(real.items)
-    for entry in entries:
+    # A caller fills `item` from this vocabulary, so every form must land where it says.
+    catalog = _recipe_items()
+    pseudo = {e["name"] for e in upgrade_words.pseudo_entries()}
+    for entry in real.vocabulary(catalog):
         for form in (entry["name"], entry["id"], *entry["aliases"]):
-            assert real.resolve(form) == entry["name"], form
-    iron = next(e for e in entries if e["name"] == "Iron Bar")
+            name, miss = real.find(form, catalog)
+            if entry["name"] in pseudo:
+                assert name is None and miss["note"], form
+            else:
+                assert name == entry["name"], form
+    iron = next(e for e in real.vocabulary(catalog) if e["name"] == "Iron Bar")
     assert iron == {"id": "IronBarItem", "name": "Iron Bar", "aliases": ["IronBarItem", "Iron"]}
 
 
