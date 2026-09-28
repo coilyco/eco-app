@@ -52,6 +52,10 @@ against this same contract.
   when none is eligible the caller falls back to its LLM path.
 - **`when_args`** - every named call argument was passed and is not empty or
   whitespace. An empty list always applies.
+- **`when_unmatched`** - in place of `when_args`, a literal reply for when every
+  named argument's vocabulary was read and matched nothing in the message. The
+  caller answers it without calling the tool, so it holds no placeholder, and
+  it never renders over a payload (teable:coilyco/sirens-echo#8424).
 - **`text`** - plain text with `{{path}}` placeholders and nothing else, no
   sections or loops. A path is dot-separated keys into the call result's
   `structuredContent`. A decimal segment indexes a list. A leading `args`

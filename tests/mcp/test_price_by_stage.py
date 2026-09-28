@@ -246,3 +246,11 @@ async def test_the_priced_items_vocabulary_is_served() -> None:
     assert isinstance(contents[0], mt.TextResourceContents)
     names = {e["name"] for e in json.loads(contents[0].text)["entries"]}
     assert {"Iron Bar", "Hewn Log", "Basic Upgrade 4"} <= names
+
+
+def test_the_miss_entry_is_literal_and_never_renders_over_a_payload(real: norms.Norms) -> None:
+    miss = REPLY_TEMPLATES["price_by_stage"][-1]
+    assert miss == {"when_unmatched": ["item"], "text": "Couldn't match that to one Eco item."}
+    # Only the item template answers a found item, even with the miss listed.
+    found = render_reply([miss], _stage(real, "iron"), {"item": "Iron Bar"})
+    assert found is None

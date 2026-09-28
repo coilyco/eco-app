@@ -55,7 +55,11 @@ REPLY_TEMPLATES: dict[str, list[dict[str, Any]]] = {
         },
     ],
     # The payload carries the per-stage line itself, since a template has no loop.
-    "price_by_stage": [{"when_args": ["item"], "text": "{{reply}}"}],
+    "price_by_stage": [
+        {"when_args": ["item"], "text": "{{reply}}"},
+        # Last, so a caller without `when_unmatched` reaches it only after a miss.
+        {"when_unmatched": ["item"], "text": "Couldn't match that to one Eco item."},
+    ],
     "get_currency": [
         {
             "when_args": ["currency"],
@@ -119,6 +123,9 @@ def render_reply(
 ) -> str | None:
     """The first eligible template rendered, or None when none is eligible."""
     for template in templates:
+        # A `when_unmatched` entry answers before any call, so never over a payload.
+        if template.get("when_unmatched"):
+            continue
         if not all(_present(args.get(name)) for name in template.get("when_args", [])):
             continue
         rendered = _render_one(str(template.get("text", "")), payload, args)
