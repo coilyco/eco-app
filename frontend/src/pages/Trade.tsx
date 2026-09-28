@@ -305,12 +305,12 @@ export default function Trade() {
           What to <span className="accent">buy, sell, and ship</span>
         </h1>
         <p className="hero-tagline">
-          The whole market on one always-on page — movers, price history, every store, and the
+          The whole market on one always-on page: movers, price history, every store, and the
           logistics of what to do next. The website answer to Discord's ephemeral DM embeds.
         </p>
         {nothing && (
           <p className="hero-pill hero-pill-muted" data-testid="trade-error">
-            trade data unavailable right now — check back once the game server has traded
+            trade data unavailable right now (check back once the game server has traded)
           </p>
         )}
         <FreshnessNote
@@ -354,7 +354,7 @@ export default function Trade() {
       {market && markets.length === 0 && (
         <section>
           <p className="empty-note" data-testid="market-empty">
-            No priced markets yet. Early in a cycle this is normal — check back after a few days of
+            No priced markets yet. Early in a cycle this is normal, so check back after a few days of
             trading.
           </p>
         </section>
@@ -601,11 +601,11 @@ export default function Trade() {
         <section className="k-card-grid k-card-grid--condensed dir-cards">
           <Link className="k-card dir-card" to="/crafting" data-testid="link-crafting">
             <h2>Crafting atlas →</h2>
-            <p>Where the traded goods come from — what's made, where, and from what.</p>
+            <p>Where the traded goods come from: what's made, where, and from what.</p>
           </Link>
           <Link className="k-card dir-card" to="/jobs" data-testid="link-jobs">
             <h2>Jobs →</h2>
-            <p>Who can make the traded goods — professions, specialties, and skill history.</p>
+            <p>Who can make the traded goods: professions, specialties, and skill history.</p>
           </Link>
         </section>
       )}

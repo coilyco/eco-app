@@ -64,8 +64,8 @@ export default function Civics() {
       {report && report.adminAvailable && report.totalEvents === 0 && (
         <section>
           <p className="empty-note" data-testid="civics-empty">
-            No civic events recorded on this server yet. Early in a cycle this is normal —
-            elections, citizenships, and settlements show up here as they happen.
+            No civic events recorded on this server yet. Early in a cycle this is normal.
+            Elections, citizenships, and settlements show up here as they happen.
           </p>
         </section>
       )}

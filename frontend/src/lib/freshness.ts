@@ -68,7 +68,7 @@ export const REFRESH_CONTRACTS = {
     mode: "live",
     pollMs: LIVE_POLL_MS,
     staleAfterMs: 2 * LIVE_POLL_MS,
-    rationale: "Players trade continuously; the ledger grows during a session.",
+    rationale: "Players trade continuously, so the ledger grows during a session.",
   },
 
   // --- Manual: advances, but slowly enough that a timer is not justified ---
@@ -80,7 +80,7 @@ export const REFRESH_CONTRACTS = {
   crafting: {
     mode: "manual",
     staleAfterMs: 15 * MINUTE,
-    rationale: "Crafting totals accumulate steadily; a stale read misleads nobody in minutes.",
+    rationale: "Crafting totals accumulate steadily, and a stale read misleads nobody in minutes.",
   },
   progression: {
     mode: "manual",
@@ -90,14 +90,14 @@ export const REFRESH_CONTRACTS = {
   jobs: {
     mode: "manual",
     staleAfterMs: 15 * MINUTE,
-    rationale: "Specialty holders change when someone levels, which is rare within a session.",
+    rationale: "Specialty holders change only when someone levels, and few do within a session.",
   },
   logistics: {
     mode: "manual",
     staleAfterMs: 15 * MINUTE,
     rationale:
       "Live shelf offers change with play, but the arbitrage and supply-gap boards are read " +
-      "to make a decision, then acted on — a timer would move the answer mid-read.",
+      "to make a decision, then acted on. A timer would move the answer mid-read.",
   },
   food: {
     mode: "manual",
@@ -131,7 +131,7 @@ export const REFRESH_CONTRACTS = {
   shopCheck: {
     mode: "manual",
     staleAfterMs: 15 * MINUTE,
-    rationale: "Composes stores and market; both are manual on the same cadence.",
+    rationale: "Composes stores and market, both manual on the same cadence.",
   },
   resolve: {
     mode: "manual",
@@ -154,7 +154,7 @@ export const REFRESH_CONTRACTS = {
   // --- Static: cannot advance within a session ----------------------------
   recipes: {
     mode: "static",
-    rationale: "The recipe graph is a vendored build artifact; it changes on deploy.",
+    rationale: "The recipe graph is a vendored build artifact that changes on deploy.",
   },
   items: {
     mode: "static",
@@ -172,7 +172,7 @@ export const REFRESH_CONTRACTS = {
   },
   fairPrice: {
     mode: "static",
-    rationale: "FRED commodity series are monthly or daily; a session never outlives one.",
+    rationale: "FRED commodity series are monthly or daily, so a session never outlives one.",
   },
   priceHistory: {
     mode: "static",

@@ -116,11 +116,11 @@ export default function UsesArbitrage() {
         <section className="k-card-grid k-card-grid--condensed dir-cards">
           <Link className="k-card dir-card" to="/uses/buy-sell" data-testid="link-buy-sell">
             <h2>Where to buy / sell →</h2>
-            <p>Price one item across every shelf — the cheapest to buy, the best to sell into.</p>
+            <p>Price one item across every shelf: the cheapest to buy, the best to sell into.</p>
           </Link>
           <Link className="k-card dir-card" to="/trade" data-testid="link-trade">
             <h2>Trade &amp; logistics →</h2>
-            <p>The whole market — movers, price history, stores, and the full ledger.</p>
+            <p>The whole market: movers, price history, stores, and the full ledger.</p>
           </Link>
         </section>
       )}

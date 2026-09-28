@@ -146,7 +146,7 @@ export default function UsesDemand() {
           </Link>
           <Link className="k-card dir-card" to="/trade" data-testid="link-trade">
             <h2>Trade &amp; logistics →</h2>
-            <p>The whole market — movers, price history, stores, and the full ledger.</p>
+            <p>The whole market: movers, price history, stores, and the full ledger.</p>
           </Link>
         </section>
       )}

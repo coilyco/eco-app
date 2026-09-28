@@ -82,7 +82,7 @@ export default function Items() {
       {index && index.totalItems === 0 && (
         <section>
           <p className="empty-note" data-testid="items-empty">
-            No items recorded on this server yet. Early in a cycle this is normal — check back
+            No items recorded on this server yet. Early in a cycle this is normal, so check back
             after a few days of trading and crafting.
           </p>
         </section>

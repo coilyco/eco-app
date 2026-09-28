@@ -1,14 +1,26 @@
-# DiscordLink rich-preview parity
+# DiscordLink preview parity
 
 Inventory captured from `eco-ops/mods/Configs/DiscordLink.eco` on 2026-07-23.
-Only read-only display/preview surfaces are in scope; the configured duplex
-chat bridge stays enabled and automatic notification feeds are not command previews.
+Only read-only display/preview surfaces are in scope. The configured duplex
+chat bridge stays enabled, and automatic notification feeds are not command previews.
 
-| Active DiscordLink surface | Rich Eco replacement | eco-app data plane | SPA link | State |
-| --- | --- | --- | --- | --- |
-| Server information display (players, in-game time, meteor, elections) | `/eco status` and `/eco player <name>` | `/preview.json`, `/preview/user.json` | `/`, `/civics` | Implemented; election detail is on the civics page rather than an always-posted channel card. The per-player web page was removed (eco-app#8385), so player detail is Discord-only. |
-| Map display | `/eco world` | `/preview/world.json` | `/map` | Implemented. |
-| Work-party display | No safe replacement yet | No public work-party data plane exists | — | Director/ops checkpoint: add or approve a public-safe eco-app work-party plane before disabling this DiscordLink display. |
+Each active DiscordLink surface, with its slash-command replacement, the eco-app data plane behind it, the SPA link, and its state:
+
+* **Server information display** (players, in-game time, meteor, elections)
+  * Replacement - `/eco status` and `/eco player <name>`.
+  * Data plane - `/preview.json`, `/preview/user.json`.
+  * SPA link - `/`, `/civics`.
+  * State - Implemented. Election detail is on the civics page rather than an always-posted channel card. The per-player web page was removed (teable:coilyco/eco-app#8385), so player detail is Discord-only.
+* **Map display**
+  * Replacement - `/eco world`.
+  * Data plane - `/preview/world.json`.
+  * SPA link - `/map`.
+  * State - Implemented.
+* **Work-party display**
+  * Replacement - none safe yet.
+  * Data plane - no public work-party data plane exists.
+  * SPA link - none.
+  * State - Director/ops checkpoint: add or approve a public-safe eco-app work-party plane before disabling this DiscordLink display.
 
 The active trade, crafting, server-status, player-status, and election feed
 channels are automatic notifications rather than read-only previews. They stay

@@ -419,7 +419,7 @@ export default function Jobs() {
 
       {error && !data && (
         <p className="loading" data-testid="jobs-error">
-          jobs data unavailable right now — the world spins on without us for a moment
+          jobs data unavailable right now (the world spins on without us for a moment)
         </p>
       )}
 

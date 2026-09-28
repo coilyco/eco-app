@@ -60,7 +60,7 @@ export default function Replay() {
           The server's <span className="accent">chronicle</span>, event by event
         </h1>
         <p className="hero-tagline">
-          Every recorded player action — logins, chat, blocks placed — newest first. A read-only
+          Every recorded player action (logins, chat, blocks placed), newest first. A read-only
           mirror of the in-game Chronicler.
         </p>
         {events && (
