@@ -408,6 +408,12 @@ class Norms:
             )
         floor = self.first_traded_stage(name)
         out["firstTradedStage"] = STAGES[floor] if floor is not None else None
+        # Every trade line in any currency, so a reply with no median can say why.
+        out["trades"] = sum(
+            entry.get("n", 0)
+            for slot in self.items[name]["cycles"].values()
+            for entry in slot.get("byCurrency", {}).values()
+        )
         for i, value, estimated in self._stage_medians(name, floor):
             bucket = self.items[name]["crossCycle"].get(STAGES[i]) or {}
             out["stages"].append(
@@ -729,7 +735,13 @@ def _stage_reply(payload: dict[str, Any]) -> str:
     if payload.get("note"):
         return f"{payload['item']}: {payload['note']}."
     if not payload["stages"]:
-        return f"{payload['item']} has no recorded trades by stage."
+        # Traded, but only in currencies with no basket index to compare (#8425).
+        count = payload.get("trades", 0)
+        plural = "" if count == 1 else "s"
+        return (
+            f"{payload['item']} has {count} recorded trade{plural}, none in a comparable "
+            "currency, so no median."
+        )
     # Grouped by tier so the stage number alone repeats: every item then fits.
     # `~` marks an estimate. Its thin count stays in the payload, not the line.
     tiers: dict[str, list[str]] = {}

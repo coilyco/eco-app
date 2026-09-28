@@ -111,6 +111,17 @@ def test_a_specialty_and_its_5_resolve_through_the_source_table(
     assert _ask(real, word)["resolved"] == item
 
 
+def test_a_trade_only_in_an_incomparable_currency_says_so(real: norms.Norms) -> None:
+    # Advanced Masonry's one trade was cycle 11, Modern 4, in Nookies, which is
+    # not that cycle's primary currency, so no crossCycle median exists.
+    out = _ask(real, "masonry mu5")
+    assert (out["resolved"], out["trades"], out["stages"]) == ("Advanced Masonry Upgrade", 1, [])
+    assert out["reply"] == (
+        "Advanced Masonry Upgrade has 1 recorded trade, none in a comparable currency, "
+        "so no median."
+    )
+
+
 def test_a_specialty_not_in_that_tier_is_no_module(real: norms.Norms) -> None:
     assert _ask(real, "pottery bu5")["resolved"] is None
 
