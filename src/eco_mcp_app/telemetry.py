@@ -36,6 +36,7 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.trace import Link, SpanKind, Status, StatusCode
 from sentry_sdk.integrations.fastapi import FastApiIntegration
 from sentry_sdk.integrations.logging import LoggingIntegration
+from sentry_sdk.integrations.mcp import MCPIntegration
 from sentry_sdk.integrations.starlette import StarletteIntegration
 
 if TYPE_CHECKING:
@@ -109,6 +110,10 @@ def init_error_tracking() -> bool:
             traces_sample_rate=0.0,
             environment=os.getenv("OTEL_DEPLOYMENT_ENVIRONMENT", "homelab"),
             before_send=_sentry_before_send,
+            # Frame locals and request bodies can carry member and admin data.
+            include_local_variables=False,
+            max_request_body_size="never",
+            send_default_pii=False,
             integrations=[
                 # Breadcrumbs only: an ERROR log is a handled error, and those stay in SigNoz.
                 LoggingIntegration(event_level=None),
@@ -116,6 +121,8 @@ def init_error_tracking() -> bool:
                 StarletteIntegration(failed_request_status_codes=set()),
                 FastApiIntegration(failed_request_status_codes=set()),
             ],
+            # It reports every MCP tool error, and those are handled results.
+            disabled_integrations=[MCPIntegration()],
         )
         sentry_sdk.set_tag(
             "service.name", os.getenv("OTEL_SERVICE_NAME", "eco-app").strip() or "eco-app"

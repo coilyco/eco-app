@@ -113,3 +113,27 @@ def test_init_failure_logs_the_class_and_never_the_dsn(monkeypatch, caplog):
         assert telemetry.init_error_tracking() is False
     assert "ValueError" in caplog.text
     assert "secret-key" not in caplog.text
+
+
+def test_a_crash_reaches_sentry_without_its_body_or_frame_locals(captured):
+    import json
+
+    from starlette.requests import Request
+
+    async def crash(request: Request):
+        member_text = (await request.json())["text"]  # noqa: F841
+        raise RuntimeError("route crashed")
+
+    telemetry.init_error_tracking()
+    app = Starlette(routes=[Route("/crash", crash, methods=["POST"])])
+    secret = "-".join(["MEMBER", "SECRET"])
+    client = TestClient(app, raise_server_exceptions=False)
+    assert client.post("/crash", json={"text": secret}).status_code == 500
+    sentry_sdk.flush()
+    assert [e["exception"]["values"][-1]["value"] for e in captured.events] == ["route crashed"]
+    assert secret not in json.dumps(captured.events)
+
+
+def test_the_mcp_tool_error_integration_is_off(captured):
+    telemetry.init_error_tracking()
+    assert sentry_sdk.get_client().get_integration("mcp") is None
