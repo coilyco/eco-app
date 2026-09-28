@@ -142,6 +142,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Publish immutable application image
+        env:
+          SENTRY_DSN: ${{ secrets.SENTRY_FRONTEND_DSN }}
         run: bash scripts/publish-image.sh
       - name: Alert Telegram on main failure
         if: ${{ failure() && github.ref == 'refs/heads/main' }}

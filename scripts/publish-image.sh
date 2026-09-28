@@ -39,6 +39,7 @@ docker build \
   --pull \
   --build-arg HTTP_PROXY="${FORGEJO_EGRESS_PROXY}" \
   --build-arg HTTPS_PROXY="${FORGEJO_EGRESS_PROXY}" \
+  --build-arg VITE_SENTRY_DSN="${SENTRY_DSN:-}" \
   --build-arg MOD_SOURCE_REVISION="${sha}" \
   -t "${image}" \
   .

@@ -16,7 +16,9 @@ COPY frontend/ /frontend/
 # server brief lives beside it for the same reason (frontend/src/lib/serverBrief.ts).
 COPY data/spa_routes.json /data/spa_routes.json
 COPY data/server_brief.json /data/server_brief.json
-RUN pnpm build
+# The browser DSN is public by design, but it stays out of tracked files.
+ARG VITE_SENTRY_DSN=""
+RUN VITE_SENTRY_DSN="$VITE_SENTRY_DSN" pnpm build
 
 FROM ${AOS_IMAGE} AS mods
 
