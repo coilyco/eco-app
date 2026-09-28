@@ -32,6 +32,7 @@ from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
 from starlette.applications import Starlette
 from starlette.datastructures import MutableHeaders
 from starlette.middleware.cors import CORSMiddleware
+from starlette.middleware.gzip import GZipMiddleware
 from starlette.requests import Request
 from starlette.responses import (
     FileResponse,
@@ -145,6 +146,39 @@ class CoilycoDevCors:
             await send(message)
 
         await self.cors(scope, receive, send_with_vary)
+
+
+# Only /preview JSON bodies of this many bytes or more are gzipped. The ~1.2 MB
+# recipes graph is the motivating case; tiny error payloads skip the CPU cost.
+GZIP_MIN_SIZE = 1024
+
+
+class PreviewGzip:
+    """GZipMiddleware scoped to the `/preview*` JSON data plane (eco-app#8390).
+
+    `recipes.json` and the other `/preview/<tool>.json` routes ship the whole
+    recipe graph (~1.2 MB) and gzip to ~125 KB. Gzip is scoped to the one-shot
+    JSON `/preview*` routes rather than applied app-wide: the `/mcp/`
+    Streamable-HTTP transport answers with SSE whose events must reach the
+    client incrementally rather than sit behind a compression decision, and the
+    SPA shell plus its content-hashed assets (a subset binary) gain nothing
+    from gzip at this layer.
+    """
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+        self.gzip = GZipMiddleware(app, minimum_size=GZIP_MIN_SIZE)
+
+    @staticmethod
+    def _scoped(path: str) -> bool:
+        # Same set CoilycoDevCors routes: the read-only /preview* data plane.
+        return path in ("/preview.json", "/preview-map.json") or path.startswith("/preview/")
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] == "http" and self._scoped(scope.get("path", "")):
+            await self.gzip(scope, receive, send)
+        else:
+            await self.app(scope, receive, send)
 
 
 class NormalizeMcpPath:
@@ -789,6 +823,7 @@ def create_app(route_registry: DualRouteRegistry | None = None) -> Starlette:
         inner.add_middleware(NormalizeAdminPath)
     inner.add_middleware(FrameAncestorsCSP)
     inner.add_middleware(CoilycoDevCors)
+    inner.add_middleware(PreviewGzip)
     return instrument_asgi(inner)
 
 
