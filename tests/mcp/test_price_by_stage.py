@@ -46,6 +46,7 @@ def real() -> norms.Norms:
         ("some iron", "Iron Bar"),
         ("The Grasshopper", "The Grasshopper"),
         ("the grasshopper", "The Grasshopper"),
+        ("solar panels", "Solar Generator"),
     ],
 )
 def test_a_word_resolves_by_name_id_plural_or_metal(
@@ -90,14 +91,70 @@ def test_iron_matches_the_prototype(real: norms.Norms) -> None:
     assert rows["Modern 1"] == (0.43, 278)
     assert rows["Modern 2"] == (0.58, 136)
     assert rows["Modern 4"] == (0.58, 181)
-    assert [r["stage"] for r in out["stages"]] == [s for s in norms.STAGES if s in rows]
 
 
-def test_a_thin_stage_keeps_its_count_and_loses_its_median(real: norms.Norms) -> None:
-    rows = {r["stage"]: r for r in _stage(real, "hewn logs")["stages"]}
-    assert rows["none"]["n"] < norms.MIN_N and rows["none"]["median"] is None
-    assert (rows["Basic 4"]["median"], rows["Basic 4"]["n"]) == (0.38, 178)
-    assert (rows["Modern 4"]["median"], rows["Modern 4"]["n"]) == (0.26, 149)
+@pytest.mark.parametrize(("word", "floor"), [("iron", "Basic 1"), ("hewn logs", "none")])
+def test_acceptance_items_price_every_stage_from_their_floor(
+    real: norms.Norms, word: str, floor: str
+) -> None:
+    # Kai on #8423: a guess beats silence. Iron's floor is a Basic 1 trade in a
+    # non-primary currency, which crossCycle alone would miss.
+    out = _stage(real, word)
+    assert out["firstTradedStage"] == floor
+    start = norms.STAGES.index(floor)
+    assert [r["stage"] for r in out["stages"]] == list(norms.STAGES[start:])
+    assert all(r["median"] is not None for r in out["stages"])
+    for row in out["stages"]:
+        assert row["estimated"] == (row["n"] < norms.MIN_N)
+
+
+def test_a_thin_stage_is_estimated_by_flat_carry_or_linear_interpolation(
+    real: norms.Norms,
+) -> None:
+    hewn = {r["stage"]: r for r in _stage(real, "hewn logs")["stages"]}
+    # Below the lowest real stage: carried from Basic 1.
+    none = hewn["none"]
+    assert (none["median"], none["estimated"], none["n"]) == (0.52, True, 3)
+    upgrade = {r["stage"]: r["median"] for r in _stage(real, "Basic Upgrade 4")["stages"]}
+    # Advanced 3 has 3 trades, halfway between Advanced 2 and Advanced 4.
+    assert upgrade["Advanced 3"] == 209.85
+    assert (upgrade["Modern 2"], upgrade["Modern 3"]) == (176.0, 169.72)
+
+
+@pytest.mark.parametrize(
+    ("word", "floor"), [("Solar Generator", "Modern 1"), ("Combustion Engine", "Advanced 4")]
+)
+def test_nothing_is_priced_below_the_first_traded_stage(
+    real: norms.Norms, word: str, floor: str
+) -> None:
+    out = _stage(real, word)
+    assert out["firstTradedStage"] == floor
+    assert out["stages"][0]["stage"] == floor
+    assert out["reply"].endswith(f"None before {floor}.")
+
+
+def test_solar_generator_carries_its_one_real_median_down_to_the_floor(
+    real: norms.Norms,
+) -> None:
+    rows = [
+        (r["stage"], r["median"], r["estimated"]) for r in _stage(real, "solar panel")["stages"]
+    ]
+    assert rows == [
+        ("Modern 1", 421.11, True),
+        ("Modern 2", 421.11, True),
+        ("Modern 3", 421.11, True),
+        ("Modern 4", 421.11, False),
+    ]
+
+
+def test_an_item_with_only_thin_stages_still_gets_estimates(real: norms.Norms) -> None:
+    name = next(
+        n
+        for n, it in real.items.items()
+        if it["crossCycle"] and all(b["n"] < norms.MIN_N for b in it["crossCycle"].values())
+    )
+    rows = _stage(real, name)["stages"]
+    assert rows and all(r["median"] is not None and r["estimated"] for r in rows)
 
 
 def test_an_upgrade_name_is_the_item_not_a_stage(real: norms.Norms) -> None:
@@ -137,7 +194,7 @@ async def test_the_tool_answers_through_mcp_with_one_line_per_stage() -> None:
     result, text, payload = await _call({"item": "hewn logs"})
     assert result.isError is False
     assert text.startswith("**Hewn Log**") and "- Basic 4: 0.38 (178 trades)" in text
-    assert "- none: too few trades" in text
+    assert "- none: ~0.52 estimated (3 trades)" in text
     assert payload["resolved"] == "Hewn Log"
     # No `norm`: it would carry a second median on another basis beside the stages.
     assert "norm" not in payload and "normContext" not in payload
@@ -154,7 +211,7 @@ def test_the_reply_template_renders_for_found_and_missing(real: norms.Norms) -> 
     templates = REPLY_TEMPLATES["price_by_stage"]
     found = render_reply(templates, _stage(real, "hewn logs"), {"item": "Hewn Log"})
     assert found == (
-        "Hewn Log median Spectres per upgrade stage (trades): no upgrade too few (3). "
+        "Hewn Log median Spectres by stage (trades, ~est.): no upgrade ~0.52. "
         "Basic 1 0.52 (9), 2 0.52 (169), 3 0.46 (21), 4 0.38 (178). "
         "Advanced 1 0.35 (90), 2 0.30 (76), 3 0.32 (37), 4 0.29 (132). "
         "Modern 1 0.36 (192), 2 0.31 (55), 3 0.33 (19), 4 0.26 (149)."

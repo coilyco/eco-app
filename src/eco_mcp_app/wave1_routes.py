@@ -141,7 +141,8 @@ def register_wave1_routes(registry: DualRouteRegistry, invoke: ToolInvoker) -> N
             "or flat, per item and currency, from past trades. Answers 'is X "
             "getting cheaper' and 'which items change hands most by volume'. "
             "Optional item and currency filters narrow the report. For whether a "
-            "given price is fair use fair_price, for where to buy or sell an item "
+            "given price is fair, or what to pay or charge, use price_by_stage, for where to "
+            "buy or sell an item "
             "right now use find_trade, and for individual trades use get_trades. "
             "Requires the server-side admin API key."
         ),
@@ -181,7 +182,8 @@ def register_wave1_routes(registry: DualRouteRegistry, invoke: ToolInvoker) -> N
             "what a store should carry to earn money. Reads live store shelves, falling back to "
             "recent "
             "trade prices. Pass item for one item, or currency for offers priced "
-            "in that currency. For price trends use get_market, for individual "
+            "in that currency. For what an item is worth or what to pay or charge for it "
+            "use price_by_stage, for price trends use get_market, for individual "
             "past trades get_trades, and for who owns which store get_stores. "
             "Requires the server-side admin API key."
         ),

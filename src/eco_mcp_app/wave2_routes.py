@@ -264,11 +264,12 @@ def register_wave2_routes(registry: DualRouteRegistry, invoke: ToolInvoker) -> N
         name="price_by_stage",
         title="Eco - median price per upgrade stage",
         description=(
-            "Answer how much to sell or buy an Eco item for: its median trade price at each "
-            "upgrade stage (none, Basic 1 to Modern 4) across past cycles, with the trade count "
-            "behind each, in the live cycle's currency. Answers 'how much should I sell X for' "
-            "and 'what does X usually go for'. A stage with too few trades has no median. An "
-            "item it cannot find returns no prices, sometimes with near names. For which store "
+            "Answer what an Eco item is worth and what to pay or charge for it: its median "
+            "trade price at each upgrade stage (none, Basic 1 to Modern 4) across past cycles, "
+            "with the trade count behind each, in the live cycle's currency, and marked "
+            "estimates where trades are thin. Answers 'how much should I sell X for', 'what "
+            "should I pay for X', 'how much should I buy X for', 'what's a good price for X', "
+            "and 'what is X worth'. An item it cannot match returns no price. For which store "
             "to buy from or sell to right now use find_trade."
         ),
         rest_path=WAVE2_PATHS["price_by_stage"],

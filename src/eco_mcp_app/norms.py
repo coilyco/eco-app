@@ -36,6 +36,8 @@ _CYCLE = re.compile(r"\bCycle\s+(\d+)", re.I)
 _TAGS = re.compile(r"<[^>]*>")
 _LVL = re.compile(r"\s*Lvl\s*(\d)")
 _DETERMINERS = frozenset({"a", "an", "the", "my", "some", "your", "our"})
+# Names members use that no item carries. Checked like a name, plurals included.
+_ALIASES = {"solar panel": "Solar Generator"}
 
 
 def upgrade_stage(item: str) -> int:
@@ -71,6 +73,7 @@ class Norms:
         self.built = data.get("source", {})
         self._by_lower = {name.lower(): name for name in self.items}
         self._by_id = {i: n for i, n in item_ids.items() if n in self.items}
+        self._aliases = {a: n for a, n in _ALIASES.items() if n in self.items}
         self.all_stages = {name: self._all_stages(name) for name in self.items}
 
     def _all_stages(self, name: str) -> dict[str, Any] | None:
@@ -206,12 +209,48 @@ class Norms:
         if lowered.endswith("s"):
             forms.append(lowered[:-1])
         for form in forms:
-            if name := self._by_lower.get(form):
+            if name := self._by_lower.get(form) or self._aliases.get(form):
                 return name
             # Only the metals are named `<Word> Bar`, and players say "iron" for the bar.
             if " " not in form and (name := self._by_lower.get(f"{form} bar")):
                 return name
         return None
+
+    def first_traded_stage(self, name: str) -> int | None:
+        """The lowest stage the item ever traded at, in any currency or barter.
+        `crossCycle` holds primary-currency trades only, so it can read too high."""
+        seen = {STAGES.index(s) for s in self.items[name]["crossCycle"]}
+        for slot in self.items[name]["cycles"].values():
+            seen.update(STAGES.index(s) for s in slot.get("stages", {}) if s in STAGES)
+        return min(seen, default=None)
+
+    def _stage_medians(self, name: str, floor: int | None) -> list[tuple[int, float, bool]]:
+        """(stage index, basket-unit median, estimated) from the floor to Modern 4.
+
+        Kai's rule on #8423: a guess beats silence, never below the floor. Method
+        per Jev on a holdout backtest (docs/price-history.md): linear on the stage
+        index between real medians, flat carry past the outermost one. A stage
+        under MIN_N is estimated, and anchors only when no stage reaches MIN_N."""
+        if floor is None:
+            return []
+        cross = self.items[name]["crossCycle"]
+        buckets = [(STAGES.index(s), b) for s, b in cross.items() if s in STAGES]
+        full = sorted((i, b["median"]) for i, b in buckets if b["n"] >= MIN_N)
+        anchors = full or sorted((i, b["median"]) for i, b in buckets)
+        if not anchors:
+            return []
+        real = {i for i, _ in full}
+        out = []
+        for i in range(floor, len(STAGES)):
+            below = [a for a in anchors if a[0] <= i]
+            above = [a for a in anchors if a[0] >= i]
+            if below and above and below[-1][0] != above[0][0]:
+                (lo, v_lo), (hi, v_hi) = below[-1], above[0]
+                value = v_lo + (v_hi - v_lo) * (i - lo) / (hi - lo)
+            else:
+                value = (below[-1] if below else above[0])[1]
+            out.append((i, value, i not in real))
+        return out
 
     def vocabulary(self) -> list[dict[str, Any]]:
         """Every item `resolve` accepts, as `eco://vocab/priced-items` entries. The bare
@@ -221,6 +260,7 @@ class Norms:
         entries = []
         for name in sorted(self.items):
             aliases = [ids[name]] if name in ids else []
+            aliases += [a for a, n in self._aliases.items() if n == name]
             head, _, tail = name.rpartition(" ")
             if tail == "Bar" and head and " " not in head:
                 aliases.append(head)
@@ -266,18 +306,17 @@ class Norms:
             out["note"] = (
                 f"cycle {ctx.cycle} is not in the norms file yet, so no median is in its currency"
             )
-        cross = self.items[name]["crossCycle"]
-        for stage in STAGES:
-            bucket = cross.get(stage)
-            if not bucket:
-                continue
-            enough = bucket["n"] >= MIN_N and bool(index)
+        floor = self.first_traded_stage(name)
+        out["firstTradedStage"] = STAGES[floor] if floor is not None else None
+        for i, value, estimated in self._stage_medians(name, floor):
+            bucket = self.items[name]["crossCycle"].get(STAGES[i]) or {}
             out["stages"].append(
                 {
-                    "stage": stage,
-                    "median": round(bucket["median"] * index, 2) if enough else None,
-                    "n": bucket["n"],
-                    "cycles": bucket["cycles"],
+                    "stage": STAGES[i],
+                    "median": round(value * index, 2) if index else None,
+                    "estimated": estimated,
+                    "n": bucket.get("n", 0),
+                    "cycles": bucket.get("cycles", 0),
                 }
             )
         out["reply"] = _stage_reply(out)
@@ -588,20 +627,30 @@ def _stage_reply(payload: dict[str, Any]) -> str:
     if not payload["stages"]:
         return f"{payload['item']}: no trades in past cycles."
     # Grouped by tier so the stage number alone repeats: every item then fits.
+    # `~` marks an estimate. Its thin count stays in the payload, not the line.
     tiers: dict[str, list[str]] = {}
     for row in payload["stages"]:
         tier, _, number = row["stage"].partition(" ")
-        figure = f"{row['median']:.2f}" if row["median"] is not None else "too few"
-        tiers.setdefault(tier, []).append(f"{number} {figure} ({row['n']})".lstrip())
+        if row["median"] is None:
+            figure = "?"
+        elif row["estimated"]:
+            figure = f"~{row['median']:.2f}"
+        else:
+            figure = f"{row['median']:.2f} ({row['n']})"
+        tiers.setdefault(tier, []).append(f"{number} {figure}".lstrip())
     groups = [
         f"no upgrade {rows[0]}" if tier == "none" else f"{tier} " + ", ".join(rows)
         for tier, rows in tiers.items()
     ]
-    return (
-        f"{payload['item']} median {payload['currency']} per upgrade stage (trades): "
+    text = (
+        f"{payload['item']} median {payload['currency']} by stage (trades, ~est.): "
         + ". ".join(groups)
         + "."
     )
+    floor = payload.get("firstTradedStage")
+    if floor and floor != STAGES[0]:
+        text += f" None before {floor}."
+    return text
 
 
 def price_by_stage_markdown(payload: dict[str, Any]) -> str:
@@ -613,8 +662,14 @@ def price_by_stage_markdown(payload: dict[str, Any]) -> str:
     if payload.get("note"):
         lines.append(payload["note"])
     for row in payload["stages"]:
-        figure = (
-            f"{row['median']:.2f}" if row["median"] is not None else f"too few trades (<{MIN_N})"
-        )
+        if row["median"] is None:
+            figure = "no price"
+        elif row["estimated"]:
+            figure = f"~{row['median']:.2f} estimated"
+        else:
+            figure = f"{row['median']:.2f}"
         lines.append(f"- {row['stage']}: {figure} ({row['n']} trades)")
+    floor = payload.get("firstTradedStage")
+    if floor and floor != STAGES[0]:
+        lines.append(f"Never traded before {floor}, so no price below it.")
     return "\n".join(lines)

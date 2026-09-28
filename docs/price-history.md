@@ -99,14 +99,28 @@ It sits in `NO_PRICE_TOOLS`: its stages already are the norm, and an attached
 
 - **Resolution** takes an exact name or Eco id, then a plural's singular, then a
   bare metal word as its bar (`iron` is Iron Bar), and retries once without a
-  leading `a`, `the` or `my`. Nothing is fuzzy-matched. A
+  leading `a`, `the` or `my`. `solar panel` is an alias of Solar Generator.
+  Nothing is fuzzy-matched. A
   miss returns `resolved: null` and no price, with `candidates` only when 2 to 5
   item names hold the word whole.
 - **Basis** is the cross-cycle stage median times the live basket index, the
-  `referencePrice` basis. A stage under `MIN_N` trades keeps its `n` and gets
-  `median: null`. Sold and Bought lines pool.
+  `referencePrice` basis. Sold and Bought lines pool.
+- **Floor** is `firstTradedStage`, the lowest stage the item traded at in any
+  cycle, any currency or barter. No row sits below it, and `reply` ends
+  `None before <stage>.` Kai's rule: nobody sold solar panels at `none`.
+- **Estimates** fill every stage from the floor to Modern 4 (Kai, 2026-09-27: a
+  guess beats silence). A stage with `MIN_N` trades or more is real. Any other
+  stage gets `estimated: true` and keeps its own `n`. The method is Jev's pick
+  on a holdout backtest over this file, error as median `|log(pred/true)|`:
+  - **Between two real stages**, linear on the stage index in basket units
+    (0.213, tied with log-linear, where copying the nearest stage scored 0.235).
+  - **Past the outermost real stage**, up or down to the floor, flat carry of
+    the nearest real median (0.259, against 0.567 for a log-linear slope).
+  - **No stage at `MIN_N`** (665 of 1,598 items): the thin stages' own medians
+    anchor, and every row is estimated.
 - **`reply`** is the whole answer on one line, grouped by tier so every item fits
-  the 280-character template cap. The tool's template is `{{reply}}`, and its
+  the 280-character template cap (279 at most today). `~` marks an estimate, and
+  only a real median shows its trade count. The tool's template is `{{reply}}`, and its
   `item` fills from `eco://vocab/priced-items`, built by `Norms.vocabulary` from
   the same rules `resolve` applies. A word no entry matches takes the caller's
   model path, which the server instructions tell to report a miss and stop.
