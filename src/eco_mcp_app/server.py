@@ -2068,7 +2068,9 @@ SERVER_INSTRUCTIONS = (
     "specialties, laws and elections, climate and pollution, species and "
     "ecoregions. It reads the game; it never changes it. Prices and stock "
     "move, so prefer a fresh call over an earlier answer in the same "
-    "conversation."
+    "conversation. For what to sell or buy an item for, answer from "
+    "price_by_stage alone. When it resolves no item, say it is not an Eco "
+    "item this server knows and stop, with no guess, other game, or other price."
 )
 
 
@@ -2182,6 +2184,12 @@ def build_server(
                 description="Every named currency on the server, for a currency argument.",
                 mimeType="application/json",
             ),
+            Resource(
+                uri=AnyUrl(vocab_mod.PRICED_ITEMS_URI),
+                name="eco-priced-item-vocabulary",
+                description="Every item with trade history, for price_by_stage's item argument.",
+                mimeType="application/json",
+            ),
         ]
 
     @server.read_resource()
@@ -2193,6 +2201,9 @@ def build_server(
             entries = vocab_mod.item_vocabulary(load_recipe_index())
         elif key == vocab_mod.CURRENCIES_URI:
             entries = await _currency_vocabulary_entries()
+        elif key == vocab_mod.PRICED_ITEMS_URI:
+            price_norms = norms_mod.load()
+            entries = price_norms.vocabulary() if price_norms else []
         else:
             raise ValueError(f"unknown resource {key}")
         body = json.dumps({"entries": entries})

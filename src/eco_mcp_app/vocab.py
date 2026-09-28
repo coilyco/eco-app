@@ -16,6 +16,7 @@ from .recipes import RecipeIndex
 
 ITEMS_URI = "eco://vocab/items"
 CURRENCIES_URI = "eco://vocab/currencies"
+PRICED_ITEMS_URI = "eco://vocab/priced-items"
 ARGS_META_KEY = "coilyco/args"
 
 # Which vocabulary and which entry field each templated argument takes. The
@@ -30,7 +31,11 @@ TOOL_ARGS: dict[str, dict[str, dict[str, Any]]] = {
     "get_market": {"item": {"vocabulary": ITEMS_URI, "field": "id", "ignore": SHOP_WORDS}},
     "price_recipe": {"product": {"vocabulary": ITEMS_URI, "field": "id"}},
     "get_currency": {"currency": {"vocabulary": CURRENCIES_URI, "field": "name"}},
-    "price_by_stage": {"item": {"vocabulary": ITEMS_URI, "field": "name", "ignore": SHOP_WORDS}},
+    # Its own set: the items with trade history, plus "iron" for Iron Bar, exactly
+    # what the tool resolves (teable:coilyco/eco-app#8423).
+    "price_by_stage": {
+        "item": {"vocabulary": PRICED_ITEMS_URI, "field": "name", "ignore": SHOP_WORDS}
+    },
 }
 
 

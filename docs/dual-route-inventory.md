@@ -86,7 +86,9 @@ entry's `field`. Source: `src/eco_mcp_app/vocab.py`.
 - **Resources** - `eco://vocab/items` (every product and ingredient in the
   recipe graph `get_recipes` serves, tags excluded) and
   `eco://vocab/currencies` (the live named-currency roster, an empty list
-  when admin data is unreachable). Both are `application/json`
+  when admin data is unreachable), plus `eco://vocab/priced-items` for
+  `price_by_stage` alone (items with trade history, `iron` as an alias of Iron
+  Bar). All are `application/json`
   `{"entries": [{"id", "name", "aliases"}]}` with no annotations, so no
   client reads them as grounding.
 - **Fields** - `find_trade.item`, `price_by_stage.item` and `get_currency.currency` take `name`.

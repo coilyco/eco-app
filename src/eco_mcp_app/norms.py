@@ -202,6 +202,20 @@ class Norms:
                 return name
         return None
 
+    def vocabulary(self) -> list[dict[str, Any]]:
+        """Every item `resolve` accepts, as `eco://vocab/priced-items` entries. The bare
+        metal word rides as an alias, so a caller matching words fills `item` exactly
+        when this tool would resolve it. A plural needs no entry: callers fold s/es."""
+        ids = {n: i for i, n in self._by_id.items()}
+        entries = []
+        for name in sorted(self.items):
+            aliases = [ids[name]] if name in ids else []
+            head, _, tail = name.rpartition(" ")
+            if tail == "Bar" and head and " " not in head:
+                aliases.append(head)
+            entries.append({"id": ids.get(name, name), "name": name, "aliases": aliases})
+        return entries
+
     def candidates(self, word: str | None) -> list[str]:
         """Item names holding the word whole, only when there are 2 to 5 of them."""
         query = " ".join((word or "").split())

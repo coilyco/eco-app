@@ -9,10 +9,12 @@ from typing import Any
 
 import mcp.types as mt
 import pytest
+from pydantic import AnyUrl
 
 from eco_mcp_app import norms
 from eco_mcp_app.reply_templates import MAX_REPLY_CHARS, REPLY_TEMPLATES, render_reply
 from eco_mcp_app.server import build_server
+from eco_mcp_app.vocab import PRICED_ITEMS_URI
 
 LIVE = norms.LiveContext(stage="Modern 4", cycle=14)
 
@@ -155,3 +157,25 @@ def test_every_item_fits_the_template_cap(real: norms.Norms) -> None:
     # Past the cap the caller drops to its model path, which is the #8421 failure.
     over = [n for n in real.items if len(_stage(real, n)["reply"]) > MAX_REPLY_CHARS]
     assert over == []
+
+
+def test_every_vocabulary_form_resolves_to_its_own_entry(real: norms.Norms) -> None:
+    entries = real.vocabulary()
+    assert len(entries) == len(real.items)
+    for entry in entries:
+        for form in (entry["name"], entry["id"], *entry["aliases"]):
+            assert real.resolve(form) == entry["name"], form
+    iron = next(e for e in entries if e["name"] == "Iron Bar")
+    assert iron == {"id": "IronBarItem", "name": "Iron Bar", "aliases": ["IronBarItem", "Iron"]}
+
+
+async def test_the_priced_items_vocabulary_is_served() -> None:
+    handler = build_server().request_handlers[mt.ReadResourceRequest]
+    request = mt.ReadResourceRequest(
+        method="resources/read",
+        params=mt.ReadResourceRequestParams(uri=AnyUrl(PRICED_ITEMS_URI)),
+    )
+    contents = (await handler(request)).root.contents
+    assert isinstance(contents[0], mt.TextResourceContents)
+    names = {e["name"] for e in json.loads(contents[0].text)["entries"]}
+    assert {"Iron Bar", "Hewn Log", "Basic Upgrade 4"} <= names

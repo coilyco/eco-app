@@ -19,6 +19,7 @@ from eco_mcp_app.vocab import (
     ARGS_META_KEY,
     CURRENCIES_URI,
     ITEMS_URI,
+    PRICED_ITEMS_URI,
     TOOL_ARGS,
     currency_vocabulary,
     item_vocabulary,
@@ -57,12 +58,12 @@ async def _read(uri: str) -> dict[str, Any]:
 
 
 @pytest.mark.asyncio
-async def test_resources_list_both_vocabularies_without_annotations() -> None:
+async def test_resources_list_every_vocabulary_without_annotations() -> None:
     mcp = build_server()
     handler = mcp.request_handlers[mt.ListResourcesRequest]
     result = await handler(mt.ListResourcesRequest(method="resources/list"))
     by_uri = {str(r.uri): r for r in result.root.resources}
-    assert set(by_uri) == {ITEMS_URI, CURRENCIES_URI}
+    assert set(by_uri) == {ITEMS_URI, CURRENCIES_URI, PRICED_ITEMS_URI}
     for resource in by_uri.values():
         assert resource.mimeType == "application/json"
         # No assistant audience, so no client pulls a vocabulary into a prompt.

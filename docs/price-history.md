@@ -103,7 +103,10 @@ median per upgrade stage and nothing else priced (teable:coilyco/eco-app#8423).
   `referencePrice` basis. A stage under `MIN_N` trades keeps its `n` and gets
   `median: null`. Sold and Bought lines pool.
 - **`reply`** is the whole answer on one line, grouped by tier so every item fits
-  the 280-character template cap. The tool's template is `{{reply}}`.
+  the 280-character template cap. The tool's template is `{{reply}}`, and its
+  `item` fills from `eco://vocab/priced-items`, built by `Norms.vocabulary` from
+  the same rules `resolve` applies. A word no entry matches takes the caller's
+  model path, which the server instructions tell to report a miss and stop.
 
 ## See also
 
