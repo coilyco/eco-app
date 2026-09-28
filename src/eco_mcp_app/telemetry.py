@@ -36,8 +36,8 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.trace import Link, SpanKind, Status, StatusCode
 from sentry_sdk.integrations.fastapi import FastApiIntegration
 from sentry_sdk.integrations.logging import LoggingIntegration
-from sentry_sdk.integrations.mcp import MCPIntegration
 from sentry_sdk.integrations.starlette import StarletteIntegration
+from sentry_sdk.scrubber import DEFAULT_DENYLIST, EventScrubber
 
 if TYPE_CHECKING:
     from sentry_sdk.types import Event
@@ -95,6 +95,26 @@ def _sentry_before_send(event: Event, _hint: dict[str, Any]) -> Event | None:
     return event if _sentry_within_budget(time.monotonic()) else None
 
 
+# Frame locals and request bodies stay on, because they make a crash readable.
+# These keys hold Discord member text, admin credentials, or raw bodies.
+ECO_USER_DATA_KEYS = [
+    "content",
+    "message",
+    "messages",
+    "text",
+    "author",
+    "member",
+    "username",
+    "interaction",
+    "query",
+    "body",
+    "payload",
+    "admin_token",
+    # FastAPI's raw request bytes, held in its own routing frame.
+    "body_bytes",
+]
+
+
 def init_error_tracking() -> bool:
     """Send unhandled exceptions to Sentry once, when SENTRY_DSN is set."""
     global _sentry_active, _sentry_initialized
@@ -110,10 +130,10 @@ def init_error_tracking() -> bool:
             traces_sample_rate=0.0,
             environment=os.getenv("OTEL_DEPLOYMENT_ENVIRONMENT", "homelab"),
             before_send=_sentry_before_send,
-            # Frame locals and request bodies can carry member and admin data.
-            include_local_variables=False,
-            max_request_body_size="never",
             send_default_pii=False,
+            event_scrubber=EventScrubber(
+                denylist=DEFAULT_DENYLIST + ECO_USER_DATA_KEYS, recursive=True
+            ),
             integrations=[
                 # Breadcrumbs only: an ERROR log is a handled error, and those stay in SigNoz.
                 LoggingIntegration(event_level=None),
@@ -121,8 +141,6 @@ def init_error_tracking() -> bool:
                 StarletteIntegration(failed_request_status_codes=set()),
                 FastApiIntegration(failed_request_status_codes=set()),
             ],
-            # It reports every MCP tool error, and those are handled results.
-            disabled_integrations=[MCPIntegration()],
         )
         sentry_sdk.set_tag(
             "service.name", os.getenv("OTEL_SERVICE_NAME", "eco-app").strip() or "eco-app"

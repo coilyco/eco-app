@@ -115,25 +115,49 @@ def test_init_failure_logs_the_class_and_never_the_dsn(monkeypatch, caplog):
     assert "secret-key" not in caplog.text
 
 
-def test_a_crash_reaches_sentry_without_its_body_or_frame_locals(captured):
-    import json
-
+def _annotated_crash_app() -> Starlette:
     from starlette.requests import Request
 
     async def crash(request: Request):
-        member_text = (await request.json())["text"]  # noqa: F841
+        route_name = "economy"  # noqa: F841
+        content = (await request.json())["content"]  # noqa: F841
+        logging.getLogger("eco_mcp_app.test").warning("resolving interaction")
         raise RuntimeError("route crashed")
 
+    return Starlette(routes=[Route("/crash", crash, methods=["POST"])])
+
+
+def _crash_event(captured) -> tuple[dict, str]:
     telemetry.init_error_tracking()
-    app = Starlette(routes=[Route("/crash", crash, methods=["POST"])])
     secret = "-".join(["MEMBER", "SECRET"])
-    client = TestClient(app, raise_server_exceptions=False)
-    assert client.post("/crash", json={"text": secret}).status_code == 500
+    client = TestClient(_annotated_crash_app(), raise_server_exceptions=False)
+    assert client.post("/crash", json={"content": secret}).status_code == 500
     sentry_sdk.flush()
-    assert [e["exception"]["values"][-1]["value"] for e in captured.events] == ["route crashed"]
+    (event,) = captured.events
+    return event, secret
+
+
+def test_a_crash_keeps_its_locals_and_scrubs_member_text(captured):
+    import json
+
+    event, secret = _crash_event(captured)
+    frame_vars = event["exception"]["values"][-1]["stacktrace"]["frames"][-1]["vars"]
+    # Locals are what make a crash readable, so a harmless one survives.
+    assert "economy" in frame_vars["route_name"]
     assert secret not in json.dumps(captured.events)
 
 
-def test_the_mcp_tool_error_integration_is_off(captured):
+def test_a_crash_carries_its_breadcrumbs_and_request_context(captured):
+    event, _secret = _crash_event(captured)
+    crumbs = [crumb.get("message") for crumb in event["breadcrumbs"]["values"]]
+    assert "resolving interaction" in crumbs
+    assert event["request"]["method"] == "POST"
+    assert event["request"]["url"].endswith("/crash")
+
+
+def test_mcp_integration_is_on_without_tool_payloads(captured):
     telemetry.init_error_tracking()
-    assert sentry_sdk.get_client().get_integration("mcp") is None
+    client = sentry_sdk.get_client()
+    assert client.get_integration("mcp") is not None
+    # The MCP integration records tool arguments and results only with PII on.
+    assert client.options["send_default_pii"] is False
