@@ -77,23 +77,51 @@ def meaning(token: str) -> str | None:
     return None
 
 
-def specialist_modules(names: Iterable[str]) -> dict[str, dict[str, list[str]]]:
-    """{tier: {specialty: module names}} for tier-named specialist upgrades. Two
-    names for one specialty (Advanced Masonry, Masonry Advanced) stay ambiguous.
+# Each specialist module's tier, read by game-dev from the Eco 0.14 source at
+# Kai's ask: a module's recipe consumes one tier-4 module, and that is its tier.
+# The name is not (Advanced Masonry is MU5). Table and source: the decision
+# comment on teable:coilyco/eco-app#8425. Refresh eco_autogen_data to 0.14 and
+# autogen.py can read it, but the server's own mods stay a hand entry here.
+SPECIALISTS: dict[str, tuple[str, ...]] = {
+    "Basic": (
+        "Basic Engineering", "Blacksmith", "Butchery", "Campfire Cooking", "Carpentry Basic",
+        "Farming", "Fertilizers", "Gathering Basic", "Hunting", "Logging Basic",
+        "Masonry Basic", "Milling", "Mining Basic", "Painting", "Paper Milling",
+        "Shipwright Basic", "Smelting Basic", "Tailoring",
+        "Animal Husbandry", "Beekeeping", "Fishing Reloaded",
+    ),
+    "Advanced": (
+        "Advanced Baking", "Advanced Cooking", "Advanced Smelting", "Baking",
+        "Blacksmith Advanced", "Carpentry Advanced", "Cooking", "Gathering Advanced",
+        "Glassworking Advanced", "Logging Advanced", "Masonry Advanced", "Mechanics Advanced",
+        "Mining Advanced", "Pottery", "Shipwright Advanced", "Smelting",
+        "Mixology", "Advanced Mixology",
+    ),
+    "Modern": (
+        "Advanced Masonry", "Composites", "Cutting Edge Cooking", "Electronics",
+        "Glassworking Modern", "Industry", "Mechanics Modern", "Mining Modern", "Oil Drilling",
+        "Tailoring Modern", "Biochemist",
+    ),
+}  # fmt: skip
 
-    Only a module whose name carries its tier word can be tiered. Smelting,
-    Farming and the rest carry none, and game-dev's spec says not to guess them.
-    """
-    out: dict[str, dict[str, list[str]]] = {tier: {} for tier in TIERS.values()}
-    for name in names:
-        words = name.split()
-        if len(words) < 3 or words[-1] != "Upgrade" or words[-2].isdigit():
-            continue
-        tiers = [w for w in words[:-1] if w in out]
-        rest = [w for w in words[:-1] if w not in out]
-        if len(tiers) == 1 and rest and rest != ["Scholars"]:
-            out[tiers[0]].setdefault(" ".join(rest).lower(), []).append(name)
-    return out
+
+def _specialty(module: str) -> str:
+    """`Masonry Basic` -> `masonry`: the word a member puts before `bu5`."""
+    return " ".join(w for w in module.split() if w not in TIERS.values()).lower()
+
+
+def specialties(tier: str) -> list[str]:
+    """The specialty words of one tier's modules, deduplicated, in table order."""
+    return list(dict.fromkeys(_specialty(m) for m in SPECIALISTS[tier]))
+
+
+def specialist_modules(tier: str, words: str) -> list[str]:
+    """The module(s) `<words> <tier>5` names. A module named exactly the words wins
+    (smelting au5 is Smelting, not Advanced Smelting). More than one is ambiguous."""
+    key = " ".join(words.split()).lower()
+    exact = [m for m in SPECIALISTS[tier] if m.lower() == key]
+    loose = [m for m in SPECIALISTS[tier] if _specialty(m) == key]
+    return [f"{m} Upgrade" for m in (exact or loose)]
 
 
 def swapped_tier(name: str) -> str | None:
@@ -170,10 +198,12 @@ def item_aliases(names: Iterable[str]) -> dict[str, list[str]]:
         if swapped and swapped not in present and not name[-1].isdigit():
             out.setdefault(name, []).append(swapped)
     for letter, tier in TIERS.items():
-        for specialty, modules in specialist_modules(present)[tier].items():
-            if len(modules) == 1:
+        for words in {*specialties(tier), *(m.lower() for m in SPECIALISTS[tier])}:
+            modules = specialist_modules(tier, words)
+            if len(modules) == 1 and modules[0] in present:
                 forms = _forms(f"{letter}u5")
-                out.setdefault(modules[0], []).extend(f"{specialty} {f}" for f in forms)
+                out.setdefault(modules[0], []).extend(f"{words} {f}" for f in forms)
+                out[modules[0]].extend(f"{f} {words}" for f in forms)
     return out
 
 

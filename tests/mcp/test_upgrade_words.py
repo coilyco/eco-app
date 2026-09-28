@@ -62,8 +62,10 @@ def test_shorthand_alone_is_the_upgrade_item(real: norms.Norms, word: str, item:
 def test_bu5_lists_the_basic_specialists_with_no_price(real: norms.Norms) -> None:
     out = _ask(real, "bu5")
     assert out["resolved"] is None and "stages" not in out
-    assert "Mining Basic Upgrade" in out["candidates"] and len(out["candidates"]) == 7
-    assert out["reply"].startswith("BU5 is a specialist Basic upgrade.")
+    # 18 vanilla and 3 mod modules, per the Eco 0.14 source table.
+    assert "Mining Basic Upgrade" in out["candidates"] and len(out["candidates"]) == 21
+    assert out["reply"].startswith("BU5 is a Basic specialist: engineering, blacksmith,")
+    assert len(out["reply"]) <= 280
 
 
 def test_a_specialty_word_picks_one_module_even_with_no_trades(real: norms.Norms) -> None:
@@ -87,10 +89,30 @@ def test_either_word_order_names_a_tiered_module(real: norms.Norms, word: str, i
     assert _ask(real, word)["resolved"] == item
 
 
-def test_two_modules_for_one_specialty_stay_a_miss(real: norms.Norms) -> None:
-    out = _ask(real, "masonry au5")
-    assert out["resolved"] is None
-    assert out["candidates"] == ["Advanced Masonry Upgrade", "Masonry Advanced Upgrade"]
+@pytest.mark.parametrize(
+    ("word", "item"),
+    [
+        # The tier is the recipe's tier-4 input, not the name: Advanced Masonry is MU5.
+        ("masonry bu5", "Masonry Basic Upgrade"),
+        ("masonry au5", "Masonry Advanced Upgrade"),
+        ("masonry mu5", "Advanced Masonry Upgrade"),
+        ("smelting bu5", "Smelting Basic Upgrade"),
+        # Two AU5 smelting modules, and the one named exactly "Smelting" wins.
+        ("smelting au5", "Smelting Upgrade"),
+        ("advanced smelting au5", "Advanced Smelting Upgrade"),
+        ("blacksmith bu5", "Blacksmith Upgrade"),
+        ("bu5 gathering", "Gathering Basic Upgrade"),
+        ("tailoring mu5", "Tailoring Modern Upgrade"),
+    ],
+)
+def test_a_specialty_and_its_5_resolve_through_the_source_table(
+    real: norms.Norms, word: str, item: str
+) -> None:
+    assert _ask(real, word)["resolved"] == item
+
+
+def test_a_specialty_not_in_that_tier_is_no_module(real: norms.Norms) -> None:
+    assert _ask(real, "pottery bu5")["resolved"] is None
 
 
 @pytest.mark.parametrize(

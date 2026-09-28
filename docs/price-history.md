@@ -134,14 +134,17 @@ reads the whole token `(s)?([bam])u ?([0-5])`, case-insensitive: B, A and M are
 Basic, Advanced and Modern, and `s` is the Scholars module.
 
 - **As the item.** `xu1`-`xu4` is `<Tier> Upgrade n`, and `sxu1`-`sxu4` is
-  `Scholars <Tier> Upgrade n`. A bare `xu5` is a miss listing that tier's
-  specialist modules, past the 5-name cap. `<specialty> xu5` (`mining bu5`) names
-  one module, and two modules for one specialty (masonry at Advanced) stay a miss
-  listing both. A tiered module resolves in either word order (Basic Gathering
-  Upgrade is Gathering Basic Upgrade), and the exact order wins when both are
-  items. `xu0`, `sxu0` and `sxu5` name no item, and the reply says why. A
-  module is tiered only by a tier word in its name. Smelting, Farming and others
-  carry none and are left out rather than guessed.
+  `Scholars <Tier> Upgrade n`. `xu0`, `sxu0` and `sxu5` name no item, and the
+  reply says why.
+- **Specialist modules are the 5 of their tier**, and the tier is the tier-4
+  module their Eco 0.14 recipe consumes, not the name: Advanced Masonry Upgrade
+  is MU5 and Smelting Upgrade is AU5. `upgrade_words.SPECIALISTS` holds game-dev's
+  table from the Eco source, the server's mods included (the #8425 decision
+  comment). A bare `xu5` lists its tier's specialty words. `masonry bu5` or
+  `bu5 masonry` names one module, and where a tier has two (smelting at AU5),
+  the one named exactly the specialty wins. A full module name resolves as
+  written or with its tier word moved (Basic Gathering Upgrade). History before
+  cycle 15 ran on 0.13, where these modules had no tier input.
 - **As a stage qualifier**, through the optional `stage` input or a token inside
   the item phrase (`iron at au3`). `xu1`-`xu4` and `sxu1`-`sxu4` are that stage.
   `xu0` is the stage before the tier (BU0 none, AU0 Basic 4, MU0 Advanced 4), and

@@ -40,6 +40,7 @@ _LVL = re.compile(r"\s*Lvl\s*(\d)")
 Catalog = Sequence[dict[str, Any]]
 # "mining bu5": a specialty word before a tier's 5 names one specialist module.
 _SPECIALTY = re.compile(r"^(.+?)\s+([bam])u ?5$", re.I)
+_SPECIALTY_AFTER = re.compile(r"^([bam])u ?5\s+(.+)$", re.I)
 _DETERMINERS = frozenset({"a", "an", "the", "my", "some", "your", "our"})
 # Names members use that no item carries. Checked like a name, plurals included.
 _ALIASES = {"solar panel": "Solar Generator"}
@@ -243,7 +244,6 @@ class Norms:
             for form in (e["name"], e["id"], *e.get("aliases", []))
         }
         names.update(self._by_lower)
-        modules_by_tier = uw.specialist_modules(set(names.values()))
         for base in self._bases(word):
             if uw.parse(base):
                 if (name := uw.generic_item(base)) and name in names.values():
@@ -251,18 +251,21 @@ class Norms:
                 if note := uw.meaning(base):
                     return None, {"note": note}
                 _, tier, _ = uw.parse(base) or (False, "", 0)
-                groups = modules_by_tier[tier].values()
-                shown = uw.canonical(base)
-                note = f"{shown} is a specialist {tier} upgrade. Name one, like mining {base}:"
-                return None, {"note": note, "candidates": sorted(n for g in groups for n in g)}
-            if m := _SPECIALTY.match(base):
-                head, tier = m[1], uw.TIERS[m[2].lower()]
-                modules = modules_by_tier[tier].get(head.lower(), [])
+                # The specialty words, not full names: 21 Basic names would pass 280.
+                listed = ", ".join(uw.specialties(tier))
+                article = "an" if tier == "Advanced" else "a"
+                note = f"{uw.canonical(base)} is {article} {tier} specialist: {listed}."
+                full = sorted(f"{m} Upgrade" for m in uw.SPECIALISTS[tier])
+                return None, {"note": note, "candidates": full}
+            m = _SPECIALTY.match(base)
+            after = _SPECIALTY_AFTER.match(base)
+            if m or after:
+                words, letter = (m[1], m[2]) if m else (after[2], after[1])  # type: ignore[index]
+                modules = uw.specialist_modules(uw.TIERS[letter.lower()], words)
                 if len(modules) == 1:
                     return modules[0], {}
                 if modules:
-                    note = f"{base} could be either:"
-                    return None, {"note": note, "candidates": sorted(modules)}
+                    return None, {"note": f"{base} could be either:", "candidates": modules}
             if name := self.key(base) or self._resolve_form(base.lower(), self._by_lower):
                 return name, {}
             if name := self._resolve_form(base.lower(), names):
@@ -716,8 +719,9 @@ def _stage_reply(payload: dict[str, Any]) -> str:
     stage traded still fits the 280-character template cap."""
     if payload.get("resolved") is None:
         text = payload.get("note") or f"Couldn't match {payload.get('query')!r} to one Eco item."
-        if payload.get("candidates"):
-            joiner = " " if payload.get("note") else " Items with that word: "
+        note = payload.get("note") or ""
+        if payload.get("candidates") and (not note or note.endswith(":")):
+            joiner = " " if note else " Items with that word: "
             text += joiner + ", ".join(payload["candidates"]) + "."
         return str(text)
     if not payload.get("traded", True):
@@ -725,7 +729,7 @@ def _stage_reply(payload: dict[str, Any]) -> str:
     if payload.get("note"):
         return f"{payload['item']}: {payload['note']}."
     if not payload["stages"]:
-        return f"{payload['item']}: no trades in past cycles."
+        return f"{payload['item']} has no recorded trades by stage."
     # Grouped by tier so the stage number alone repeats: every item then fits.
     # `~` marks an estimate. Its thin count stays in the payload, not the line.
     tiers: dict[str, list[str]] = {}
