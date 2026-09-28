@@ -32,7 +32,8 @@ consolidation (coilysiren/inbox#101).
   [progression.md](progression.md).
 - **Discord worker** - `src/eco_discord/`, a separate Pycord gateway process.
   See [discord-bot.md](discord-bot.md), [discord-parity.md](discord-parity.md).
-- **Telemetry** - shared OTLP init in `eco_mcp_app/telemetry.py`.
+- **Telemetry** - shared OTLP init in `eco_mcp_app/telemetry.py`, plus Sentry
+  for crashes only when `SENTRY_DSN` is set. Handled errors stay in SigNoz.
 - **Crawl surface** - `robots.txt`, `sitemap.xml`, `301`s for retired paths,
   `404` for unrouted ones, and a per-response index posture, all derived from
   the shared route manifest `data/spa_routes.json`. See

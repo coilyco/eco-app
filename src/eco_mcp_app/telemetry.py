@@ -1,18 +1,22 @@
-"""OpenTelemetry setup for eco-app.
+"""OpenTelemetry and Sentry setup for eco-app.
 
 The deploy surface points private workloads at SigNoz's OTLP/HTTP NodePort.
 ASGI instrumentation records uncaught exceptions as span events and marks the
-request span as an error, which feeds SigNoz Exceptions without a second error
-tracking SDK.
+request span as an error, which feeds SigNoz Exceptions.
+
+Crashes also go to Sentry when SENTRY_DSN is set, and only crashes: handled
+errors stay in SigNoz to keep inside Sentry's free quota (teable:coilyco/deploy#8347).
 """
 
 from __future__ import annotations
 
 import logging
 import os
+import time
 from collections.abc import Awaitable, Callable
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
+import sentry_sdk
 from mcp import types as mt
 from mcp.server.lowlevel import Server
 from opentelemetry import metrics, propagate, trace
@@ -30,6 +34,12 @@ from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.trace import Link, SpanKind, Status, StatusCode
+from sentry_sdk.integrations.fastapi import FastApiIntegration
+from sentry_sdk.integrations.logging import LoggingIntegration
+from sentry_sdk.integrations.starlette import StarletteIntegration
+
+if TYPE_CHECKING:
+    from sentry_sdk.types import Event
 
 _log = logging.getLogger(__name__)
 _initialized = False
@@ -63,9 +73,65 @@ def configure_healthcheck_logging() -> None:
         access_logger.addFilter(_HealthcheckAccessFilter())
 
 
+SENTRY_EVENTS_PER_MINUTE = 20
+_sentry_initialized = False
+_sentry_active = False
+_sentry_window: list[float] = []
+
+
+def _sentry_within_budget(now: float) -> bool:
+    """Cap events per process so one crash loop cannot spend the monthly quota."""
+    cutoff = now - 60.0
+    while _sentry_window and _sentry_window[0] < cutoff:
+        _sentry_window.pop(0)
+    if len(_sentry_window) >= SENTRY_EVENTS_PER_MINUTE:
+        return False
+    _sentry_window.append(now)
+    return True
+
+
+def _sentry_before_send(event: Event, _hint: dict[str, Any]) -> Event | None:
+    return event if _sentry_within_budget(time.monotonic()) else None
+
+
+def init_error_tracking() -> bool:
+    """Send unhandled exceptions to Sentry once, when SENTRY_DSN is set."""
+    global _sentry_active, _sentry_initialized
+    if _sentry_initialized:
+        return _sentry_active
+    _sentry_initialized = True
+    dsn = os.getenv("SENTRY_DSN", "").strip()
+    if not dsn:
+        return False
+    try:
+        sentry_sdk.init(
+            dsn=dsn,
+            traces_sample_rate=0.0,
+            environment=os.getenv("OTEL_DEPLOYMENT_ENVIRONMENT", "homelab"),
+            before_send=_sentry_before_send,
+            integrations=[
+                # Breadcrumbs only: an ERROR log is a handled error, and those stay in SigNoz.
+                LoggingIntegration(event_level=None),
+                # Only uncaught exceptions, never an HTTPException the app raised on purpose.
+                StarletteIntegration(failed_request_status_codes=set()),
+                FastApiIntegration(failed_request_status_codes=set()),
+            ],
+        )
+        sentry_sdk.set_tag(
+            "service.name", os.getenv("OTEL_SERVICE_NAME", "eco-app").strip() or "eco-app"
+        )
+    except Exception as exc:
+        # The class only: a BadDsn message can carry the DSN itself.
+        _log.warning("Sentry initialization failed (%s); continuing", type(exc).__name__)
+        return False
+    _sentry_active = True
+    return True
+
+
 def init_telemetry() -> bool:
     """Configure OTLP tracing and metrics once and report whether either is enabled."""
     global _enabled, _initialized, _mcp_tool_calls, _meter_provider, _trace_provider
+    init_error_tracking()
     if _initialized:
         return _enabled
 
@@ -227,7 +293,11 @@ def instrument_mcp_server(server: Server) -> Server:
 
 
 def record_exception(exc: Exception, operation: str) -> None:
-    """Export a fatal non-ASGI exception as a short error span."""
+    """Export a fatal non-ASGI exception as a short error span and a Sentry event."""
+    if init_error_tracking():
+        sentry_sdk.capture_exception(exc)
+        # The process is about to exit, so do not leave the event in the queue.
+        sentry_sdk.flush(timeout=2.0)
     if not init_telemetry():
         return
     tracer = trace.get_tracer("eco-app")
