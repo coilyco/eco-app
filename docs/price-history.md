@@ -94,9 +94,12 @@ join that map or `NO_PRICE_TOOLS`, or `tests/mcp/test_norms.py` fails.
 
 `price_by_stage(item)` answers "how much should I sell or buy X for" with one
 median per upgrade stage and nothing else priced (teable:coilyco/eco-app#8423).
+It sits in `NO_PRICE_TOOLS`: its stages already are the norm, and an attached
+`norm` would add this cycle's own median beside them on the other basis.
 
 - **Resolution** takes an exact name or Eco id, then a plural's singular, then a
-  bare metal word as its bar (`iron` is Iron Bar). Nothing is fuzzy-matched. A
+  bare metal word as its bar (`iron` is Iron Bar), and retries once without a
+  leading `a`, `the` or `my`. Nothing is fuzzy-matched. A
   miss returns `resolved: null` and no price, with `candidates` only when 2 to 5
   item names hold the word whole.
 - **Basis** is the cross-cycle stage median times the live basket index, the

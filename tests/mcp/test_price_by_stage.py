@@ -41,6 +41,11 @@ def real() -> norms.Norms:
         ("hewn logs", "Hewn Log"),
         ("  hewn   log ", "Hewn Log"),
         ("Basic Upgrade 4", "Basic Upgrade 4"),
+        ("a basic upgrade 4", "Basic Upgrade 4"),
+        ("my bricks", "Brick"),
+        ("some iron", "Iron Bar"),
+        ("The Grasshopper", "The Grasshopper"),
+        ("the grasshopper", "The Grasshopper"),
     ],
 )
 def test_a_word_resolves_by_name_id_plural_or_metal(
@@ -49,7 +54,10 @@ def test_a_word_resolves_by_name_id_plural_or_metal(
     assert real.resolve(word) == item
 
 
-@pytest.mark.parametrize("word", ["unobtainium", "dragon scales", "glorbnite", "cotton", "", "ron"])
+@pytest.mark.parametrize(
+    "word",
+    ["unobtainium", "dragon scales", "glorbnite", "cotton", "", "ron", "the", "a unobtainium"],
+)
 def test_nothing_is_guessed(real: norms.Norms, word: str) -> None:
     out = _stage(real, word)
     assert out["resolved"] is None
@@ -130,13 +138,15 @@ async def test_the_tool_answers_through_mcp_with_one_line_per_stage() -> None:
     assert result.isError is False
     assert text.startswith("**Hewn Log**") and "- Basic 4: 0.38 (178 trades)" in text
     assert "- none: too few trades" in text
-    assert payload["resolved"] == "Hewn Log" and "normContext" in payload
+    assert payload["resolved"] == "Hewn Log"
+    # No `norm`: it would carry a second median on another basis beside the stages.
+    assert "norm" not in payload and "normContext" not in payload
 
 
 async def test_the_tool_says_it_found_nothing() -> None:
     result, text, payload = await _call({"item": "glorbnite"})
     assert result.isError is False
-    assert text == "No Eco item matches 'glorbnite'."
+    assert text == "Couldn't match 'glorbnite' to one Eco item."
     assert payload["resolved"] is None and "stages" not in payload
 
 
@@ -150,7 +160,7 @@ def test_the_reply_template_renders_for_found_and_missing(real: norms.Norms) -> 
         "Modern 1 0.36 (192), 2 0.31 (55), 3 0.33 (19), 4 0.26 (149)."
     )
     missing = render_reply(templates, _stage(real, "glorbnite"), {"item": "glorbnite"})
-    assert missing == "No Eco item matches 'glorbnite'."
+    assert missing == "Couldn't match 'glorbnite' to one Eco item."
 
 
 def test_every_item_fits_the_template_cap(real: norms.Norms) -> None:

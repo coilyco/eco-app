@@ -35,6 +35,7 @@ _NUMERIC = re.compile(r"^\d+$")
 _CYCLE = re.compile(r"\bCycle\s+(\d+)", re.I)
 _TAGS = re.compile(r"<[^>]*>")
 _LVL = re.compile(r"\s*Lvl\s*(\d)")
+_DETERMINERS = frozenset({"a", "an", "the", "my", "some", "your", "our"})
 
 
 def upgrade_stage(item: str) -> int:
@@ -185,15 +186,25 @@ class Norms:
         query = " ".join((word or "").split())
         if not query:
             return None
-        if name := self.key(query):
-            return name
-        forms = [query.lower()]
-        if forms[0].endswith("ies"):
-            forms.append(forms[0][:-3] + "y")
-        if forms[0].endswith("es"):
-            forms.append(forms[0][:-2])
-        if forms[0].endswith("s"):
-            forms.append(forms[0][:-1])
+        bases = [query]
+        # "a basic upgrade 4", "my bricks": a caller may pass the member's words
+        # verbatim. Tried second, so The Grasshopper still resolves whole.
+        head, _, rest = query.partition(" ")
+        if rest and head.lower() in _DETERMINERS:
+            bases.append(rest)
+        for base in bases:
+            if name := self.key(base) or self._resolve_form(base.lower()):
+                return name
+        return None
+
+    def _resolve_form(self, lowered: str) -> str | None:
+        forms = [lowered]
+        if lowered.endswith("ies"):
+            forms.append(lowered[:-3] + "y")
+        if lowered.endswith("es"):
+            forms.append(lowered[:-2])
+        if lowered.endswith("s"):
+            forms.append(lowered[:-1])
         for form in forms:
             if name := self._by_lower.get(form):
                 return name
@@ -439,7 +450,6 @@ PRICE_FIELDS: dict[str, tuple[PriceSpec, ...]] = {
         ("recipes[].cost.ingredients[]", "unitCost"),
     ),
     "fair_price": (("", "inGameMedian"),),
-    "price_by_stage": (("", ""),),
     # SPA data routes, not MCP tools. Their pages show the same prices.
     "/preview/item.json": (("", ""),),
     "/preview/price-history.json": (("", "distribution.median"),),
@@ -464,6 +474,9 @@ NO_PRICE_TOOLS = frozenset(
         "get_climate",
         "get_government",
         "get_skills",
+        # Its stages are the norm on one basis. Attaching `norm` would add this
+        # cycle's own median and quartiles beside them (teable:coilyco/eco-app#8423).
+        "price_by_stage",
         "get_social",
     }
 )
@@ -566,7 +579,7 @@ def _stage_reply(payload: dict[str, Any]) -> str:
     """The one-line answer `{{reply}}` templates. Kept terse so an item with every
     stage traded still fits the 280-character template cap."""
     if payload.get("resolved") is None:
-        text = f"No Eco item matches {payload.get('query')!r}."
+        text = f"Couldn't match {payload.get('query')!r} to one Eco item."
         if payload.get("candidates"):
             text += " Items with that word: " + ", ".join(payload["candidates"]) + "."
         return text

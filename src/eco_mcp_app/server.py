@@ -2069,8 +2069,8 @@ SERVER_INSTRUCTIONS = (
     "ecoregions. It reads the game; it never changes it. Prices and stock "
     "move, so prefer a fresh call over an earlier answer in the same "
     "conversation. For what to sell or buy an item for, answer from "
-    "price_by_stage alone. When it resolves no item, say it is not an Eco "
-    "item this server knows and stop, with no guess, other game, or other price."
+    "price_by_stage alone. When it resolves no item, say the word could not be "
+    "matched to one Eco item and stop, with no guess, other game, or other price."
 )
 
 
