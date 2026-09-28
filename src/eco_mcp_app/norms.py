@@ -178,6 +178,86 @@ class Norms:
             }
         return {}
 
+    def resolve(self, word: str | None) -> str | None:
+        """One player word to one norms item, or None. Exact name or Eco id, then
+        the singular of a plural, then a bare metal word as its bar. No fuzzy match:
+        a wrong item priced confidently is worse than none (teable:coilyco/eco-app#8423)."""
+        query = " ".join((word or "").split())
+        if not query:
+            return None
+        if name := self.key(query):
+            return name
+        forms = [query.lower()]
+        if forms[0].endswith("ies"):
+            forms.append(forms[0][:-3] + "y")
+        if forms[0].endswith("es"):
+            forms.append(forms[0][:-2])
+        if forms[0].endswith("s"):
+            forms.append(forms[0][:-1])
+        for form in forms:
+            if name := self._by_lower.get(form):
+                return name
+            # Only the metals are named `<Word> Bar`, and players say "iron" for the bar.
+            if " " not in form and (name := self._by_lower.get(f"{form} bar")):
+                return name
+        return None
+
+    def candidates(self, word: str | None) -> list[str]:
+        """Item names holding the word whole, only when there are 2 to 5 of them."""
+        query = " ".join((word or "").split())
+        if not query:
+            return []
+        pattern = re.compile(rf"\b{re.escape(query)}\b", re.I)
+        hits = sorted(name for name in self.items if pattern.search(name))
+        return hits if 2 <= len(hits) <= 5 else []
+
+    def price_by_stage(self, word: str | None, ctx: LiveContext) -> dict[str, Any]:
+        """The cross-cycle median per upgrade stage for one item, in the live currency.
+
+        Basis is Jev's pick on #8423: the cross-cycle stage median times the live
+        cycle's basketIndex, the same basis as `referencePrice`. Sold and Bought
+        lines pool, one observation per trade line."""
+        name = self.resolve(word)
+        if name is None:
+            missing = {"query": word, "resolved": None, "candidates": self.candidates(word)}
+            return {**missing, "reply": _stage_reply(missing)}
+        item_id = next((i for i, n in self._by_id.items() if n == name), None)
+        out: dict[str, Any] = {
+            "query": word,
+            "resolved": name,
+            "item": name,
+            "itemId": item_id,
+            "currency": self.reference_currency(ctx),
+            "cycle": ctx.cycle,
+            "liveStage": ctx.stage,
+            "minN": MIN_N,
+            "stages": [],
+        }
+        index = self.cycles.get(ctx.cycle or -1, {}).get("basketIndex")
+        if not ctx.home:
+            out["note"] = "norms describe the Sirens server only"
+            return out
+        if not index:
+            out["note"] = (
+                f"cycle {ctx.cycle} is not in the norms file yet, so no median is in its currency"
+            )
+        cross = self.items[name]["crossCycle"]
+        for stage in STAGES:
+            bucket = cross.get(stage)
+            if not bucket:
+                continue
+            enough = bucket["n"] >= MIN_N and bool(index)
+            out["stages"].append(
+                {
+                    "stage": stage,
+                    "median": round(bucket["median"] * index, 2) if enough else None,
+                    "n": bucket["n"],
+                    "cycles": bucket["cycles"],
+                }
+            )
+        out["reply"] = _stage_reply(out)
+        return out
+
     def context(self, ctx: LiveContext) -> dict[str, Any]:
         """Payload-level fields every per-object norm shares."""
         ref = self.reference_currency(ctx)
@@ -345,6 +425,7 @@ PRICE_FIELDS: dict[str, tuple[PriceSpec, ...]] = {
         ("recipes[].cost.ingredients[]", "unitCost"),
     ),
     "fair_price": (("", "inGameMedian"),),
+    "price_by_stage": (("", ""),),
     # SPA data routes, not MCP tools. Their pages show the same prices.
     "/preview/item.json": (("", ""),),
     "/preview/price-history.json": (("", "distribution.median"),),
@@ -465,3 +546,48 @@ def unnormed(payload: Any) -> list[str]:
 
     walk(payload, "", None, None)
     return misses
+
+
+def _stage_reply(payload: dict[str, Any]) -> str:
+    """The one-line answer `{{reply}}` templates. Kept terse so an item with every
+    stage traded still fits the 280-character template cap."""
+    if payload.get("resolved") is None:
+        text = f"No Eco item matches {payload.get('query')!r}."
+        if payload.get("candidates"):
+            text += " Items with that word: " + ", ".join(payload["candidates"]) + "."
+        return text
+    if payload.get("note"):
+        return f"{payload['item']}: {payload['note']}."
+    if not payload["stages"]:
+        return f"{payload['item']}: no trades in past cycles."
+    # Grouped by tier so the stage number alone repeats: every item then fits.
+    tiers: dict[str, list[str]] = {}
+    for row in payload["stages"]:
+        tier, _, number = row["stage"].partition(" ")
+        figure = f"{row['median']:.2f}" if row["median"] is not None else "too few"
+        tiers.setdefault(tier, []).append(f"{number} {figure} ({row['n']})".lstrip())
+    groups = [
+        f"no upgrade {rows[0]}" if tier == "none" else f"{tier} " + ", ".join(rows)
+        for tier, rows in tiers.items()
+    ]
+    return (
+        f"{payload['item']} median {payload['currency']} per upgrade stage (trades): "
+        + ". ".join(groups)
+        + "."
+    )
+
+
+def price_by_stage_markdown(payload: dict[str, Any]) -> str:
+    """The readable block for `price_by_stage`: one line per stage, nothing else priced."""
+    if payload.get("resolved") is None:
+        return str(payload["reply"])
+    head = f"**{payload['item']}**, median trade price per upgrade stage"
+    lines = [f"{head} in {payload['currency']}"]
+    if payload.get("note"):
+        lines.append(payload["note"])
+    for row in payload["stages"]:
+        figure = (
+            f"{row['median']:.2f}" if row["median"] is not None else f"too few trades (<{MIN_N})"
+        )
+        lines.append(f"- {row['stage']}: {figure} ({row['n']} trades)")
+    return "\n".join(lines)

@@ -30,6 +30,7 @@ TOOL_ARGS: dict[str, dict[str, dict[str, Any]]] = {
     "get_market": {"item": {"vocabulary": ITEMS_URI, "field": "id", "ignore": SHOP_WORDS}},
     "price_recipe": {"product": {"vocabulary": ITEMS_URI, "field": "id"}},
     "get_currency": {"currency": {"vocabulary": CURRENCIES_URI, "field": "name"}},
+    "price_by_stage": {"item": {"vocabulary": ITEMS_URI, "field": "name", "ignore": SHOP_WORDS}},
 }
 
 

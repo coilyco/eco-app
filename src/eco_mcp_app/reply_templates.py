@@ -54,6 +54,8 @@ REPLY_TEMPLATES: dict[str, list[dict[str, Any]]] = {
             ),
         },
     ],
+    # The payload carries the per-stage line itself, since a template has no loop.
+    "price_by_stage": [{"when_args": ["item"], "text": "{{reply}}"}],
     "get_currency": [
         {
             "when_args": ["currency"],

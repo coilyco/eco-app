@@ -90,6 +90,21 @@ join that map or `NO_PRICE_TOOLS`, or `tests/mcp/test_norms.py` fails.
 - Ledger prices carry currency ids. Until the id-to-name map is live
   (eco-app#217), they get no `multiple` and no in-currency figure.
 
+## Median price per stage
+
+`price_by_stage(item)` answers "how much should I sell or buy X for" with one
+median per upgrade stage and nothing else priced (teable:coilyco/eco-app#8423).
+
+- **Resolution** takes an exact name or Eco id, then a plural's singular, then a
+  bare metal word as its bar (`iron` is Iron Bar). Nothing is fuzzy-matched. A
+  miss returns `resolved: null` and no price, with `candidates` only when 2 to 5
+  item names hold the word whole.
+- **Basis** is the cross-cycle stage median times the live basket index, the
+  `referencePrice` basis. A stage under `MIN_N` trades keeps its `n` and gets
+  `median: null`. Sold and Bought lines pool.
+- **`reply`** is the whole answer on one line, grouped by tier so every item fits
+  the 280-character template cap. The tool's template is `{{reply}}`.
+
 ## See also
 
 - [trades.md](trades.md) - the ledger this derives from.

@@ -1,0 +1,157 @@
+"""One item word to one Eco item and its median price per upgrade stage
+(teable:coilyco/eco-app#8423). The expected figures are game-dev's prototype run
+against the bundled norms file at aacb6bf."""
+
+from __future__ import annotations
+
+import json
+from typing import Any
+
+import mcp.types as mt
+import pytest
+
+from eco_mcp_app import norms
+from eco_mcp_app.reply_templates import MAX_REPLY_CHARS, REPLY_TEMPLATES, render_reply
+from eco_mcp_app.server import build_server
+
+LIVE = norms.LiveContext(stage="Modern 4", cycle=14)
+
+
+def _stage(norm: norms.Norms, word: str) -> dict[str, Any]:
+    return norm.price_by_stage(word, LIVE)
+
+
+@pytest.fixture(scope="module")
+def real() -> norms.Norms:
+    loaded = norms.load()
+    assert loaded is not None, "data/eco_trades_norms.json.gz is not bundled"
+    return loaded
+
+
+@pytest.mark.parametrize(
+    ("word", "item"),
+    [
+        ("Iron Bar", "Iron Bar"),
+        ("iron bar", "Iron Bar"),
+        ("IronBarItem", "Iron Bar"),
+        ("iron", "Iron Bar"),
+        ("copper", "Copper Bar"),
+        ("hewn logs", "Hewn Log"),
+        ("  hewn   log ", "Hewn Log"),
+        ("Basic Upgrade 4", "Basic Upgrade 4"),
+    ],
+)
+def test_a_word_resolves_by_name_id_plural_or_metal(
+    real: norms.Norms, word: str, item: str
+) -> None:
+    assert real.resolve(word) == item
+
+
+@pytest.mark.parametrize("word", ["unobtainium", "dragon scales", "glorbnite", "cotton", "", "ron"])
+def test_nothing_is_guessed(real: norms.Norms, word: str) -> None:
+    out = _stage(real, word)
+    assert out["resolved"] is None
+    # An unresolved item carries no price field at all.
+    assert set(out) == {"query", "resolved", "candidates", "reply"}
+
+
+def test_candidates_list_only_two_to_five_whole_word_names(real: norms.Norms) -> None:
+    # "cotton" is whole in 17 names, past the cap, and "ron" is inside words only.
+    assert real.candidates("cotton") == []
+    assert real.candidates("ron") == []
+    tallow = ["Tallow", "Tallow Candle", "Tallow Lamp", "Tallow Wall Lamp"]
+    assert real.candidates("tallow") == tallow
+    assert real.price_by_stage("tallows wax", LIVE)["candidates"] == []
+
+
+def test_iron_matches_the_prototype(real: norms.Norms) -> None:
+    out = _stage(real, "iron")
+    assert (out["item"], out["itemId"], out["currency"], out["cycle"], out["liveStage"]) == (
+        "Iron Bar",
+        "IronBarItem",
+        "Spectres",
+        14,
+        "Modern 4",
+    )
+    rows = {r["stage"]: (r["median"], r["n"]) for r in out["stages"]}
+    assert rows["Basic 2"] == (1.05, 28)
+    assert rows["Basic 4"] == (1.31, 348)
+    assert rows["Advanced 1"] == (0.89, 163)
+    assert rows["Modern 1"] == (0.43, 278)
+    assert rows["Modern 2"] == (0.58, 136)
+    assert rows["Modern 4"] == (0.58, 181)
+    assert [r["stage"] for r in out["stages"]] == [s for s in norms.STAGES if s in rows]
+
+
+def test_a_thin_stage_keeps_its_count_and_loses_its_median(real: norms.Norms) -> None:
+    rows = {r["stage"]: r for r in _stage(real, "hewn logs")["stages"]}
+    assert rows["none"]["n"] < norms.MIN_N and rows["none"]["median"] is None
+    assert (rows["Basic 4"]["median"], rows["Basic 4"]["n"]) == (0.38, 178)
+    assert (rows["Modern 4"]["median"], rows["Modern 4"]["n"]) == (0.26, 149)
+
+
+def test_an_upgrade_name_is_the_item_not_a_stage(real: norms.Norms) -> None:
+    rows = {r["stage"]: (r["median"], r["n"]) for r in _stage(real, "Basic Upgrade 4")["stages"]}
+    assert rows["Basic 4"] == (219.13, 13)
+    assert rows["Modern 4"] == (163.44, 19)
+
+
+def test_a_cycle_missing_from_the_file_prices_nothing_and_says_why(real: norms.Norms) -> None:
+    out = real.price_by_stage("iron", norms.LiveContext(stage=None, cycle=99))
+    assert out["stages"] and all(r["median"] is None for r in out["stages"])
+    assert "cycle 99" in out["note"] and out["reply"].startswith("Iron Bar: cycle 99 is not")
+
+
+def test_another_server_gets_no_stages(real: norms.Norms) -> None:
+    out = real.price_by_stage("iron", norms.LiveContext(stage=None, cycle=None, home=False))
+    assert out["stages"] == [] and out["note"] == "norms describe the Sirens server only"
+
+
+async def _call(arguments: dict[str, Any]) -> tuple[mt.CallToolResult, str, dict[str, Any]]:
+    """The result, its readable block, and its JSON block."""
+    handler = build_server().request_handlers[mt.CallToolRequest]
+    result = await handler(
+        mt.CallToolRequest(
+            method="tools/call",
+            params=mt.CallToolRequestParams(name="price_by_stage", arguments=arguments),
+        )
+    )
+    root = result.root
+    assert isinstance(root, mt.CallToolResult)
+    text, blob = root.content
+    assert isinstance(text, mt.TextContent) and isinstance(blob, mt.TextContent)
+    return root, text.text, json.loads(blob.text)
+
+
+async def test_the_tool_answers_through_mcp_with_one_line_per_stage() -> None:
+    result, text, payload = await _call({"item": "hewn logs"})
+    assert result.isError is False
+    assert text.startswith("**Hewn Log**") and "- Basic 4: 0.38 (178 trades)" in text
+    assert "- none: too few trades" in text
+    assert payload["resolved"] == "Hewn Log" and "normContext" in payload
+
+
+async def test_the_tool_says_it_found_nothing() -> None:
+    result, text, payload = await _call({"item": "glorbnite"})
+    assert result.isError is False
+    assert text == "No Eco item matches 'glorbnite'."
+    assert payload["resolved"] is None and "stages" not in payload
+
+
+def test_the_reply_template_renders_for_found_and_missing(real: norms.Norms) -> None:
+    templates = REPLY_TEMPLATES["price_by_stage"]
+    found = render_reply(templates, _stage(real, "hewn logs"), {"item": "Hewn Log"})
+    assert found == (
+        "Hewn Log median Spectres per upgrade stage (trades): no upgrade too few (3). "
+        "Basic 1 0.52 (9), 2 0.52 (169), 3 0.46 (21), 4 0.38 (178). "
+        "Advanced 1 0.35 (90), 2 0.30 (76), 3 0.32 (37), 4 0.29 (132). "
+        "Modern 1 0.36 (192), 2 0.31 (55), 3 0.33 (19), 4 0.26 (149)."
+    )
+    missing = render_reply(templates, _stage(real, "glorbnite"), {"item": "glorbnite"})
+    assert missing == "No Eco item matches 'glorbnite'."
+
+
+def test_every_item_fits_the_template_cap(real: norms.Norms) -> None:
+    # Past the cap the caller drops to its model path, which is the #8421 failure.
+    over = [n for n in real.items if len(_stage(real, n)["reply"]) > MAX_REPLY_CHARS]
+    assert over == []

@@ -60,9 +60,10 @@ async def _advertised_tools() -> list[mt.Tool]:
 
 
 @pytest.mark.asyncio
-async def test_the_surface_is_still_twenty_four_tools() -> None:
-    """#6076 audited "all 25 MCP tools". trade_watchers left in #8404, so 24 is the claim now."""
-    assert len(await _advertised_tools()) == 24
+async def test_the_surface_is_still_twenty_five_tools() -> None:
+    """#6076 audited "all 25 MCP tools". trade_watchers left in #8404 and price_by_stage
+    joined in #8423, whose stages array is bounded by the 13 upgrade stages."""
+    assert len(await _advertised_tools()) == 25
 
 
 @pytest.mark.asyncio

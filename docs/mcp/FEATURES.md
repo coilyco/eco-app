@@ -30,6 +30,7 @@ Defined in [src/eco_mcp_app/server.py](../../src/eco_mcp_app/server.py) and the 
 - **get_world** - World / industry activity from the action-log exporter. Construction, terraforming, roads, moved objects, explosions, garbage, and air pollution folded into a per-day mutation timeline by category, a top-world-shapers + top-polluters leaderboard, most-touched objects, and coarse-binned activity hotspots. No new mod, no restart - reuses the crafting atlas's streamed-CSV plumbing. Probe: [docs/world.md](../world.md).
 - **get_market** - Per-item and per-currency price history, volume, and trend intelligence.
 - **find_trade** - Resale, arbitrage, and supply-gap decisions from history and live shelves.
+- **price_by_stage** - One item word to one Eco item and its median trade price per upgrade stage, or a plain miss. No fuzzy match ([price-history.md](../price-history.md#median-price-per-stage), teable:coilyco/eco-app#8423).
 - **fair_price** (disabled, teable:coilyco/eco-app#8346) - Real-world commodity prices via FRED (copper, wheat, lumber, iron, crude). 7d/30d/90d.
 - **get_region** - WWF ecoregion classification. Donut, top-3 matches, boom/bust lists.
 - **get_government** - Civic org chart. Elected titles, active elections, active laws (current-state snapshot from the live civic endpoints).

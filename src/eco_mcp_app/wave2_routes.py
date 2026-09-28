@@ -94,6 +94,24 @@ class FairPriceInput(ServerInput):
     )
 
 
+class PriceByStageInput(BaseModel):
+    """Name one item to price across upgrade stages."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    item: str = Field(
+        description=(
+            "One Eco item as the player said it: a display name, an Eco id, a plural, "
+            'or a bare metal word, such as "Hewn Log", IronBarItem, "hewn logs", or iron. '
+            "Nothing is fuzzy-matched, so an unknown word returns no item rather than a guess."
+        )
+    )
+    server: str | None = Field(
+        default=None,
+        description="Eco server whose live cycle sets the currency. Omit for the default.",
+    )
+
+
 WAVE2_PATHS = {
     "get_economy": "/preview/get_economy.json",
     "get_map": "/preview/get_map.json",
@@ -103,6 +121,7 @@ WAVE2_PATHS = {
     "get_crafting_atlas": "/preview/get_crafting_atlas.json",
     "get_trades": "/preview/get_trades.json",
     "fair_price": "/preview/fair_price.json",
+    "price_by_stage": "/preview/price_by_stage.json",
     "get_region": "/preview/get_region.json",
     "get_climate": "/preview/get_climate.json",
     "get_government": "/preview/get_government.json",
@@ -238,6 +257,22 @@ def register_wave2_routes(registry: DualRouteRegistry, invoke: ToolInvoker) -> N
         ),
         rest_path=WAVE2_PATHS["fair_price"],
         input_model=FairPriceInput,
+    )
+    register_json_route(
+        registry,
+        invoke,
+        name="price_by_stage",
+        title="Eco - median price per upgrade stage",
+        description=(
+            "Answer how much to sell or buy an Eco item for: its median trade price at each "
+            "upgrade stage (none, Basic 1 to Modern 4) across past cycles, with the trade count "
+            "behind each, in the live cycle's currency. Answers 'how much should I sell X for' "
+            "and 'what does X usually go for'. A stage with too few trades has no median. An "
+            "item it cannot find returns no prices, sometimes with near names. For which store "
+            "to buy from or sell to right now use find_trade."
+        ),
+        rest_path=WAVE2_PATHS["price_by_stage"],
+        input_model=PriceByStageInput,
     )
     register_json_route(
         registry,

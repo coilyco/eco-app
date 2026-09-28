@@ -47,6 +47,8 @@ async def test_list_tools_advertises_all_tools() -> None:
         "get_recipes",
         "price_recipe",
         "get_skills",
+        # Per-stage median price for one item (teable:coilyco/eco-app#8423).
+        "price_by_stage",
     }
 
 

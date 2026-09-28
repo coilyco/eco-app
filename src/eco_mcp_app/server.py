@@ -2199,6 +2199,22 @@ def build_server(
         return [ReadResourceContents(content=body, mime_type="application/json")]
 
     async def _dispatch_call_tool_raw(name: str, arguments: dict[str, Any]) -> CallToolResult:
+        if name == "price_by_stage":
+            args = arguments or {}
+            price_norms = norms_mod.load()
+            if price_norms is None:
+                return CallToolResult(
+                    content=[TextContent(type="text", text="the trade norms file is not bundled")],
+                    isError=True,
+                )
+            ctx = await norms_mod.live_context(args.get("server"))
+            stage_payload = price_norms.price_by_stage(args.get("item"), ctx)
+            return CallToolResult(
+                content=[
+                    TextContent(type="text", text=norms_mod.price_by_stage_markdown(stage_payload)),
+                    TextContent(type="text", text=json.dumps(stage_payload)),
+                ],
+            )
         if name == "explain_item":
             from .wikidata import build_ecopedia_card
 

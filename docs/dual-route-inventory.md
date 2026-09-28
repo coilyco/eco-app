@@ -18,8 +18,8 @@ Eco server endpoints are upstream dependencies, not routes this service owns.
 
 ## State
 
-The public server defines 24 tools, two of them disabled (`get_economy`,
-`fair_price`). **Twenty-three are registered** and serve both
+The public server defines 25 tools, two of them disabled (`get_economy`,
+`fair_price`). **Twenty-four are registered** and serve both
 surfaces, each at `GET /preview/<tool>.json` except the Wave 1 set, which keeps
 its shorter paths: `preview.json` (`get_server_status`), and `world`, `stores`,
 `progression`, `market`, `logistics`, `currency`, `civics`, and
@@ -66,8 +66,8 @@ against this same contract.
 
 ### Shipped
 
-- `find_trade`, `get_market`, `price_recipe`, `get_currency`, and
-  `get_server_status`.
+- `find_trade`, `get_market`, `price_recipe`, `get_currency`,
+  `price_by_stage`, and `get_server_status`.
 - `get_recipes` has no template, because an ingredient list needs a loop.
 - `get_milestones` has no template, because the next unfinished
   achievement needs a filter, since rows sort completed ones first.
@@ -89,7 +89,7 @@ entry's `field`. Source: `src/eco_mcp_app/vocab.py`.
   when admin data is unreachable). Both are `application/json`
   `{"entries": [{"id", "name", "aliases"}]}` with no annotations, so no
   client reads them as grounding.
-- **Fields** - `find_trade.item` and `get_currency.currency` take `name`.
+- **Fields** - `find_trade.item`, `price_by_stage.item` and `get_currency.currency` take `name`.
   `get_market.item` and `price_recipe.product` take `id`: `get_market`
   folds spaces out of the id side only, so a multi-word display name never
   matches there.
