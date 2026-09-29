@@ -788,7 +788,10 @@ def _stage_lead(payload: dict[str, Any]) -> str | None:
         return f"{payload['stageQuery']!r} is not an upgrade stage."
     floor = payload.get("firstTradedStage")
     if floor and STAGES.index(asked) < STAGES.index(floor):
-        return f"{payload['item']} was never traded before {floor}, so nothing at {asked}{shown}."
+        return (
+            f"{payload['item']} was never traded before {floor}, so nothing at {asked}{shown}, "
+            "the market price at that world stage, not your cost to craft with that module."
+        )
     row = next((r for r in payload["stages"] if r["stage"] == asked), None)
     if row is None or row["median"] is None:
         return f"{payload['item']} has no price at {asked}{shown}."

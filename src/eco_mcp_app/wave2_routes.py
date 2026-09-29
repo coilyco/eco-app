@@ -212,8 +212,10 @@ def register_wave2_routes(registry: DualRouteRegistry, invoke: ToolInvoker) -> N
         description=(
             "Explain what an Eco item is in real life: looks it up on Wikidata and "
             "Wikipedia and returns its image, a short description, and category-specific "
-            "facts. Answers 'what is basalt in the real world'. For how to make it in game "
-            "use get_recipes, and for an animal or plant use get_species."
+            "facts. Answers 'what is basalt in the real world'. Not for upgrade-module "
+            "shorthand such as au3, bu5, sbu4, or mu0, which are items price_by_stage "
+            "prices. For how to make it in game use get_recipes, and for an animal or "
+            "plant use get_species."
         ),
         rest_path=WAVE2_PATHS["explain_item"],
         input_model=ExplainItemInput,
@@ -276,10 +278,13 @@ def register_wave2_routes(registry: DualRouteRegistry, invoke: ToolInvoker) -> N
             "modules included (Basic Upgrade 4, au3, sbu4, mining bu5): its median trade price "
             "at each upgrade stage (none, Basic 1 to Modern 4) across past cycles, with the "
             "trade count behind each, in the live cycle's currency, and marked estimates where "
-            "trades are thin. Answers 'how much should I sell X for', 'what should I pay for "
-            "X', 'how much should I buy X for', 'what's a good price for X', 'what is X worth', "
-            "and 'what does X go for at au3'. An item it cannot match returns no price. For "
-            "which store to buy from or sell to right now use find_trade."
+            "trades are thin. A shorthand upgrade token by itself names the item to price: "
+            "au3 is Advanced Upgrade 3, sbu4 is Scholars Basic Upgrade 4, and mu0 means there "
+            "is no Modern upgrade. Answers 'how much for an au3', 'price check AU 3', 'how "
+            "much should I sell X for', 'what should I pay for X', 'how much should I buy X "
+            "for', 'what's a good price for X', 'what is X worth', and 'what does X go for at "
+            "au3'. An item it cannot match returns no price. For which store to buy from or "
+            "sell to right now use find_trade."
         ),
         rest_path=WAVE2_PATHS["price_by_stage"],
         input_model=PriceByStageInput,

@@ -157,7 +157,8 @@ def test_a_qualifier_below_the_floor_prices_nothing_there(real: norms.Norms) -> 
         "Modern 1",
     )
     assert out["reply"].startswith(
-        "Nylon Fabric was never traded before Modern 1, so nothing at Advanced 4 (MU0)."
+        "Nylon Fabric was never traded before Modern 1, so nothing at Advanced 4 (MU0), "
+        "the market price at that world stage, not your cost to craft with that module."
     )
 
 
