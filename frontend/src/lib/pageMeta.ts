@@ -38,6 +38,7 @@ interface ShellDefaults {
   ogTitle: string | null
   ogDescription: string | null
   ogImage: string | null
+  ogImageAlt: string | null
 }
 
 let shell: ShellDefaults | null = null
@@ -67,12 +68,15 @@ export function applyPageMeta({ title, description, image, canonical }: PageMeta
     ogTitle: read('meta[property="og:title"]'),
     ogDescription: read('meta[property="og:description"]'),
     ogImage: read('meta[property="og:image"]'),
+    ogImageAlt: read('meta[property="og:image:alt"]'),
   }
   document.title = title ?? shell.title
   put('meta[name="description"]', "name", "description", description ?? shell.description)
   put('meta[property="og:title"]', "property", "og:title", title ?? shell.ogTitle)
   put('meta[property="og:description"]', "property", "og:description", description ?? shell.ogDescription)
   put('meta[property="og:image"]', "property", "og:image", image ? `${manifest.site}${image}` : shell.ogImage)
+  // Like the server: a route's own card takes the route's title as its alt.
+  put('meta[property="og:image:alt"]', "property", "og:image:alt", image ? (title ?? shell.ogImageAlt) : shell.ogImageAlt)
   put('meta[property="og:url"]', "property", "og:url", canonical ?? null)
 }
 

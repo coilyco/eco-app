@@ -21,8 +21,8 @@ Give the route a `title`, a `description` and `"image": "/og/<slug>.png"` in the
 
 ## Where the tags come from
 
-* **Shell** - `frontend/index.html` carries the default card as `og:image`, with width, height and `twitter:card`. Every shared link gets at least this one.
-* **Client** - `applyPageMeta` swaps `og:image` to the route's card on navigation. This serves tabs and Google, which run the bundle.
+* **Shell** - `frontend/index.html` carries the default card as `og:image`, with its alt (the shell title), width, height and `twitter:card`. Every shared link gets at least this one.
+* **Client** - `applyPageMeta` swaps `og:image` to the route's card, and its alt to the route title, on navigation. This serves tabs and Google, which run the bundle.
 * **Scrapers** - Slack, Discord and the rest do not run it, so a per-route `og:image` in the served HTML is the server's job, in `shell_head.py` (eco-app#8576).
 
 Pairs with [page-meta](page-meta.md), which owns the words.
