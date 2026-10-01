@@ -37,7 +37,8 @@ def _set_meta(doc: str, attr: str, name: str, value: str) -> str:
 
 def apply(doc: str, head: Head) -> str:
     """The shell with `head` applied. A field that is None keeps the shell's default,
-    except `url`, whose tag is removed so the shell's home-page default names no page."""
+    except `url`, whose tag is removed so the shell's home-page default names no page.
+    A route's own card replaces `og:image` and takes the route's title as its alt."""
     if head.title:
         title = f"<title>{html.escape(head.title, quote=False)}</title>"
         doc = _TITLE.sub(lambda _: title, doc, count=1)
@@ -45,6 +46,10 @@ def apply(doc: str, head: Head) -> str:
     if head.description:
         doc = _set_meta(doc, "name", "description", head.description)
         doc = _set_meta(doc, "property", "og:description", head.description)
+    if head.image:
+        doc = _set_meta(doc, "property", "og:image", head.image)
+        if head.title:
+            doc = _set_meta(doc, "property", "og:image:alt", head.title)
     if head.url:
         doc = _set_meta(doc, "property", "og:url", head.url)
     else:
