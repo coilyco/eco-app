@@ -33,8 +33,9 @@ state with a retry.
   only in that mode, and then follows the canvas's CSS size every frame.
 * **Start of the engine is deferred a tick.** React's dev double-mount otherwise
   boots two engines on one canvas, which broke Play after a Pause.
-* **`crawl: noindex`.** Public and linkable, out of the sitemap, while it is a
-  draft. Flip it in `data/spa_routes.json`.
+* **`crawl: index`.** Public, in the sitemap, and answered with a canonical link
+  header, on Kai's say. It started `noindex` while it was a draft. Like every
+  SPA page it shares the shell's `<title>`, since no page sets its own.
 * **Budget 5400K** in `frontend/scripts/kit-check.mjs`: 827K measured without the
   splat plus its 4460K. `kit-check` cannot load the splat from localhost, so it
   measures the failure state.

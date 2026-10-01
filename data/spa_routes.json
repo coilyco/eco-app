@@ -42,8 +42,8 @@
     {
       "path": "/cycle-14/castle",
       "component": "CastleSplat",
-      "crawl": "noindex",
-      "note": "A draft Gaussian splat of the cycle 14 castle (eco-app#8572). Public and linkable, kept out of the index until Kai says it is ready."
+      "crawl": "index",
+      "note": "A draft Gaussian splat of the cycle 14 castle (eco-app#8572). Indexed on Kai's say, 2026-10-01, although it is a draft."
     },
     {
       "path": "/replay",
