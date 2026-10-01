@@ -1,21 +1,85 @@
 import { useEffect, useRef, useState } from "react"
 import Layout from "../components/Layout"
 import Loading from "../components/Loading"
+import hero from "../assets/castle-v2-hero.jpg"
 import type { SplatViewer } from "../lib/splatViewer"
 
-// A Gaussian splat of the cycle 14 castle draft. The file is too big to commit
-// (the repo caps files at 2 MB), so it loads from the files host.
-// docs/frontend/castle-splat.md.
-export const SPLAT_URL = "https://files.coilysiren.me/eco/cycle-14/castle-draft.sog"
+// A Gaussian splat of the cycle 14 castle, and two flythroughs of it. The splat and
+// the videos are too big to commit (the repo caps files at 2 MB), so they load from
+// the files host. docs/frontend/castle-splat.md.
+const FILES = "https://files.coilysiren.me/eco/cycle-14"
+export const SPLAT_URL = `${FILES}/castle-v2.sog`
+
+const FLYTHROUGHS = [
+  { n: 1, seconds: 55, megabytes: 27 },
+  { n: 2, seconds: 30, megabytes: 25 },
+]
 
 type Phase = "unsupported" | "loading" | "ready" | "failed"
 
 const FACTS: Array<[string, string]> = [
-  ["Frames", "72"],
-  ["Reconstruction", "COLMAP 4.2.1"],
-  ["Training", "Brush v0.3.0, 15,000 steps"],
-  ["Splats", "127,565, after trimming"],
+  ["Frames", "300, four rings and a top-down grid"],
+  ["Reconstruction", "COLMAP 4.2.1, 300 of 300 registered at 0.76 px"],
+  ["Training", "Brush v0.3.0, 30,000 steps at 3440 px"],
+  ["Quality", "28.05 dB PSNR over 20 held-out frames"],
+  ["Splats", "386,757, after trimming"],
 ]
+
+// One flythrough, as its poster on a play button. The video is not in the page until
+// someone presses it, since each is about 25 MB, and a file that will not load says
+// so instead of leaving a dead player.
+type VideoPhase = "idle" | "playing" | "failed"
+
+function Flythrough({ n, seconds, megabytes }: { n: number; seconds: number; megabytes: number }) {
+  const [phase, setPhase] = useState<VideoPhase>("idle")
+  // A poster that will not load leaves the labelled button on black, not a broken-image glyph.
+  const [posterFailed, setPosterFailed] = useState(false)
+  const name = `Flythrough ${n}`
+  const base = `${FILES}/eco-cycle-14-castle-flythrough-${n}`
+  return (
+    <figure className="castle-video k-stack k-stack--2">
+      {phase === "idle" ? (
+        <button
+          type="button"
+          className="castle-video__frame castle-video__play"
+          aria-label={`Play ${name.toLowerCase()}, ${seconds} seconds, ${megabytes} MB`}
+          onClick={() => setPhase("playing")}
+        >
+          {posterFailed ? null : (
+            <img src={`${base}-poster.jpg`} alt="" loading="lazy" decoding="async" onError={() => setPosterFailed(true)} />
+          )}
+          <span className="castle-video__badge" aria-hidden="true">
+            Play
+          </span>
+        </button>
+      ) : null}
+      {phase === "playing" ? (
+        <video
+          className="castle-video__frame"
+          controls
+          autoPlay
+          playsInline
+          src={`${base}.mp4`}
+          aria-label={`${name}, ${seconds} seconds`}
+          onError={() => setPhase("failed")}
+        />
+      ) : null}
+      {phase === "failed" ? (
+        <div className="castle-video__frame castle-note k-stack k-stack--3" role="alert" data-testid={`castle-video-failed-${n}`}>
+          <p>{name} did not load. The file may be unavailable right now.</p>
+          <div className="k-btn-row">
+            <button type="button" className="k-btn k-btn--quiet" onClick={() => setPhase("playing")}>
+              Try again
+            </button>
+          </div>
+        </div>
+      ) : null}
+      <figcaption className="k-hint">
+        {name}, {seconds} seconds, {megabytes} MB
+      </figcaption>
+    </figure>
+  )
+}
 
 // WebGL2 is the floor the engine needs. Checking the global first keeps jsdom
 // (which has no canvas) from logging a not-implemented error.
@@ -77,10 +141,11 @@ export default function CastleSplat() {
   return (
     <Layout>
       <section className="k-stack k-stack--4">
-        {/* Kai's own words, as she approved them (teable:coilyco/eco-app#8572). */}
-        <h1 className="k-display">DRAFT CYCLE 14 CASTLE</h1>
+        {/* dev-advocate's words, teable:coilyco/eco-app#8601. */}
+        <h1 className="k-display">The castle of La Croisée des Bois</h1>
         <p className="castle-sub">
-          v1 proof of concept, Gaussian splat of the cycle 14 french castle, pending v2 high quality re-capture
+          Built by the French-speaking town of La Croisée des Bois on the Sirens Eco server in cycle 14, captured from
+          300 frames as a Gaussian splat of 386,757 points.
         </p>
       </section>
 
@@ -89,29 +154,37 @@ export default function CastleSplat() {
           Look around
         </h2>
         <div className="castle-stage" data-phase={phase}>
+          {/* The still stands in while the splat loads and when it cannot, so the stage is never empty. */}
+          <img
+            className="castle-still"
+            src={hero}
+            width={1920}
+            height={1080}
+            alt="The castle of La Croisée des Bois, a still from the 3D capture."
+          />
           <canvas
             ref={canvasRef}
             className={phase === "failed" || phase === "unsupported" ? "castle-canvas castle-canvas--off" : "castle-canvas"}
             // The canvas draws pixels no assistive tech can read, so it is one
             // labelled image with its controls described beside it.
             role="img"
-            aria-label="3D view of the castle draft, a Gaussian splat. The facts below describe the capture."
+            aria-label="3D view of the castle, a Gaussian splat. The facts below describe the capture."
             aria-describedby="castle-help"
             tabIndex={live ? 0 : -1}
             aria-hidden={!live}
           />
           {phase === "loading" ? (
-            <Loading label="Loading the castle draft, 4.4 MB…" testid="castle-loading" />
+            <Loading label="Loading the castle, 8.2 MB…" testid="castle-loading" />
           ) : null}
           {phase === "unsupported" ? (
             <p className="castle-note" role="status" data-testid="castle-unsupported">
-              This browser cannot draw 3D with WebGL 2, so the castle draft cannot show here. A recent desktop
+              This browser cannot draw 3D with WebGL 2, so the 3D castle cannot show here. A recent desktop
               browser can.
             </p>
           ) : null}
           {phase === "failed" ? (
             <div className="castle-note k-stack k-stack--3" role="alert" data-testid="castle-failed">
-              <p>The castle draft did not load. The file may be unavailable right now.</p>
+              <p>The castle did not load. The file may be unavailable right now.</p>
               <div className="k-btn-row">
                 <button type="button" className="k-btn k-btn--quiet" onClick={() => {
                     setPhase("loading")
@@ -137,6 +210,17 @@ export default function CastleSplat() {
           Drag to orbit, scroll or pinch to zoom. With the view focused, the arrow keys turn it and plus and minus
           zoom.
         </p>
+      </section>
+
+      <section className="k-stack k-stack--4" aria-labelledby="castle-flythroughs">
+        <h2 className="k-h2" id="castle-flythroughs">
+          Flythroughs
+        </h2>
+        <div className="castle-videos">
+          {FLYTHROUGHS.map((video) => (
+            <Flythrough key={video.n} {...video} />
+          ))}
+        </div>
       </section>
 
       <section className="k-stack k-stack--3" aria-labelledby="castle-facts">

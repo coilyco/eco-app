@@ -180,9 +180,9 @@
       "crawl": "index",
       "image": "/og/cycle-14-castle.png",
       "art": "castle.jpg",
-      "title": "DRAFT CYCLE 14 CASTLE",
-      "description": "v1 proof of concept, Gaussian splat of the cycle 14 french castle, pending v2 high quality re-capture",
-      "note": "A draft Gaussian splat of the cycle 14 castle (eco-app#8572). Indexed on Kai's say, 2026-10-01, although it is a draft."
+      "title": "The castle of La Croisée des Bois",
+      "description": "Built by the French-speaking town of La Croisée des Bois on the Sirens Eco server in cycle 14, captured from 300 frames as a Gaussian splat of 386,757 points.",
+      "note": "A Gaussian splat of the cycle 14 castle, with a still and two flythroughs (eco-app#8572, #8601). Indexed on Kai's say, 2026-10-01."
     },
     {
       "path": "/replay",

@@ -11,13 +11,18 @@ export interface SplatViewer {
   zoom(factor: number): void
 }
 
-// The reference viewer's direction, camera at [2, 2, -2] looking at the origin,
-// brought in from its 3.46 so the island fills the frame instead of floating in haze.
-const START = { yaw: Math.atan2(2, -2), pitch: Math.asin(2 / Math.sqrt(12)), distance: 2.2 }
-const FOV = 85
+// The v2 splat is in Eco blocks, about 150 across, so the numbers below are blocks.
+// The reference viewer starts at [90, 70, -90] looking at [0, 10, 0], fov 50, in the
+// y-up frame this page draws in.
+const TARGET: [number, number, number] = [0, 10, 0]
+const REFERENCE: [number, number, number] = [90, 70, -90]
+const offset = REFERENCE.map((value, axis) => value - TARGET[axis])
+const reach = Math.hypot(...offset)
+const START = { yaw: Math.atan2(offset[0], offset[2]), pitch: Math.asin(offset[1] / reach), distance: reach }
+const FOV = 50
 const ORBIT_SPEED = 0.15 // radians per second
 const PITCH_LIMIT = 1.45
-const DISTANCE_RANGE: [number, number] = [0.4, 12]
+const DISTANCE_RANGE: [number, number] = [15, 400]
 
 const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n))
 
@@ -36,19 +41,21 @@ export async function startViewer(
   app.setCanvasResolution(pc.RESOLUTION_AUTO)
   app.graphicsDevice.maxPixelRatio = Math.min(window.devicePixelRatio || 1, 2)
 
+  // The hero still's flat sky (#8B9EBF), so the handoff from still to live view does not flash.
+  const SKY = new pc.Color(0x8b / 255, 0x9e / 255, 0xbf / 255)
   const camera = new pc.Entity("camera")
-  camera.addComponent("camera", { clearColor: new pc.Color(0, 0, 0), fov: FOV, nearClip: 0.01, farClip: 1000 })
+  camera.addComponent("camera", { clearColor: SKY, fov: FOV, nearClip: 0.1, farClip: 2000 })
   app.root.addChild(camera)
 
   const state = { ...START, playing: options.playing, dragging: false }
   const place = () => {
     const flat = Math.cos(state.pitch)
     camera.setPosition(
-      state.distance * flat * Math.sin(state.yaw),
-      state.distance * Math.sin(state.pitch),
-      state.distance * flat * Math.cos(state.yaw),
+      TARGET[0] + state.distance * flat * Math.sin(state.yaw),
+      TARGET[1] + state.distance * Math.sin(state.pitch),
+      TARGET[2] + state.distance * flat * Math.cos(state.yaw),
     )
-    camera.lookAt(0, 0, 0)
+    camera.lookAt(...TARGET)
   }
   place()
 
@@ -59,7 +66,7 @@ export async function startViewer(
   }
 
   try {
-    const asset = new pc.Asset("castle-draft", "gsplat", { url })
+    const asset = new pc.Asset("castle", "gsplat", { url })
     app.assets.add(asset)
     await new Promise<void>((resolve, reject) => {
       asset.once("load", () => resolve())
@@ -67,7 +74,7 @@ export async function startViewer(
       app.assets.load(asset)
     })
     const splat = new pc.Entity("castle")
-    // COLMAP is y-down, so a capture arrives upside down without this turn.
+    // 3DGS is y-down, so a capture arrives upside down without this turn. v2 is y-down too.
     splat.setLocalEulerAngles(0, 0, 180)
     splat.addComponent("gsplat", { asset })
     app.root.addChild(splat)

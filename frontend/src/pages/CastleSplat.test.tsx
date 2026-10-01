@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react"
 import { MemoryRouter } from "react-router-dom"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import CastleSplat, { SPLAT_URL } from "./CastleSplat"
@@ -44,15 +44,21 @@ describe("Castle splat page", () => {
     renderPage()
     expect(await screen.findByTestId("castle-unsupported")).toHaveTextContent(/cannot draw 3D/i)
     expect(startViewer).not.toHaveBeenCalled()
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("DRAFT CYCLE 14 CASTLE")
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("The castle of La Croisée des Bois")
     expect(screen.queryByRole("group", { name: /view controls/i })).not.toBeInTheDocument()
   })
 
   it("keeps the facts and the instructions on the page in every state", async () => {
     renderPage()
     await screen.findByTestId("castle-unsupported")
-    expect(screen.getByText("127,565, after trimming")).toBeInTheDocument()
+    expect(screen.getByText("386,757, after trimming")).toBeInTheDocument()
     expect(screen.getByText(/drag to orbit/i)).toBeInTheDocument()
+  })
+
+  it("keeps the still on the stage in every state, so the stage is never empty", async () => {
+    renderPage()
+    await screen.findByTestId("castle-unsupported")
+    expect(screen.getByRole("img", { name: /a still from the 3D capture/i })).toBeInTheDocument()
   })
 
   it("shows a failure with a way to retry, and retries the same file", async () => {
@@ -84,7 +90,7 @@ describe("Castle splat page", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /reset view/i }))
     expect(viewer.reset).toHaveBeenCalledTimes(1)
-    expect(screen.getByRole("img", { name: /3D view of the castle draft/i })).toHaveAttribute("tabindex", "0")
+    expect(screen.getByRole("img", { name: /3D view of the castle/i })).toHaveAttribute("tabindex", "0")
   })
 
   it("starts paused for someone who asked for reduced motion", async () => {
@@ -108,5 +114,51 @@ describe("Castle splat page", () => {
     unmount()
     await act(async () => finish(viewer))
     expect(viewer.destroy).toHaveBeenCalledTimes(1)
+  })
+
+  it("offers both flythroughs as play buttons, with no video in the page until one is pressed", async () => {
+    renderPage()
+    await screen.findByTestId("castle-unsupported")
+    expect(document.querySelectorAll("video")).toHaveLength(0)
+    const play = screen.getByRole("button", { name: /play flythrough 1, 55 seconds, 27 MB/i })
+    expect(play.querySelector("img")?.getAttribute("src")).toMatch(/flythrough-1-poster\.jpg$/)
+    expect(screen.getByRole("button", { name: /play flythrough 2, 30 seconds, 25 MB/i })).toBeInTheDocument()
+    expect(screen.getByText("Flythrough 2, 30 seconds, 25 MB")).toBeInTheDocument()
+  })
+
+  it("drops a poster that will not load, and keeps the labelled button", async () => {
+    renderPage()
+    await screen.findByTestId("castle-unsupported")
+    const play = screen.getByRole("button", { name: /play flythrough 1/i })
+    fireEvent.error(play.querySelector("img") as HTMLImageElement)
+    expect(play.querySelector("img")).toBeNull()
+    expect(screen.getByRole("button", { name: /play flythrough 1/i })).toBeInTheDocument()
+  })
+
+  it("puts the video in on press, and only the one that was pressed", async () => {
+    renderPage()
+    await screen.findByTestId("castle-unsupported")
+    fireEvent.click(screen.getByRole("button", { name: /play flythrough 2/i }))
+
+    const videos = document.querySelectorAll("video")
+    expect(videos).toHaveLength(1)
+    expect(videos[0].getAttribute("src")).toMatch(/flythrough-2\.mp4$/)
+    expect(videos[0]).toHaveAttribute("controls")
+    expect(screen.getByRole("button", { name: /play flythrough 1/i })).toBeInTheDocument()
+  })
+
+  it("says so when a flythrough will not load, and tries again on request", async () => {
+    renderPage()
+    await screen.findByTestId("castle-unsupported")
+    fireEvent.click(screen.getByRole("button", { name: /play flythrough 1/i }))
+    fireEvent.error(screen.getByLabelText("Flythrough 1, 55 seconds"))
+
+    const alert = await screen.findByTestId("castle-video-failed-1")
+    expect(alert).toHaveAttribute("role", "alert")
+    expect(screen.getByRole("button", { name: /play flythrough 2/i })).toBeInTheDocument()
+
+    fireEvent.click(within(alert).getByRole("button", { name: /try again/i }))
+    expect(await screen.findByLabelText("Flythrough 1, 55 seconds")).toBeInTheDocument()
+    expect(screen.queryByTestId("castle-video-failed-1")).not.toBeInTheDocument()
   })
 })

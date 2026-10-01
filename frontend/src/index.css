@@ -2082,10 +2082,79 @@ html {
   display: none;
 }
 
-.castle-stage .loading,
-.castle-note {
+.castle-still {
   position: absolute;
   inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.castle-stage .loading,
+.castle-stage .castle-note {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: var(--k-s-3);
+  padding: var(--k-s-5);
+  text-align: center;
+  color: var(--k-text);
+  /* Over the still, so the words stay readable on any part of the picture. */
+  background: rgb(0 0 0 / 0.7);
+}
+
+.castle-videos {
+  display: grid;
+  gap: var(--k-s-4);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+}
+
+.castle-video {
+  margin: 0;
+}
+
+.castle-video__frame {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1920 / 1206;
+  background: #000;
+  border: 1px solid var(--k-line);
+}
+
+.castle-video__play {
+  position: relative;
+  /* A button does not inherit the page's type, and the site's floor is 16px. */
+  font: inherit;
+  padding: 0;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.castle-video__play img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.castle-video__badge {
+  position: absolute;
+  inset: auto auto var(--k-s-3) var(--k-s-3);
+  padding: var(--k-s-2) var(--k-s-4);
+  background: rgb(0 0 0 / 0.75);
+  color: var(--k-text);
+  border: 1px solid var(--k-line);
+  font-weight: 700;
+}
+
+.castle-video__play:focus-visible {
+  outline: 2px solid var(--leaf);
+  outline-offset: 2px;
+}
+
+.castle-video .castle-note {
   display: grid;
   place-content: center;
   justify-items: center;
