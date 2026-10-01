@@ -108,7 +108,7 @@ def test_a_retired_path_keeps_its_query_string_across_the_redirect() -> None:
 @pytest.mark.usefixtures("dist")
 def test_a_canonical_page_carries_a_canonical_link_and_no_noindex() -> None:
     client = TestClient(create_app())
-    for path in ("/", "/trade", "/uses/price"):
+    for path in ("/", "/trade", "/uses/price", "/cycle-14/castle"):
         r = client.get(path)
         assert r.status_code == 200
         assert "spa-shell" in r.text

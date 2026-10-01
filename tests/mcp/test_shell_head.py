@@ -75,12 +75,11 @@ def test_routes_get_their_own_title_description_and_canonical_url(served: TestCl
         assert _tag(doc, "property", "og:title") == title
         assert _tag(doc, "name", "description") == description
         assert _tag(doc, "property", "og:description") == description
-        # A noindex draft like /cycle-14/castle has no canonical, so it names none.
+        # og:url is the canonical the server names for the path, and none where it names none.
         assert _tag(doc, "property", "og:url") == seo.classify(path).canonical
         seen.add(_title(doc))
     assert len(seen) == 3
     assert _tag(served.get("/items").text, "property", "og:url") == f"{SITE}/items"
-    assert _tag(served.get("/cycle-14/castle").text, "property", "og:url") is None
 
 
 def test_a_query_string_never_reaches_og_url(served: TestClient) -> None:
