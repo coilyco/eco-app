@@ -12,6 +12,9 @@ build/
 .env
 *.log
 
+# Link-preview cards, drawn by frontend/scripts/og-cards.mjs on every build
+frontend/public/og/
+
 # Local snapshot harness captures (pushed to S3, never committed)
 .snapshots/
 

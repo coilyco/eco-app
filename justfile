@@ -70,6 +70,10 @@ frontend-test *ARGS:
 frontend-norm-fixtures:
     @uv run python -m scripts.frontend_norm_fixtures
 
+# Draw the link-preview cards into frontend/public/og. Native args - [--only /a,/b,default].
+frontend-og *ARGS:
+    @pnpm --dir frontend og "$@"
+
 # The coilyco kit's browser checks (axe, 16px floor, layering, overflow, weight) on every route. Native args - [--base URL] [--only /a,/b] [--json].
 frontend-kit-check *ARGS:
     @pnpm --dir frontend kit-check "$@"

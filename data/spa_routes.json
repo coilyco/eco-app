@@ -6,6 +6,7 @@
       "path": "/",
       "component": "Home",
       "crawl": "index",
+      "image": "/og/home.png",
       "title": "Eco via Sirens: server status and meteor countdown",
       "description": "Who's online on the Eco via Sirens server, how long until the meteor, and how to join. Read live from the game server."
     },
@@ -13,6 +14,7 @@
       "path": "/mods",
       "component": "Mods",
       "crawl": "index",
+      "image": "/og/mods.png",
       "title": "Mods on the server | Eco via Sirens",
       "description": "Every mod running on the Eco via Sirens server, linked to its source where one is published, with the reason where it isn't."
     },
@@ -20,12 +22,14 @@
       "path": "/wiki",
       "component": "Wiki",
       "crawl": "index",
+      "image": "/og/wiki.png",
       "title": "Eco wiki shortcuts | Eco via Sirens",
       "description": "Links to the parts of the official Eco wiki that players use most, checked by hand. The wiki on Strange Loop Games' site has the final word."
     },
     {
       "path": "/jobs/*",
       "component": "Jobs",
+      "image": "/og/jobs.png",
       "title": "Specialties and profitable crafts | Eco via Sirens",
       "description": "Who on the Eco via Sirens server has each specialty, and which crafts pay best right now, ranked by profit times how many people want them.",
       "crawl": "index",
@@ -36,6 +40,7 @@
       "path": "/trade",
       "component": "Trade",
       "crawl": "index",
+      "image": "/og/trade.png",
       "title": "What to buy, sell, and ship | Eco via Sirens",
       "description": "The whole Eco via Sirens market on one page: what's moving, price history, every store, and what to buy, sell, and ship next."
     },
@@ -43,6 +48,7 @@
       "path": "/crafting",
       "component": "Crafting",
       "crawl": "index",
+      "image": "/og/crafting.png",
       "title": "Crafting atlas | Eco via Sirens",
       "description": "What the Eco via Sirens world is making: the most crafted items, the most gathered resources, and the busiest crafting stations."
     },
@@ -50,12 +56,14 @@
       "path": "/items",
       "component": "Items",
       "crawl": "index",
+      "image": "/og/items.png",
       "title": "Every item in the world | Eco via Sirens",
       "description": "Every item bought, sold, or crafted on the Eco via Sirens server. Open one for its trades, prices, who makes it, and who sells it."
     },
     {
       "path": "/item",
       "component": "Item",
+      "image": "/og/item.png",
       "title": "Item market and recipes | Eco via Sirens",
       "description": "One item on the Eco via Sirens server: its market, the recipes that make it, and what it's used for.",
       "crawl": "noindex",
@@ -65,12 +73,14 @@
       "path": "/recipes",
       "component": "Recipes",
       "crawl": "index",
+      "image": "/og/recipes.png",
       "title": "Every Eco recipe | Eco via Sirens",
       "description": "Every way to craft in Eco, filterable, and linked to each product's market history on the Eco via Sirens server."
     },
     {
       "path": "/recipe",
       "component": "Recipe",
+      "image": "/og/recipe.png",
       "title": "Recipe | Eco via Sirens",
       "description": "Recipes live on each product's item page now, with the market history beside them.",
       "crawl": "noindex",
@@ -80,6 +90,7 @@
       "path": "/civics",
       "component": "Civics",
       "crawl": "index",
+      "image": "/og/civics.png",
       "title": "Civics and elections | Eco via Sirens",
       "description": "Elections, voter turnout, citizenships, and settlements on the Eco via Sirens server, counted from the server's own civics data."
     },
@@ -87,6 +98,7 @@
       "path": "/uses",
       "component": "Uses",
       "crawl": "index",
+      "image": "/og/uses.png",
       "title": "What eco-app answers | Eco via Sirens",
       "description": "Each page answers one question about the Eco via Sirens economy: what's in demand, where to buy and sell, how to price, and more."
     },
@@ -94,6 +106,7 @@
       "path": "/uses/demand",
       "component": "UsesDemand",
       "crawl": "index",
+      "image": "/og/uses-demand.png",
       "title": "What's in demand right now | Eco via Sirens",
       "description": "Items players on the Eco via Sirens server want but no store is selling, most wanted first."
     },
@@ -101,6 +114,7 @@
       "path": "/uses/food",
       "component": "UsesFood",
       "crawl": "index",
+      "image": "/og/uses-food.png",
       "title": "Food to restock or watch | Eco via Sirens",
       "description": "Cooked, baked, and chef-made food on the Eco via Sirens server: what's in shops, what's wanted, what's selling, and what's been made."
     },
@@ -108,6 +122,7 @@
       "path": "/uses/buy-sell",
       "component": "UsesBuySell",
       "crawl": "index",
+      "image": "/og/uses-buy-sell.png",
       "title": "Where to buy and sell an item | Eco via Sirens",
       "description": "Pick an item and see the cheapest shelves to buy it from and the best stores to sell it to on the Eco via Sirens server."
     },
@@ -115,6 +130,7 @@
       "path": "/uses/arbitrage",
       "component": "UsesArbitrage",
       "crawl": "index",
+      "image": "/og/uses-arbitrage.png",
       "title": "Buy low here, sell high there | Eco via Sirens",
       "description": "Items you can buy cheap at one Eco via Sirens store and sell for more at another, biggest total profit first."
     },
@@ -122,6 +138,7 @@
       "path": "/uses/price",
       "component": "UsesPrice",
       "crawl": "index",
+      "image": "/og/uses-price.png",
       "title": "How should I price this? | Eco via Sirens",
       "description": "Pick an item, see what shops on the Eco via Sirens server charge, and use the craft cost to work out your profit."
     },
@@ -129,6 +146,7 @@
       "path": "/uses/resolve",
       "component": "UsesResolve",
       "crawl": "index",
+      "image": "/og/uses-resolve.png",
       "title": "Make it, buy it, or find a crafter | Eco via Sirens",
       "description": "For any item: what it takes to craft, what shops charge, and who on the Eco via Sirens server has the specialty to make it."
     },
@@ -136,6 +154,7 @@
       "path": "/uses/shop-check",
       "component": "UsesShopCheck",
       "crawl": "index",
+      "image": "/og/uses-shop-check.png",
       "title": "Check a shop against the market | Eco via Sirens",
       "description": "Pick a store on the Eco via Sirens server and see which of its prices sit far above or below the market's middle price."
     },
@@ -143,6 +162,7 @@
       "path": "/map",
       "component": "Map",
       "crawl": "index",
+      "image": "/og/map.png",
       "title": "World map, biomes, and climate | Eco via Sirens",
       "description": "The Eco via Sirens world: its biomes, the climate and what to do about it, and which species are at risk."
     },
@@ -150,6 +170,7 @@
       "path": "/species",
       "component": "Species",
       "crawl": "index",
+      "image": "/og/species.png",
       "title": "Species populations | Eco via Sirens",
       "description": "How many of each species are alive on the Eco via Sirens world right now, and each one's population curve across this cycle."
     },
@@ -157,6 +178,8 @@
       "path": "/cycle-14/castle",
       "component": "CastleSplat",
       "crawl": "index",
+      "image": "/og/cycle-14-castle.png",
+      "art": "castle.jpg",
       "title": "DRAFT CYCLE 14 CASTLE",
       "description": "v1 proof of concept, Gaussian splat of the cycle 14 french castle, pending v2 high quality re-capture",
       "note": "A draft Gaussian splat of the cycle 14 castle (eco-app#8572). Indexed on Kai's say, 2026-10-01, although it is a draft."
