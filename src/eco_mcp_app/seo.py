@@ -47,6 +47,24 @@ class Verdict:
 
 
 @dataclass(frozen=True)
+class Page:
+    """Optional link-preview words for one route; either may be absent."""
+
+    title: str | None = None
+    description: str | None = None
+
+
+@dataclass(frozen=True)
+class Head:
+    """What the shell's `<head>` says for one URL. None keeps the shell default,
+    except `url`, where None means the tag is dropped."""
+
+    title: str | None
+    description: str | None
+    url: str | None
+
+
+@dataclass(frozen=True)
 class RouteTable:
     site: str
     exact: dict[str, str]
@@ -57,6 +75,8 @@ class RouteTable:
     """(parent prefix, posture) for one-segment routes like ``/users/:hex``."""
     redirects: dict[str, str]
     disallow: tuple[str, ...]
+    pages: dict[tuple[str, str], Page]
+    """(kind, key) of the matched route -> its words. See `_match`."""
 
     @property
     def sitemap_paths(self) -> tuple[str, ...]:
@@ -75,15 +95,23 @@ def _load(path: str) -> RouteTable:
     exact: dict[str, str] = {}
     prefixes: list[tuple[str, str, str]] = []
     params: list[tuple[str, str]] = []
+    pages: dict[tuple[str, str], Page] = {}
     for route in raw["routes"]:
         spec, crawl = route["path"], route.get("crawl", "index")
         if spec.endswith("/*"):
             bare = spec[: -len("/*")] or "/"
             prefixes.append((bare, crawl, route.get("deepCrawl", crawl)))
+            key = ("prefix", bare)
         elif ":" in spec:
-            params.append((spec.rsplit("/", 1)[0], crawl))
+            parent = spec.rsplit("/", 1)[0]
+            params.append((parent, crawl))
+            key = ("param", parent)
         else:
             exact[spec] = crawl
+            key = ("exact", spec)
+        page = Page(_words(route, "title", spec), _words(route, "description", spec))
+        if page.title or page.description:
+            pages[key] = page
     return RouteTable(
         site=raw["site"].rstrip("/"),
         exact=exact,
@@ -91,7 +119,18 @@ def _load(path: str) -> RouteTable:
         params=tuple(params),
         redirects={r["from"]: r["to"] for r in raw["redirects"]},
         disallow=tuple(raw["disallow"]),
+        pages=pages,
     )
+
+
+def _words(route: dict[str, object], field: str, spec: str) -> str | None:
+    """A route's optional `title` or `description`, which must be a nonblank string."""
+    value = route.get(field)
+    if value is None:
+        return None
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{_DEFAULT_MANIFEST}: route {spec!r} {field} must be a nonblank string")
+    return value.strip()
 
 
 def routes() -> RouteTable:
@@ -109,6 +148,27 @@ def redirect_target(path: str) -> str | None:
     return routes().redirects.get(_normalize(path))
 
 
+def _match(table: RouteTable, bare: str) -> tuple[tuple[str, str], str] | None:
+    """The route owning a normalized path: its (kind, key) and its crawl posture.
+
+    One matcher for the crawl policy and the link-preview words, so the two
+    cannot disagree about which route a path belongs to.
+    """
+    crawl = table.exact.get(bare)
+    if crawl is not None:
+        return ("exact", bare), crawl
+    for prefix, own, deep in table.prefixes:
+        if bare == prefix:
+            return ("prefix", prefix), own
+        if bare.startswith(prefix + "/"):
+            return ("prefix", prefix), deep
+    for parent, posture in table.params:
+        rest = bare[len(parent) + 1 :] if bare.startswith(parent + "/") else ""
+        if rest and "/" not in rest:
+            return ("param", parent), posture
+    return None
+
+
 def classify(path: str, query: str = "") -> Verdict:
     """Decide whether a path is a real page and whether it belongs in the index.
 
@@ -124,26 +184,30 @@ def classify(path: str, query: str = "") -> Verdict:
     """
     table = routes()
     bare = _normalize(path)
-    crawl: str | None = table.exact.get(bare)
-    if crawl is None:
-        for prefix, own, deep in table.prefixes:
-            if bare == prefix:
-                crawl = own
-                break
-            if bare.startswith(prefix + "/"):
-                crawl = deep
-                break
-    if crawl is None:
-        for parent, posture in table.params:
-            rest = bare[len(parent) + 1 :] if bare.startswith(parent + "/") else ""
-            if rest and "/" not in rest:
-                crawl = posture
-                break
-    if crawl is None:
+    matched = _match(table, bare)
+    if matched is None:
         return Verdict(known=False, indexable=False)
+    _, crawl = matched
     indexable = crawl == "index" and not query
     canonical = f"{table.site}{bare}" if indexable else None
     return Verdict(known=True, indexable=indexable, canonical=canonical)
+
+
+def head_for(path: str) -> Head | None:
+    """What the shell's `<head>` should say for a URL, or None for an unknown path.
+
+    The words come from the matched route, and a wildcard route's deeper paths
+    take the parent's. `url` is the canonical of the bare path, so a query string
+    never reaches it and a noindex route has none: it names no page that is not
+    itself canonical. Link-preview scrapers read this and run no script.
+    """
+    table = routes()
+    bare = _normalize(path)
+    matched = _match(table, bare)
+    if matched is None:
+        return None
+    page = table.pages.get(matched[0], Page())
+    return Head(page.title, page.description, classify(bare).canonical)
 
 
 def robots_txt() -> str:

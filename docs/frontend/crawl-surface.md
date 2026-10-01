@@ -63,10 +63,24 @@ resolving that contradiction its own way is how a deliberate `noindex` quietly
 stops holding. `seo.classify` returns a canonical only for a page that is
 actually indexable.
 
+## Link previews
+
+A preview scraper reads `<head>` and runs no script, so the head cannot be the
+shell's single copy. `http_app._shell` rewrites it per request through
+`src/eco_mcp_app/shell_head.py`, from the optional `title` and `description` on
+each route in the manifest: `<title>`, `description`, `og:title`,
+`og:description`, and `og:url`. The `<body>` is never touched, so the
+duplicate-content protection above is unchanged. `og:url` is the canonical of
+the bare path, so a query string never reaches it, and a `noindex` route
+carries none rather than naming a page that is not canonical. A route without
+words keeps the shell defaults, and `/jobs/*` takes the parent's words for
+deeper paths. The `ETag` follows the rewritten head.
+
 ## Changing the route table
 
 Add the route to `data/spa_routes.json` with a `component` and a `crawl`
-posture. `frontend/src/routes.tsx` maps the component name to code and fails the
+posture, and optionally a `title` and `description` for link previews.
+`frontend/src/routes.tsx` maps the component name to code and fails the
 build if the name is unknown. The service picks up the crawl posture with no
 further edit. A `gate: "password"` route must be `noindex`. A gated page in
 search results is a title and a URL for something the visitor cannot open, and
@@ -74,7 +88,8 @@ search results is a title and a URL for something the visitor cannot open, and
 
 ## Verifying
 
-`tests/mcp/test_seo.py` covers every posture above.
+`tests/mcp/test_seo.py` covers every posture above and
+`tests/mcp/test_shell_head.py` the link-preview head.
 `frontend/src/routes.test.tsx` covers manifest-to-router parity. Against a
 running server:
 
@@ -83,6 +98,7 @@ curl -s localhost:4000/robots.txt
 curl -sI localhost:4000/item?name=Iron+Ore   # X-Robots-Tag: noindex, follow
 curl -sI localhost:4000/world                # 301 -> /map
 curl -sI localhost:4000/some/future/page     # 404
+curl -s localhost:4000/items | grep -E '<title>|og:'   # this route's own head
 ```
 
 Recovery in Search Console is not instant. The `301`s and `404`s resolve as the
