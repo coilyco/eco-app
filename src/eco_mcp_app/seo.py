@@ -48,10 +48,11 @@ class Verdict:
 
 @dataclass(frozen=True)
 class Page:
-    """Optional link-preview words for one route; either may be absent."""
+    """Optional link-preview words and card for one route; each may be absent."""
 
     title: str | None = None
     description: str | None = None
+    image: str | None = None
 
 
 @dataclass(frozen=True)
@@ -62,6 +63,8 @@ class Head:
     title: str | None
     description: str | None
     url: str | None
+    image: str | None = None
+    """Absolute URL of the route's own card, or None for the shell's default."""
 
 
 @dataclass(frozen=True)
@@ -109,8 +112,12 @@ def _load(path: str) -> RouteTable:
         else:
             exact[spec] = crawl
             key = ("exact", spec)
-        page = Page(_words(route, "title", spec), _words(route, "description", spec))
-        if page.title or page.description:
+        page = Page(
+            _words(route, "title", spec),
+            _words(route, "description", spec),
+            _image(route, spec),
+        )
+        if page.title or page.description or page.image:
             pages[key] = page
     return RouteTable(
         site=raw["site"].rstrip("/"),
@@ -131,6 +138,18 @@ def _words(route: dict[str, object], field: str, spec: str) -> str | None:
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{_DEFAULT_MANIFEST}: route {spec!r} {field} must be a nonblank string")
     return value.strip()
+
+
+def _image(route: dict[str, object], spec: str) -> str | None:
+    """A route's optional `image`, a site-relative path like `/og/items.png`."""
+    value = route.get("image")
+    if value is None:
+        return None
+    if not isinstance(value, str) or not value.startswith("/") or value.startswith("//"):
+        raise ValueError(
+            f"{_DEFAULT_MANIFEST}: route {spec!r} image must be a path starting with one /"
+        )
+    return value
 
 
 def routes() -> RouteTable:
@@ -207,7 +226,8 @@ def head_for(path: str) -> Head | None:
     if matched is None:
         return None
     page = table.pages.get(matched[0], Page())
-    return Head(page.title, page.description, classify(bare).canonical)
+    image = f"{table.site}{page.image}" if page.image else None
+    return Head(page.title, page.description, classify(bare).canonical, image)
 
 
 def robots_txt() -> str:

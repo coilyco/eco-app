@@ -67,19 +67,20 @@ actually indexable.
 
 A preview scraper reads `<head>` and runs no script, so the head cannot be the
 shell's single copy. `http_app._shell` rewrites it per request through
-`src/eco_mcp_app/shell_head.py`, from the optional `title` and `description` on
+`src/eco_mcp_app/shell_head.py`, from the optional `title`, `description` and `image` on
 each route in the manifest: `<title>`, `description`, `og:title`,
-`og:description`, and `og:url`. The `<body>` is never touched, so the
+`og:description`, `og:url`, `og:image` and `og:image:alt`. The `<body>` is never touched, so the
 duplicate-content protection above is unchanged. `og:url` is the canonical of
 the bare path, so a query string never reaches it, and a `noindex` route
-carries none rather than naming a page that is not canonical. A route without
-words keeps the shell defaults, and `/jobs/*` takes the parent's words for
-deeper paths. The `ETag` follows the rewritten head.
+carries none rather than naming a page that is not canonical. A route's `image` is a site-relative
+path like `/og/items.png`, made absolute against `site`, and its alt is the
+route's title. A route without words or an image keeps the shell defaults, and
+`/jobs/*` takes the parent's words and card for deeper paths. The `ETag` follows the rewritten head.
 
 ## Changing the route table
 
 Add the route to `data/spa_routes.json` with a `component` and a `crawl`
-posture, and optionally a `title` and `description` for link previews.
+posture, and optionally a `title`, `description` and `image` for link previews.
 `frontend/src/routes.tsx` maps the component name to code and fails the
 build if the name is unknown. The service picks up the crawl posture with no
 further edit. A `gate: "password"` route must be `noindex`. A gated page in
