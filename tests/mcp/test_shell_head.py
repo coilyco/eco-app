@@ -50,11 +50,10 @@ def served(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
     """The real shell head over a manifest carrying link-preview words."""
     dist = tmp_path / "dist"
     (dist / "og").mkdir(parents=True)
-    shell = SHELL.read_text(encoding="utf-8")
-    if 'property="og:image"' not in shell:
-        # The fixture owns its default card, so "keeps the default" never rests on the real shell.
-        card = f'    <meta property="og:image" content="{DEFAULT_CARD}" />\n'
-        shell = shell.replace("</head>", card + "  </head>", 1)
+    # The fixture owns its default card, so "keeps the default" never rests on the real shell's.
+    shell = shell_head._set_meta(
+        SHELL.read_text(encoding="utf-8"), "property", "og:image", DEFAULT_CARD
+    )
     (dist / "index.html").write_text(shell, encoding="utf-8")
     for image in IMAGES.values():
         (dist / image.lstrip("/")).write_bytes(PNG)
