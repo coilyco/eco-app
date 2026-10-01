@@ -1,6 +1,7 @@
 import type { ReactElement } from "react"
 import { Navigate, Route } from "react-router-dom"
 import manifest from "../../data/spa_routes.json"
+import PageMeta from "./components/PageMeta"
 import PagePassword from "./components/PagePassword"
 import CastleSplat from "./pages/CastleSplat"
 import Civics from "./pages/Civics"
@@ -68,6 +69,8 @@ export interface RouteSpec {
   deepCrawl?: string
   gate?: string
   note?: string
+  title?: string
+  description?: string
 }
 
 export const routeSpecs = manifest.routes as RouteSpec[]
@@ -78,12 +81,17 @@ function elementFor(spec: RouteSpec): ReactElement {
   if (!Page) throw new Error(`spa_routes.json names an unknown component: ${spec.component}`)
   // A password gate is declared in the manifest rather than hand-wired here, so
   // the crawl policy and the gate cannot disagree about which pages are public.
-  return spec.gate === "password" ? (
-    <PagePassword>
-      <Page />
-    </PagePassword>
-  ) : (
-    <Page />
+  return (
+    <>
+      <PageMeta spec={spec} />
+      {spec.gate === "password" ? (
+        <PagePassword>
+          <Page />
+        </PagePassword>
+      ) : (
+        <Page />
+      )}
+    </>
   )
 }
 
