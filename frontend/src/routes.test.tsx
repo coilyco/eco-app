@@ -35,6 +35,17 @@ describe("the shared route manifest", () => {
     }
   })
 
+  it("gives a route a title and a description together or not at all, at a search result's length", () => {
+    // Completeness is deliberately not asserted, so the mechanism can land before
+    // every string exists (eco-app#8577). A half-filled route, or one too long to
+    // show, is the failure.
+    for (const spec of routeSpecs) {
+      expect(Boolean(spec.title), `${spec.path}: title and description go together`).toBe(Boolean(spec.description))
+      if (spec.title) expect(spec.title.length, `${spec.path} title`).toBeLessThanOrEqual(60)
+      if (spec.description) expect(spec.description.length, `${spec.path} description`).toBeLessThanOrEqual(160)
+    }
+  })
+
   it("points every redirect at a path that exists", () => {
     const live = new Set(routeSpecs.map((s) => s.path.replace("/*", "")))
     for (const { from, to } of redirectSpecs) {

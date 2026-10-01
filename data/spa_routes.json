@@ -2,47 +2,163 @@
   "_comment": "The SPA route table and its crawl policy, owned here and read by both consumers: frontend/src/routes.tsx builds the react-router table from it, and src/eco_mcp_app/seo.py builds robots.txt, sitemap.xml, the 404 rule for unknown paths, and the per-response X-Robots-Tag. Two hand-maintained lists is how the crawl policy drifts back out of sync with the router, so there is one.",
   "site": "https://eco-app.coilysiren.me",
   "routes": [
-    { "path": "/", "component": "Home", "crawl": "index" },
-    { "path": "/mods", "component": "Mods", "crawl": "index" },
-    { "path": "/wiki", "component": "Wiki", "crawl": "index" },
+    {
+      "path": "/",
+      "component": "Home",
+      "crawl": "index",
+      "title": "Eco via Sirens: server status and meteor countdown",
+      "description": "Who's online on the Eco via Sirens server, how long until the meteor, and how to join. Read live from the game server."
+    },
+    {
+      "path": "/mods",
+      "component": "Mods",
+      "crawl": "index",
+      "title": "Mods on the server | Eco via Sirens",
+      "description": "Every mod running on the Eco via Sirens server, linked to its source where one is published, with the reason where it isn't."
+    },
+    {
+      "path": "/wiki",
+      "component": "Wiki",
+      "crawl": "index",
+      "title": "Eco wiki shortcuts | Eco via Sirens",
+      "description": "Links to the parts of the official Eco wiki that players use most, checked by hand. The wiki on Strange Loop Games' site has the final word."
+    },
     {
       "path": "/jobs/*",
       "component": "Jobs",
+      "title": "Specialties and profitable crafts | Eco via Sirens",
+      "description": "Who on the Eco via Sirens server has each specialty, and which crafts pay best right now, ranked by profit times how many people want them.",
       "crawl": "index",
       "deepCrawl": "noindex",
       "note": "The wildcard swallows the retired server-rendered sub-paths (/jobs/professions). Only /jobs itself is canonical, so anything deeper renders but stays out of the index."
     },
-    { "path": "/trade", "component": "Trade", "crawl": "index" },
-    { "path": "/crafting", "component": "Crafting", "crawl": "index" },
-    { "path": "/items", "component": "Items", "crawl": "index" },
+    {
+      "path": "/trade",
+      "component": "Trade",
+      "crawl": "index",
+      "title": "What to buy, sell, and ship | Eco via Sirens",
+      "description": "The whole Eco via Sirens market on one page: what's moving, price history, every store, and what to buy, sell, and ship next."
+    },
+    {
+      "path": "/crafting",
+      "component": "Crafting",
+      "crawl": "index",
+      "title": "Crafting atlas | Eco via Sirens",
+      "description": "What the Eco via Sirens world is making: the most crafted items, the most gathered resources, and the busiest crafting stations."
+    },
+    {
+      "path": "/items",
+      "component": "Items",
+      "crawl": "index",
+      "title": "Every item in the world | Eco via Sirens",
+      "description": "Every item bought, sold, or crafted on the Eco via Sirens server. Open one for its trades, prices, who makes it, and who sells it."
+    },
     {
       "path": "/item",
       "component": "Item",
+      "title": "Item market and recipes | Eco via Sirens",
+      "description": "One item on the Eco via Sirens server: its market, the recipes that make it, and what it's used for.",
       "crawl": "noindex",
       "note": "One page per item keyed by ?id= (the item id minus Item), holding market, recipes, and uses. The retired ?item= form redirects in the client. Thousands of URLs over one shell."
     },
-    { "path": "/recipes", "component": "Recipes", "crawl": "index" },
+    {
+      "path": "/recipes",
+      "component": "Recipes",
+      "crawl": "index",
+      "title": "Every Eco recipe | Eco via Sirens",
+      "description": "Every way to craft in Eco, filterable, and linked to each product's market history on the Eco via Sirens server."
+    },
     {
       "path": "/recipe",
       "component": "Recipe",
+      "title": "Recipe | Eco via Sirens",
+      "description": "Recipes live on each product's item page now, with the market history beside them.",
       "crawl": "noindex",
       "note": "Kept so old links never 404: the page redirects ?id=<recipe> to its card on the product's item page (eco-app#8383)."
     },
-    { "path": "/civics", "component": "Civics", "crawl": "index" },
-    { "path": "/uses", "component": "Uses", "crawl": "index" },
-    { "path": "/uses/demand", "component": "UsesDemand", "crawl": "index" },
-    { "path": "/uses/food", "component": "UsesFood", "crawl": "index" },
-    { "path": "/uses/buy-sell", "component": "UsesBuySell", "crawl": "index" },
-    { "path": "/uses/arbitrage", "component": "UsesArbitrage", "crawl": "index" },
-    { "path": "/uses/price", "component": "UsesPrice", "crawl": "index" },
-    { "path": "/uses/resolve", "component": "UsesResolve", "crawl": "index" },
-    { "path": "/uses/shop-check", "component": "UsesShopCheck", "crawl": "index" },
-    { "path": "/map", "component": "Map", "crawl": "index" },
-    { "path": "/species", "component": "Species", "crawl": "index" },
+    {
+      "path": "/civics",
+      "component": "Civics",
+      "crawl": "index",
+      "title": "Civics and elections | Eco via Sirens",
+      "description": "Elections, voter turnout, citizenships, and settlements on the Eco via Sirens server, counted from the server's own civics data."
+    },
+    {
+      "path": "/uses",
+      "component": "Uses",
+      "crawl": "index",
+      "title": "What eco-app answers | Eco via Sirens",
+      "description": "Each page answers one question about the Eco via Sirens economy: what's in demand, where to buy and sell, how to price, and more."
+    },
+    {
+      "path": "/uses/demand",
+      "component": "UsesDemand",
+      "crawl": "index",
+      "title": "What's in demand right now | Eco via Sirens",
+      "description": "Items players on the Eco via Sirens server want but no store is selling, most wanted first."
+    },
+    {
+      "path": "/uses/food",
+      "component": "UsesFood",
+      "crawl": "index",
+      "title": "Food to restock or watch | Eco via Sirens",
+      "description": "Cooked, baked, and chef-made food on the Eco via Sirens server: what's in shops, what's wanted, what's selling, and what's been made."
+    },
+    {
+      "path": "/uses/buy-sell",
+      "component": "UsesBuySell",
+      "crawl": "index",
+      "title": "Where to buy and sell an item | Eco via Sirens",
+      "description": "Pick an item and see the cheapest shelves to buy it from and the best stores to sell it to on the Eco via Sirens server."
+    },
+    {
+      "path": "/uses/arbitrage",
+      "component": "UsesArbitrage",
+      "crawl": "index",
+      "title": "Buy low here, sell high there | Eco via Sirens",
+      "description": "Items you can buy cheap at one Eco via Sirens store and sell for more at another, biggest total profit first."
+    },
+    {
+      "path": "/uses/price",
+      "component": "UsesPrice",
+      "crawl": "index",
+      "title": "How should I price this? | Eco via Sirens",
+      "description": "Pick an item, see what shops on the Eco via Sirens server charge, and use the craft cost to work out your profit."
+    },
+    {
+      "path": "/uses/resolve",
+      "component": "UsesResolve",
+      "crawl": "index",
+      "title": "Make it, buy it, or find a crafter | Eco via Sirens",
+      "description": "For any item: what it takes to craft, what shops charge, and who on the Eco via Sirens server has the specialty to make it."
+    },
+    {
+      "path": "/uses/shop-check",
+      "component": "UsesShopCheck",
+      "crawl": "index",
+      "title": "Check a shop against the market | Eco via Sirens",
+      "description": "Pick a store on the Eco via Sirens server and see which of its prices sit far above or below the market's middle price."
+    },
+    {
+      "path": "/map",
+      "component": "Map",
+      "crawl": "index",
+      "title": "World map, biomes, and climate | Eco via Sirens",
+      "description": "The Eco via Sirens world: its biomes, the climate and what to do about it, and which species are at risk."
+    },
+    {
+      "path": "/species",
+      "component": "Species",
+      "crawl": "index",
+      "title": "Species populations | Eco via Sirens",
+      "description": "How many of each species are alive on the Eco via Sirens world right now, and each one's population curve across this cycle."
+    },
     {
       "path": "/cycle-14/castle",
       "component": "CastleSplat",
       "crawl": "index",
+      "title": "DRAFT CYCLE 14 CASTLE",
+      "description": "v1 proof of concept, Gaussian splat of the cycle 14 french castle, pending v2 high quality re-capture",
       "note": "A draft Gaussian splat of the cycle 14 castle (eco-app#8572). Indexed on Kai's say, 2026-10-01, although it is a draft."
     },
     {

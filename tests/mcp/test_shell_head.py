@@ -44,6 +44,9 @@ def served(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
     (dist / "index.html").write_text(SHELL.read_text(encoding="utf-8"), encoding="utf-8")
     manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
     for route in manifest["routes"]:
+        # Hermetic: only WORDS carry words, so the real manifest's strings never decide a test.
+        route.pop("title", None)
+        route.pop("description", None)
         if route["path"] in WORDS:
             route["title"], route["description"] = WORDS[route["path"]]
     path = tmp_path / "spa_routes.json"
@@ -111,7 +114,7 @@ def test_a_route_without_words_keeps_the_shell_defaults_but_gets_its_own_url(
     default = SHELL.read_text(encoding="utf-8")
     doc = served.get("/trade").text
     assert _title(doc) == _title(default)
-    assert _tag(doc, "property", "og:title") == "eco-app"
+    assert _tag(doc, "property", "og:title") == _tag(default, "property", "og:title")
     assert _tag(doc, "name", "description") == _tag(default, "name", "description")
     assert _tag(doc, "property", "og:url") == f"{SITE}/trade"
 
