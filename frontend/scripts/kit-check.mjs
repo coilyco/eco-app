@@ -36,7 +36,15 @@ const FLOOR_PX = 16
 // route moved then, so a regression fails while today's pages pass. eco-app is
 // a data app: a route's weight is mostly its API payloads, not the shell.
 const DEFAULT_BUDGET = 900
-const BUDGETS = { "/jobs": 3200, "/recipes": 2000, "/recipe": 2000, "/uses/resolve": 3200, "/map": 2400 }
+// /cycle-14/castle: 827K measured without the splat, plus its 4460K from the files host.
+const BUDGETS = {
+  "/jobs": 3200,
+  "/recipes": 2000,
+  "/recipe": 2000,
+  "/uses/resolve": 3200,
+  "/map": 2400,
+  "/cycle-14/castle": 5400,
+}
 
 const SAMPLE = {
   "/jobs/*": "/jobs",

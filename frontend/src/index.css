@@ -2052,3 +2052,45 @@ html {
 .item-price__norm--far {
   color: var(--k-text);
 }
+
+/* The castle splat page. docs/frontend/castle-splat.md. */
+.castle-sub {
+  max-width: 60ch;
+  color: var(--k-dim);
+}
+
+.castle-stage {
+  position: relative;
+  width: 100%;
+  min-height: 18rem;
+  aspect-ratio: 16 / 10;
+  max-height: 80vh;
+  overflow: hidden;
+  background: #000;
+  border: 1px solid var(--k-line);
+}
+
+.castle-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+}
+
+.castle-canvas--off {
+  display: none;
+}
+
+.castle-stage .loading,
+.castle-note {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: var(--k-s-3);
+  padding: var(--k-s-5);
+  text-align: center;
+  color: var(--k-text);
+}

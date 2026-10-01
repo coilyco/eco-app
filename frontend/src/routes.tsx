@@ -2,6 +2,7 @@ import type { ReactElement } from "react"
 import { Navigate, Route } from "react-router-dom"
 import manifest from "../../data/spa_routes.json"
 import PagePassword from "./components/PagePassword"
+import CastleSplat from "./pages/CastleSplat"
 import Civics from "./pages/Civics"
 import Crafting from "./pages/Crafting"
 import Home from "./pages/Home"
@@ -57,6 +58,7 @@ const PAGES: Record<string, () => ReactElement> = {
   Map: MapPage,
   Species,
   Replay,
+  CastleSplat,
 }
 
 export interface RouteSpec {
