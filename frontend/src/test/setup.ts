@@ -25,9 +25,10 @@ function createMemoryStorage(): Storage {
   }
 }
 
-let hasLocalStorage = false
+// A test that opts into the node environment (scripts/og-cards.test.mjs) has no window.
+let hasLocalStorage = typeof window === "undefined"
 try {
-  hasLocalStorage = typeof window.localStorage?.getItem === "function"
+  hasLocalStorage ||= typeof window.localStorage?.getItem === "function"
 } catch {
   hasLocalStorage = false
 }

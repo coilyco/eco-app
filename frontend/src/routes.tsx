@@ -71,6 +71,7 @@ export interface RouteSpec {
   note?: string
   title?: string
   description?: string
+  image?: string
 }
 
 export const routeSpecs = manifest.routes as RouteSpec[]

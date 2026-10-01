@@ -6,6 +6,7 @@ const SHELL = `
   <meta name="description" content="shell description" />
   <meta property="og:title" content="shell og title" />
   <meta property="og:description" content="shell og description" />
+  <meta property="og:image" content="https://eco-app.coilysiren.me/og/default.png" />
   <meta property="og:url" content="https://eco-app.coilysiren.me/" />
 `
 const content = (selector: string) => document.head.querySelector(selector)?.getAttribute("content") ?? null
@@ -37,6 +38,13 @@ describe("applyPageMeta", () => {
     expect(content('meta[property="og:title"]')).toBe("shell og title")
     expect(content('meta[property="og:description"]')).toBe("shell og description")
     expect(content('meta[property="og:url"]')).toBe("https://eco-app.coilysiren.me/items")
+  })
+
+  it("points og:image at the route's card, and back at the shell's default for a route with none", () => {
+    applyPageMeta({ title: "Castle", image: "/og/cycle-14-castle.png", canonical: null })
+    expect(content('meta[property="og:image"]')).toBe("https://eco-app.coilysiren.me/og/cycle-14-castle.png")
+    applyPageMeta({ canonical: null })
+    expect(content('meta[property="og:image"]')).toBe("https://eco-app.coilysiren.me/og/default.png")
   })
 
   it("removes og:url where the server names no canonical, rather than leaving the home page's", () => {

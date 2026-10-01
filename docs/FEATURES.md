@@ -38,6 +38,9 @@ consolidation (coilysiren/inbox#101).
   `404` for unrouted ones, and a per-response index posture, all derived from
   the shared route manifest `data/spa_routes.json`. See
   [frontend/crawl-surface.md](frontend/crawl-surface.md).
+- **Link-preview cards** - a 1200x630 card per route, drawn at build time from
+  the same manifest words and seeded art, named by `og:image`. See
+  [frontend/og-cards.md](frontend/og-cards.md).
 
 **Data surfaces.**
 [civics.md](civics.md), [cost.md](cost.md), [crafting.md](crafting.md),

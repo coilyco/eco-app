@@ -11,11 +11,13 @@ export interface MetaSpec {
   deepCrawl?: string
   title?: string
   description?: string
+  image?: string
 }
 
 export interface PageMetaValues {
   title?: string
   description?: string
+  image?: string
   canonical?: string | null
 }
 
@@ -35,6 +37,7 @@ interface ShellDefaults {
   description: string | null
   ogTitle: string | null
   ogDescription: string | null
+  ogImage: string | null
 }
 
 let shell: ShellDefaults | null = null
@@ -57,17 +60,19 @@ function put(selector: string, attribute: "name" | "property", key: string, valu
 
 // A route with no words of its own gets the shell's, captured once before the
 // first route writes anything, so leaving a titled page never leaves its title behind.
-export function applyPageMeta({ title, description, canonical }: PageMetaValues): void {
+export function applyPageMeta({ title, description, image, canonical }: PageMetaValues): void {
   shell ??= {
     title: document.title,
     description: read('meta[name="description"]'),
     ogTitle: read('meta[property="og:title"]'),
     ogDescription: read('meta[property="og:description"]'),
+    ogImage: read('meta[property="og:image"]'),
   }
   document.title = title ?? shell.title
   put('meta[name="description"]', "name", "description", description ?? shell.description)
   put('meta[property="og:title"]', "property", "og:title", title ?? shell.ogTitle)
   put('meta[property="og:description"]', "property", "og:description", description ?? shell.ogDescription)
+  put('meta[property="og:image"]', "property", "og:image", image ? `${manifest.site}${image}` : shell.ogImage)
   put('meta[property="og:url"]', "property", "og:url", canonical ?? null)
 }
 
