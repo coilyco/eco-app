@@ -7,7 +7,7 @@ Every route with words gets a 1200x630 card, drawn at build time from the route 
 * **Words** - `title` and `description` from `data/spa_routes.json`, the same words the tab and the server head use. The card drops the `| Eco via Sirens` suffix from the title and shows the site name above it.
 * **Output** - the route's `image` field, such as `/og/items.png`. Cards land in `frontend/public/og/`, are gitignored, and are drawn by `pnpm build`, so the image build carries them to `dist/og/` with no extra step.
 * **Art** - by default a planet, contour rings and stars, seeded from the route path. The same path draws the same art on every build. A route that names `art` in the manifest (a file under `frontend/src/assets/og-art/`) uses that image instead, under a left-to-right scrim that keeps the words readable. A missing art file fails the build.
-* **Engine** - `satori` lays the card out as SVG and `@resvg/resvg-js` rasterises it. No browser. Fonts are the `@fontsource` Chakra Petch and Roboto files in `node_modules`, since satori reads TTF, OTF and WOFF but not WOFF2.
+* **Engine** - `satori` lays the card out as SVG and `@resvg/resvg-js` rasterises it. No browser. A card over a photograph is re-encoded as a 256-colour palette PNG with `upng-js`, because resvg writes only lossless PNG and the castle card was about 670K that way (about 175K now, and a test holds it under 300K). The path stays `.png`. Fonts are the `@fontsource` Chakra Petch and Roboto files in `node_modules`, since satori reads TTF, OTF and WOFF but not WOFF2.
 
 ## Run it
 

@@ -12,6 +12,7 @@ import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { Resvg } from "@resvg/resvg-js"
 import satori from "satori"
+import UPNG from "upng-js"
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 const FRONTEND = path.join(HERE, "..")
@@ -125,9 +126,21 @@ export function card({ title, description, url, seed, photo }) {
   )
 }
 
+// resvg writes only lossless RGBA PNG, and a photographic backdrop makes that
+// about 670K. A 256-colour palette is about a quarter of it and reads the same at
+// 1200x630 under the scrim. Cards without a photo are already small and keep the
+// lossless PNG. The path stays .png, which the shell and the server name
+// (eco-app#8586).
+const PALETTE_COLOURS = 256
+function palette(png) {
+  const frames = UPNG.toRGBA8(UPNG.decode(png))
+  return Buffer.from(UPNG.encode(frames, WIDTH, HEIGHT, PALETTE_COLOURS))
+}
+
 export async function render(spec) {
   const svg = await satori(card(spec), { width: WIDTH, height: HEIGHT, fonts: FONTS })
-  return new Resvg(svg, { fitTo: { mode: "width", value: WIDTH } }).render().asPng()
+  const png = new Resvg(svg, { fitTo: { mode: "width", value: WIDTH } }).render().asPng()
+  return spec.photo ? palette(png) : png
 }
 
 // The shell's own description, so the default card never disagrees with it.

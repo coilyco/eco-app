@@ -66,6 +66,31 @@ describe("Home", () => {
     )
   })
 
+  it("names every region differently, so a screen reader can tell them apart", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify(SAMPLE_STATUS), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      ),
+    )
+
+    renderHome()
+    await waitFor(() => {
+      expect(screen.getByTestId("world-facts")).toBeInTheDocument()
+    })
+
+    // axe landmark-unique: the world totals sit inside the "world at a glance"
+    // region and used to carry the same name (eco-app#8584).
+    const names = screen.getAllByRole("region").map((region) => region.getAttribute("aria-label"))
+    const labelled = names.filter((name): name is string => Boolean(name))
+    expect(new Set(labelled).size).toBe(labelled.length)
+    expect(labelled).toContain("world at a glance")
+    expect(labelled).toContain("world totals")
+  })
+
   it("renders per-surface sub-card badges from the live pulse endpoints", async () => {
     const byUrl: Record<string, unknown> = {
       "/preview.json": SAMPLE_STATUS,

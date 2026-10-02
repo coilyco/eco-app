@@ -61,4 +61,15 @@ describe("render", () => {
     expect(withArt, "no route names art").toBeTruthy()
     expect(dimensions(await render(withArt))).toEqual({ width: WIDTH, height: HEIGHT })
   })
+
+  it("keeps a card over a photograph under 300 KB, as a palette png", async () => {
+    // The lossless render of the castle card is about 670 KB (eco-app#8586).
+    for (const job of jobs().filter((j) => j.photo)) {
+      const png = await render(job)
+      expect(png.length, job.image).toBeLessThan(300 * 1024)
+      expect(png.subarray(1, 4).toString()).toBe("PNG")
+      // IHDR colour type 3 is a palette image.
+      expect(png[25], job.image).toBe(3)
+    }
+  })
 })

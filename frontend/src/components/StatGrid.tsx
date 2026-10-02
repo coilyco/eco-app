@@ -42,7 +42,7 @@ export default function StatGrid({ status }: { status: EcoStatus }) {
   ]
 
   return (
-    <section aria-label="world at a glance">
+    <section aria-label="world totals">
       <div className="k-facts info-facts" data-testid="world-facts">
         {stats.map((s) => (
           <div className="k-fact" key={s.label}>
