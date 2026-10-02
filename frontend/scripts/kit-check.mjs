@@ -112,6 +112,24 @@ function inspect(floor) {
   }
 }
 
+// Ready is a loaded document with the app drawn into #root. Network quiet is
+// awaited for SETTLE_MS only, and an open request is a note (eco-app#8680).
+const SETTLE_MS = 15000
+async function open(page, url, errors) {
+  const inFlight = new Set()
+  page.on("request", (r) => inFlight.add(r))
+  page.on("requestfinished", (r) => inFlight.delete(r))
+  page.on("requestfailed", (r) => inFlight.delete(r))
+  try {
+    await page.goto(url, { waitUntil: "load", timeout: 60000 })
+    await page.waitForFunction(() => (document.querySelector("#root")?.childElementCount ?? 0) > 0, null, { timeout: 15000 })
+  } catch (e) {
+    errors.push(String(e).slice(0, 160))
+  }
+  await page.waitForLoadState("networkidle", { timeout: SETTLE_MS }).catch(() => {})
+  return [...inFlight].map((r) => new URL(r.url()).pathname + new URL(r.url()).search)
+}
+
 const browser = await chromium.launch(
   process.env.CHROME_PATH ? { executablePath: process.env.CHROME_PATH } : { channel: "chrome" },
 )
@@ -122,7 +140,7 @@ for (const [width, height] of VIEWPORTS) {
     const page = await context.newPage()
     const errors = []
     page.on("pageerror", (e) => errors.push(String(e).slice(0, 160)))
-    await page.goto(BASE + route, { waitUntil: "networkidle", timeout: 60000 }).catch((e) => errors.push(String(e).slice(0, 160)))
+    const slow = await open(page, BASE + route, errors)
     await page.waitForTimeout(800)
     const found = await page.evaluate(inspect, FLOOR_PX)
     await page.evaluate(AXE)
@@ -140,9 +158,10 @@ for (const [width, height] of VIEWPORTS) {
       ...(found.overflow > 0 ? [`scrolls sideways by ${found.overflow}px`] : []),
       ...(width === VIEWPORTS[0][0] && found.kib > budget ? [`transferred ${found.kib}K against a ${budget}K budget`] : []),
     ]
-    results.push({ route, width, kib: found.kib, problems })
+    results.push({ route, width, kib: found.kib, problems, slow })
     if (!JSON_OUT) console.log(`${problems.length ? "FAIL" : "ok  "} ${String(width).padStart(4)} ${route}${width === VIEWPORTS[0][0] ? ` (${found.kib}K)` : ""}`)
     for (const p of problems) if (!JSON_OUT) console.log(`       ${p}`)
+    if (slow.length && !JSON_OUT) console.log(`       note: still loading after ${SETTLE_MS / 1000}s, not counted: ${slow.slice(0, 4).join(", ")}`)
     await page.close()
   }
   await context.close()

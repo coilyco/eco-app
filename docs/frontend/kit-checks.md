@@ -47,6 +47,11 @@ just frontend-kit-check --base http://localhost:5173      # a dev server
 just frontend-kit-check --only /map,/trade
 ```
 
+A route is ready when its document has loaded and the app has drawn into
+`#root`. The check then waits up to 15s for the network to go quiet and goes on,
+so a slow upstream preview shows as a `note: still loading` line and no longer
+fails the page. A page that does not load or draw still fails (eco-app#8680).
+
 Budgets are eco-app's, not the kit's 150K. eco-app is a data app, and a route's
 weight is its API payloads. They sit just above what each route moved on
 2026-09-27, so a regression fails while today's pages pass.
