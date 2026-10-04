@@ -54,10 +54,11 @@ is in the repo. So is the link-preview card art, `og-art/castle.jpg`.
 * **`crawl: index`.** Public, in the sitemap, and answered with a canonical link
   header, on Kai's say. The title and description are dev-advocate's, in the
   route manifest.
-* **Budget 10000K** in `frontend/scripts/kit-check.mjs`: 827K shell, 177K still,
-  8376K splat and two posters. The flythroughs are not in it, since each loads only
-  when played. `kit-check` cannot load the splat from localhost, so there it
-  measures the failure state.
+* **Budget 12300K** in `frontend/scripts/kit-check.mjs`, over the 11974K the route
+  moves: 8386K splat, 2388K of its engine, 437K shell, 435K posters, 177K still.
+  The flythroughs are not in it, since each loads only when played. The splat host
+  sends no `Timing-Allow-Origin`, so `kit-check` sums bytes on the wire, because
+  Resource Timing reads 0 for it and once reported 3155K for this route.
 * **Posters on a button, not a `<video>` with `preload="none"`.** axe waits for
   metadata on any `<video>` that has a `src`, and with `preload="none"` that never
   arrives, so the accessibility check stalled. The `<video>` is mounted on press.

@@ -39,7 +39,7 @@ viewports, 1000x660 and 320x900, and reports per route:
 * any text rendering below 16px, with SVG text scaled by its screen matrix
 * layering: a bordered element sharing its parent's fill (the kit's rule 4)
 * horizontal overflow
-* transfer weight against a per-route budget, at 1000px only
+* transfer weight on the wire, cross-origin hosts included, against a per-route budget, at 1000px only
 
 ```
 just frontend-kit-check                                   # production

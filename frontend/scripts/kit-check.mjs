@@ -36,15 +36,15 @@ const FLOOR_PX = 16
 // route moved then, so a regression fails while today's pages pass. eco-app is
 // a data app: a route's weight is mostly its API payloads, not the shell.
 const DEFAULT_BUDGET = 900
-// /cycle-14/castle: 827K shell, 177K still, 8376K splat and two posters from the files host.
-// The flythroughs are not in it: each loads only when played.
+// /cycle-14/castle moves 11974K: 8386K splat, 2388K of its engine, 437K shell, 435K posters, 177K still.
+// The splat host sends no Timing-Allow-Origin, so weight is summed on the wire, not by Resource Timing.
 const BUDGETS = {
   "/jobs": 3200,
   "/recipes": 2000,
   "/recipe": 2000,
   "/uses/resolve": 3200,
   "/map": 2400,
-  "/cycle-14/castle": 10000,
+  "/cycle-14/castle": 12300,
 }
 
 const SAMPLE = {
@@ -100,15 +100,10 @@ function inspect(floor) {
     layering.push(`${name(el)} inside ${name(el.parentElement)}`)
   }
 
-  const nav = performance.getEntriesByType("navigation")[0]
-  const kib = Math.round(
-    ((nav?.transferSize ?? 0) + performance.getEntriesByType("resource").reduce((s, e) => s + (e.transferSize || 0), 0)) / 1024,
-  )
   return {
     overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
     small: [...small].map(([k, px]) => `${k} ${px}px`),
     layering: [...new Set(layering)].slice(0, 8),
-    kib,
   }
 }
 
@@ -117,8 +112,12 @@ function inspect(floor) {
 const SETTLE_MS = 15000
 async function open(page, url, errors) {
   const inFlight = new Set()
+  const sizes = []
   page.on("request", (r) => inFlight.add(r))
-  page.on("requestfinished", (r) => inFlight.delete(r))
+  page.on("requestfinished", (r) => {
+    inFlight.delete(r)
+    sizes.push(r.sizes().then((s) => s.responseBodySize + s.responseHeadersSize, () => 0))
+  })
   page.on("requestfailed", (r) => inFlight.delete(r))
   try {
     await page.goto(url, { waitUntil: "load", timeout: 60000 })
@@ -127,7 +126,8 @@ async function open(page, url, errors) {
     errors.push(String(e).slice(0, 160))
   }
   await page.waitForLoadState("networkidle", { timeout: SETTLE_MS }).catch(() => {})
-  return [...inFlight].map((r) => new URL(r.url()).pathname + new URL(r.url()).search)
+  const slow = [...inFlight].map((r) => new URL(r.url()).pathname + new URL(r.url()).search)
+  return { slow, kib: async () => Math.round((await Promise.all(sizes)).reduce((a, b) => a + b, 0) / 1024) }
 }
 
 const browser = await chromium.launch(
@@ -140,9 +140,9 @@ for (const [width, height] of VIEWPORTS) {
     const page = await context.newPage()
     const errors = []
     page.on("pageerror", (e) => errors.push(String(e).slice(0, 160)))
-    const slow = await open(page, BASE + route, errors)
+    const { slow, kib } = await open(page, BASE + route, errors)
     await page.waitForTimeout(800)
-    const found = await page.evaluate(inspect, FLOOR_PX)
+    const found = { ...(await page.evaluate(inspect, FLOOR_PX)), kib: await kib() }
     await page.evaluate(AXE)
     const axe = await page.evaluate(async (tags) => {
       const r = await window.axe.run(document, { runOnly: tags })
