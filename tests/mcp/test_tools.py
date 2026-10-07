@@ -25,7 +25,6 @@ async def test_list_tools_advertises_all_tools() -> None:
     assert names == {
         "get_server_status",
         "list_public_servers",
-        "get_map",
         "get_milestones",
         "get_species",
         "explain_item",

@@ -1500,7 +1500,7 @@ def _narrative(
 
 
 # ---------------------------------------------------------------------------
-# Pollution heatmap GIF — used by the optional get_map overlay.
+# Pollution heatmap GIF — used by the SPA /map overlay.
 # ---------------------------------------------------------------------------
 
 

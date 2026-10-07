@@ -1,27 +1,25 @@
-"""Unit tests for the `get_map` tool.
+"""Unit tests for the browser-only world-map plane (`/preview-map.json`).
 
-Covers the pure-data helpers (polygon ordering, seam-splitting, payload
-shaping) plus the end-to-end tool call wired through the MCP handler with
-respx stubbing the Eco server.
+The plane is the raster stack the SPA `/map` page reads: the world preview,
+the optional pollution raster, and per-biome highlight rasters. The `get_map`
+tool and its property-deed path are gone (COI-2092), so the last tests here pin
+that they stay gone.
 """
 
 from __future__ import annotations
 
-import json
+from collections.abc import Iterator
 
 import httpx
 import mcp.types as mt
 import pytest
 import respx
+from fastapi.testclient import TestClient
 
 from eco_mcp_app import map as eco_map
-from eco_mcp_app.map import (
-    ECO_BASE_URL_DEFAULT,
-    _order_by_polar_angle,
-    _split_seam_crossings,
-    build_map_payload,
-    build_polygons,
-)
+from eco_mcp_app.ecoregion import BIOME_LAYERS
+from eco_mcp_app.http_app import create_app
+from eco_mcp_app.map import ECO_BASE_URL_DEFAULT, build_map_payload
 from eco_mcp_app.server import build_server
 
 # Minimal 1x1 transparent GIF — enough bytes for the data-uri test to pass
@@ -35,137 +33,58 @@ def _fake_dimension() -> dict[str, int]:
     return {"x": 720, "y": 200, "z": 720}
 
 
-def _fake_property() -> dict[str, list[dict[str, int]]]:
-    # Three deeds: a normal one, a seam-crosser (Gavin-style, wraps x=720→0),
-    # and an empty-verts deed that should be dropped.
-    return {
-        "Alice's Homestead, Owner: alice": [
-            {"x": 100, "y": 100},
-            {"x": 120, "y": 100},
-            {"x": 120, "y": 120},
-            {"x": 100, "y": 120},
-        ],
-        "Gavin's Edge Plot, Owner: gavin": [
-            {"x": 705, "y": 175},
-            {"x": 715, "y": 180},
-            {"x": 0, "y": 195},
-            {"x": 5, "y": 185},
-        ],
-        "bob's Empty Cart Deed, Owner: bob": [],
-    }
+def _mock_upstream(
+    base: str = ECO_BASE_URL_DEFAULT,
+    *,
+    pollution: bool = True,
+    served_biomes: frozenset[str] = frozenset(),
+) -> None:
+    """Stub the upstream rasters. Biome layers not in `served_biomes` answer 401."""
+    respx.get(f"{base}/api/v1/map/dimension").mock(
+        return_value=httpx.Response(200, json=_fake_dimension())
+    )
+    respx.get(f"{base}/Layers/WorldPreview.gif").mock(
+        return_value=httpx.Response(200, content=_TINY_GIF)
+    )
+    respx.get(f"{base}/Layers/Pollution.gif").mock(
+        return_value=httpx.Response(200, content=_TINY_GIF) if pollution else httpx.Response(404)
+    )
+    for layer in BIOME_LAYERS:
+        response = (
+            httpx.Response(200, content=_TINY_GIF)
+            if layer in served_biomes
+            else httpx.Response(401)
+        )
+        respx.get(f"{base}/Layers/{layer}.gif").mock(return_value=response)
 
 
-# ---- pure helpers ---------------------------------------------------------
+# ---- payload shaping ------------------------------------------------------
 
 
-def test_order_by_polar_angle_produces_stable_ring() -> None:
-    pts = [(0.0, 0.0), (2.0, 0.0), (2.0, 2.0), (0.0, 2.0)]
-    ordered = _order_by_polar_angle(pts)
-    # Four distinct corners, still four points, same set.
-    assert set(ordered) == set(pts)
-    # Consecutive differences should all be short (no diagonal cut across
-    # the square — which would happen if ordering were wrong).
-    for i in range(len(ordered)):
-        dx = ordered[i][0] - ordered[(i + 1) % 4][0]
-        dy = ordered[i][1] - ordered[(i + 1) % 4][1]
-        assert (dx * dx + dy * dy) ** 0.5 <= 2.001
-
-
-def test_split_seam_crossings_does_not_split_interior_polygon() -> None:
-    pts = [(100.0, 100.0), (120.0, 100.0), (120.0, 120.0), (100.0, 120.0)]
-    out = _split_seam_crossings(pts, 720, 720)
-    assert len(out) == 1
-    assert out[0] == pts
-
-
-def test_split_seam_crossings_splits_x_wrap() -> None:
-    # Mimics Gavin's deed: verts on both sides of x=720→0 seam.
-    pts = [(705.0, 175.0), (715.0, 180.0), (0.0, 195.0), (5.0, 185.0)]
-    out = _split_seam_crossings(pts, 720, 720)
-    # Two sub-polygons — the unwrapped contiguous polygon (high side of the
-    # map) and its -world_x translate (low side). All 4 verts preserved
-    # per copy; no polygon internally spans more than half the world.
-    assert len(out) == 2
-    for sub in out:
-        assert len(sub) == 4
-        xs = [p[0] for p in sub]
-        assert (max(xs) - min(xs)) <= 360.0
-    # The two copies are offset by exactly world_x on the x axis.
-    xs_a = sorted(p[0] for p in out[0])
-    xs_b = sorted(p[0] for p in out[1])
-    offsets = {round(a - b, 3) for a, b in zip(xs_a, xs_b, strict=True)}
-    assert offsets == {720.0}
-
-
-def test_build_polygons_drops_empty_and_shapes_output() -> None:
-    polys = build_polygons(_fake_property(), _fake_dimension(), render_size=512)
-    # Alice (1) + Gavin's two halves (2) — empty deed dropped.
-    assert len(polys) == 3
-    owners = [p["owner"] for p in polys]
-    assert owners.count("alice") == 1
-    assert owners.count("gavin") == 2
-    # Each polygon's points attribute is a non-empty, space-separated list of
-    # "x,y" pairs. Seam-crossing copies may have coords outside [0, 512] by
-    # design — the SVG viewBox clips them.
-    for p in polys:
-        assert p["points"]
-        for pt in p["points"].split():
-            x_s, y_s = pt.split(",")
-            float(x_s)  # raises on malformed
-            float(y_s)
-    # At least one polygon for Alice sits fully inside the render frame.
-    alice = next(p for p in polys if p["owner"] == "alice")
-    for pt in alice["points"].split():
-        x, y = (float(v) for v in pt.split(","))
-        assert 0.0 <= x <= 512.0
-        assert 0.0 <= y <= 512.0
-
-
-def test_build_polygons_drops_sub_3_vert_deeds() -> None:
-    tiny = {
-        "Tiny Deed, Owner: nobody": [{"x": 1, "y": 1}, {"x": 2, "y": 2}],
-    }
-    assert build_polygons(tiny, _fake_dimension()) == []
-
-
-def test_build_map_payload_shape() -> None:
+def test_build_map_payload_is_the_raster_plane_only() -> None:
     bundle = {
         "dimension": _fake_dimension(),
-        "property": _fake_property(),
         "preview_gif": _TINY_GIF,
         "base_url": "http://eco.example.com:3001",
     }
     payload = build_map_payload(bundle)
+    assert set(payload) == {
+        "view",
+        "sourceUrl",
+        "worldDim",
+        "renderSize",
+        "gifDataUri",
+        "pollutionDataUri",
+        "biomeLayers",
+    }
     assert payload["view"] == "eco_map"
     assert payload["sourceUrl"] == "http://eco.example.com:3001"
     assert payload["worldDim"] == {"x": 720, "y": 200, "z": 720}
-    # 2 unique deeds (alice + gavin), 2 unique owners — empty deed dropped.
-    assert payload["deedCount"] == 2
-    assert payload["ownerCount"] == 2
-    assert payload["owners"] == ["alice", "gavin"]
-    # Gavin's seam-split doubles the polygon count for that deed.
-    assert len(payload["polygons"]) == 3
+    assert payload["renderSize"] == eco_map.MAP_RENDER_SIZE
     # GIF bytes round-trip into a data URI.
     assert payload["gifDataUri"].startswith("data:image/gif;base64,")
-    # One styling representation, keyed by owner (#264).
-    assert set(payload["ownerStyles"]) == {"alice", "gavin"}
-    assert set(payload["ownerStyles"]["alice"]) == {"fill", "stroke"}
-    # ...and it is not repeated on every polygon.
-    assert "fill" not in payload["polygons"][0]
-    assert "stroke" not in payload["polygons"][0]
-
-
-def test_build_map_payload_handles_no_deeds() -> None:
-    bundle = {
-        "dimension": _fake_dimension(),
-        "property": {},
-        "preview_gif": _TINY_GIF,
-        "base_url": None,
-    }
-    payload = build_map_payload(bundle)
-    assert payload["deedCount"] == 0
-    assert payload["ownerCount"] == 0
-    assert payload["polygons"] == []
+    assert payload["pollutionDataUri"] is None
+    assert payload["biomeLayers"] == []
 
 
 # ---- upstream fetch -------------------------------------------------------
@@ -173,24 +92,12 @@ def test_build_map_payload_handles_no_deeds() -> None:
 
 @pytest.mark.asyncio
 @respx.mock
-async def test_fetch_map_bundle_hits_four_endpoints() -> None:
-    dim_route = respx.get(f"{ECO_BASE_URL_DEFAULT}/api/v1/map/dimension").mock(
-        return_value=httpx.Response(200, json=_fake_dimension())
-    )
-    prop_route = respx.get(f"{ECO_BASE_URL_DEFAULT}/api/v1/map/property").mock(
-        return_value=httpx.Response(200, json=_fake_property())
-    )
-    gif_route = respx.get(f"{ECO_BASE_URL_DEFAULT}/Layers/WorldPreview.gif").mock(
-        return_value=httpx.Response(200, content=_TINY_GIF)
-    )
-    pollution_route = respx.get(f"{ECO_BASE_URL_DEFAULT}/Layers/Pollution.gif").mock(
-        return_value=httpx.Response(200, content=_TINY_GIF)
-    )
+async def test_fetch_map_bundle_never_asks_for_property_deeds() -> None:
+    # The deed endpoint is deliberately unmocked: respx fails the test on any
+    # request it has no route for, so a stray property fetch cannot pass.
+    _mock_upstream()
     bundle = await eco_map.fetch_map_bundle()
-    assert dim_route.called
-    assert prop_route.called
-    assert gif_route.called
-    assert pollution_route.called
+    assert "property" not in bundle
     assert bundle["dimension"]["x"] == 720
     assert bundle["preview_gif"] == _TINY_GIF
     assert bundle["pollution_gif"] == _TINY_GIF
@@ -200,46 +107,22 @@ async def test_fetch_map_bundle_hits_four_endpoints() -> None:
 @pytest.mark.asyncio
 @respx.mock
 async def test_fetch_map_bundle_omits_pollution_on_404() -> None:
-    respx.get(f"{ECO_BASE_URL_DEFAULT}/api/v1/map/dimension").mock(
-        return_value=httpx.Response(200, json=_fake_dimension())
-    )
-    respx.get(f"{ECO_BASE_URL_DEFAULT}/api/v1/map/property").mock(
-        return_value=httpx.Response(200, json=_fake_property())
-    )
-    respx.get(f"{ECO_BASE_URL_DEFAULT}/Layers/WorldPreview.gif").mock(
-        return_value=httpx.Response(200, content=_TINY_GIF)
-    )
     # Pollution raster disabled in server config — 404 is normal, overlay omitted.
-    respx.get(f"{ECO_BASE_URL_DEFAULT}/Layers/Pollution.gif").mock(return_value=httpx.Response(404))
+    _mock_upstream(pollution=False)
     bundle = await eco_map.fetch_map_bundle()
     assert bundle["pollution_gif"] is None
+    assert build_map_payload(bundle)["pollutionDataUri"] is None
 
 
 @pytest.mark.asyncio
 @respx.mock
-async def test_fetch_map_bundle_include_biomes_best_effort() -> None:
-    """include_biomes fetches per-biome rasters; disabled/failing layers drop out."""
-    from eco_mcp_app.ecoregion import BIOME_LAYERS
-
-    respx.get(f"{ECO_BASE_URL_DEFAULT}/api/v1/map/dimension").mock(
-        return_value=httpx.Response(200, json=_fake_dimension())
-    )
-    respx.get(f"{ECO_BASE_URL_DEFAULT}/api/v1/map/property").mock(
-        return_value=httpx.Response(200, json=_fake_property())
-    )
-    respx.get(f"{ECO_BASE_URL_DEFAULT}/Layers/WorldPreview.gif").mock(
-        return_value=httpx.Response(200, content=_TINY_GIF)
-    )
-    respx.get(f"{ECO_BASE_URL_DEFAULT}/Layers/Pollution.gif").mock(return_value=httpx.Response(404))
+async def test_fetch_map_bundle_biome_rasters_best_effort() -> None:
+    """Per-biome rasters are fetched; disabled/failing layers drop out."""
     # Two biome rasters served, the rest 401 (disabled) — must not fail the map.
-    served = {"OceanBiome", "GrasslandBiome"}
-    for layer in BIOME_LAYERS:
-        status = 200 if layer in served else 401
-        respx.get(f"{ECO_BASE_URL_DEFAULT}/Layers/{layer}.gif").mock(
-            return_value=httpx.Response(status, content=_TINY_GIF if status == 200 else b"")
-        )
+    served = frozenset({"OceanBiome", "GrasslandBiome"})
+    _mock_upstream(pollution=False, served_biomes=served)
 
-    bundle = await eco_map.fetch_map_bundle(include_biomes=True)
+    bundle = await eco_map.fetch_map_bundle()
     assert set(bundle["biome_rasters"]) == served
 
     payload = build_map_payload(bundle)
@@ -250,31 +133,12 @@ async def test_fetch_map_bundle_include_biomes_best_effort() -> None:
         assert b["display"] and b["color"]
 
 
-def test_build_map_payload_biome_layers_absent_by_default() -> None:
-    """A bundle without biome_rasters (the MCP card path) yields an empty list."""
-    bundle = {
-        "dimension": _fake_dimension(),
-        "property": {},
-        "preview_gif": _TINY_GIF,
-        "base_url": None,
-    }
-    assert build_map_payload(bundle)["biomeLayers"] == []
-
-
 @pytest.mark.asyncio
 @respx.mock
 async def test_fetch_map_bundle_respects_server_arg() -> None:
     base = "http://eco.example.com:5679"
-    respx.get(f"{base}/api/v1/map/dimension").mock(
-        return_value=httpx.Response(200, json=_fake_dimension())
-    )
-    respx.get(f"{base}/api/v1/map/property").mock(return_value=httpx.Response(200, json={}))
-    gif_route = respx.get(f"{base}/Layers/WorldPreview.gif").mock(
-        return_value=httpx.Response(200, content=_TINY_GIF)
-    )
-    respx.get(f"{base}/Layers/Pollution.gif").mock(return_value=httpx.Response(404))
+    _mock_upstream(base, pollution=False)
     bundle = await eco_map.fetch_map_bundle("eco.example.com:5679")
-    assert gif_route.called
     assert bundle["base_url"] == base
 
 
@@ -286,217 +150,51 @@ async def test_fetch_map_bundle_raises_on_5xx() -> None:
         await eco_map.fetch_map_bundle()
 
 
-# ---- MCP tool surface -----------------------------------------------------
+# ---- the SPA's data plane -------------------------------------------------
 
 
-@pytest.mark.asyncio
-async def test_list_tools_advertises_get_map() -> None:
-    mcp = build_server()
-    handler = mcp.request_handlers[mt.ListToolsRequest]
-    result = await handler(mt.ListToolsRequest(method="tools/list"))
-    names = {tool.name for tool in result.root.tools}
-    assert "get_map" in names
+@pytest.fixture
+def client() -> Iterator[TestClient]:
+    with TestClient(create_app()) as c:
+        yield c
 
 
-@pytest.mark.asyncio
 @respx.mock
-async def test_get_map_call_tool_returns_data_only_result() -> None:
-    respx.get(f"{ECO_BASE_URL_DEFAULT}/api/v1/map/dimension").mock(
-        return_value=httpx.Response(200, json=_fake_dimension())
-    )
-    respx.get(f"{ECO_BASE_URL_DEFAULT}/api/v1/map/property").mock(
-        return_value=httpx.Response(200, json=_fake_property())
-    )
-    respx.get(f"{ECO_BASE_URL_DEFAULT}/Layers/WorldPreview.gif").mock(
-        return_value=httpx.Response(200, content=_TINY_GIF)
-    )
-    respx.get(f"{ECO_BASE_URL_DEFAULT}/Layers/Pollution.gif").mock(
-        return_value=httpx.Response(200, content=_TINY_GIF)
-    )
-    mcp = build_server()
-    handler = mcp.request_handlers[mt.CallToolRequest]
-    req = mt.CallToolRequest(
-        method="tools/call",
-        params=mt.CallToolRequestParams(name="get_map", arguments={}),
-    )
-    result = await handler(req)
-    blocks = result.root.content
-    assert len(blocks) == 2
-    assert isinstance(blocks[0], mt.TextContent)
-    assert isinstance(blocks[1], mt.TextContent)
-    # Markdown block summarizes deeds/owners.
-    md = blocks[0].text
-    assert "**2**" in md  # the deed count in bold
-    assert "alice" in md
-    assert "gavin" in md
-    # JSON block omits the GIF data URI (it's huge); polygons shape is stable.
-    payload = json.loads(blocks[1].text)
-    assert "gifDataUri" not in payload
-    assert payload["view"] == "eco_map"
-    assert payload["deedCount"] == 2
-    assert result.root.meta is None
+def test_preview_map_json_serves_the_raster_stack(client: TestClient) -> None:
+    """What the /map page reads: preview, pollution and biome rasters, no deeds."""
+    _mock_upstream(served_biomes=frozenset({"OceanBiome"}))
+    r = client.get("/preview-map.json")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["view"] == "eco_map"
+    assert body["gifDataUri"].startswith("data:image/gif;base64,")
+    assert body["pollutionDataUri"].startswith("data:image/gif;base64,")
+    assert [b["name"] for b in body["biomeLayers"]] == ["OceanBiome"]
+    assert body["worldDim"] == {"x": 720, "y": 200, "z": 720}
+    for gone in ("deeds", "deedCount", "polygons", "owners", "ownerStyles", "seamNote"):
+        assert gone not in body
 
 
-@pytest.mark.asyncio
 @respx.mock
-async def test_get_map_call_tool_handles_upstream_failure() -> None:
+def test_preview_map_json_is_a_502_when_the_upstream_is_down(client: TestClient) -> None:
     respx.get(f"{ECO_BASE_URL_DEFAULT}/api/v1/map/dimension").mock(
         side_effect=httpx.ConnectError("refused")
     )
+    assert client.get("/preview-map.json").status_code == 502
+
+
+# ---- the deleted tool stays deleted ---------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_get_map_is_not_a_tool() -> None:
     mcp = build_server()
-    handler = mcp.request_handlers[mt.CallToolRequest]
-    req = mt.CallToolRequest(
-        method="tools/call",
-        params=mt.CallToolRequestParams(name="get_map", arguments={}),
-    )
-    result = await handler(req)
-    assert result.root.isError is True
-    blocks = result.root.content
-    assert isinstance(blocks[0], mt.TextContent)
-    assert "unreachable" in blocks[0].text.lower()
+    handler = mcp.request_handlers[mt.ListToolsRequest]
+    result = await handler(mt.ListToolsRequest(method="tools/list"))
+    assert "get_map" not in {tool.name for tool in result.root.tools}
 
 
-# ---------------------------------------------------------------------------
-# Seam-crossing deeds (eco-app#229)
-# ---------------------------------------------------------------------------
-
-
-def test_seam_copies_are_flagged_and_counted_apart_from_deeds() -> None:
-    """`Homestead of MooshMan` came back twice, once at negative y (eco-app#229).
-
-    Eco worlds wrap, so a deed spanning the seam is emitted once at its true
-    position and once translated, and the SVG viewBox clips the overflow. The
-    translated copy carries out-of-range coordinates, which a consumer that
-    scales to the data reads as a negative viewport bound — and it was
-    indistinguishable from a second real deed.
-    """
-    world = {"x": 1000, "y": 200, "z": 1000}
-    # A square straddling the z seam: most of it near z=990, a sliver at z=5.
-    property_data = {
-        "Homestead of MooshMan (MooshMan)": [
-            {"x": 100, "y": 985},
-            {"x": 140, "y": 985},
-            {"x": 140, "y": 5},
-            {"x": 100, "y": 5},
-        ]
-    }
-    polygons = build_polygons(property_data, world)
-    assert len(polygons) > 1
-    # Exactly one polygon is the deed where it actually is.
-    primaries = [p for p in polygons if not p["seamCopy"]]
-    assert len(primaries) == 1
-    copies = [p for p in polygons if p["seamCopy"]]
-    assert copies
-    # The copies are the ones carrying out-of-range coordinates.
-    assert any(
-        float(pair.split(",")[1]) < 0 for p in copies for pair in p["points"].split() if pair
-    )
-    # ...and the primary stays inside the render box.
-    for pair in primaries[0]["points"].split():
-        y = float(pair.split(",")[1])
-        assert y >= 0
-
-
-def test_a_non_wrapping_deed_emits_one_unflagged_polygon() -> None:
-    world = {"x": 1000, "y": 200, "z": 1000}
-    property_data = {
-        "Keystone Mines (salt)": [
-            {"x": 100, "y": 100},
-            {"x": 140, "y": 100},
-            {"x": 140, "y": 140},
-            {"x": 100, "y": 140},
-        ]
-    }
-    polygons = build_polygons(property_data, world)
-    assert len(polygons) == 1
-    assert polygons[0]["seamCopy"] is False
-
-
-def test_the_payload_counts_deeds_and_polygons_separately() -> None:
-    world = {"x": 1000, "y": 200, "z": 1000}
-    bundle = {
-        "dimension": world,
-        "property": {
-            "Homestead of MooshMan (MooshMan)": [
-                {"x": 100, "y": 985},
-                {"x": 140, "y": 985},
-                {"x": 140, "y": 5},
-                {"x": 100, "y": 5},
-            ]
-        },
-    }
-    payload = build_map_payload(bundle)
-    # One deed, more than one polygon — the number a reader wants is the deed.
-    assert payload["deedCount"] == 1
-    assert payload["polygonCount"] > payload["deedCount"]
-    assert payload["seamCopyCount"] == payload["polygonCount"] - 1
-    assert "seamCopy: true" in payload["seamNote"]
-
-
-# --- deed summaries + opt-in geometry (#264) --------------------------------
-
-
-def test_deed_summaries_replace_coordinates_with_something_readable() -> None:
-    """~150 coordinate pairs per deed mean nothing to a text consumer (#264)."""
-    payload = build_map_payload(
-        {
-            "dimension": _fake_dimension(),
-            "property": _fake_property(),
-            "preview_gif": _TINY_GIF,
-            "base_url": None,
-        }
-    )
-    deeds = payload["deeds"]
-    assert {d["deed"] for d in deeds} == {"Alice's Homestead", "Gavin's Edge Plot"}
-
-    alice = next(d for d in deeds if d["owner"] == "alice")
-    # Centroid and bbox are in world blocks, inside the world extent.
-    assert 0 <= alice["centroid"]["x"] <= 720
-    assert 0 <= alice["centroid"]["z"] <= 720
-    assert alice["bbox"]["minX"] <= alice["centroid"]["x"] <= alice["bbox"]["maxX"]
-    assert alice["areaBlocks"] > 0
-    assert alice["seamCrossing"] is False
-    # Sorted largest-first so a truncated read still sees the notable deeds.
-    assert [d["areaBlocks"] for d in deeds] == sorted(
-        (d["areaBlocks"] for d in deeds), reverse=True
-    )
-
-
-def test_a_seam_crossing_deed_is_measured_unwrapped() -> None:
-    """Measured naively, a wrapping deed's bbox spans the whole world."""
-    payload = build_map_payload(
-        {
-            "dimension": _fake_dimension(),
-            "property": _fake_property(),
-            "preview_gif": _TINY_GIF,
-            "base_url": None,
-        }
-    )
-    gavin = next(d for d in payload["deeds"] if d["owner"] == "gavin")
-    assert gavin["seamCrossing"] is True
-    # The unwrapped span is the deed's real width, not ~720.
-    assert (gavin["bbox"]["maxX"] - gavin["bbox"]["minX"]) < 700
-
-
-def test_geometry_is_opt_in() -> None:
-    """The render payload is 30 KB of coordinates a text consumer cannot use."""
-    bundle = {
-        "dimension": _fake_dimension(),
-        "property": _fake_property(),
-        "preview_gif": _TINY_GIF,
-        "base_url": None,
-    }
-    without = build_map_payload(bundle, include_geometry=False)
-    assert without["geometryIncluded"] is False
-    assert "polygons" not in without
-    assert "ownerStyles" not in without
-    # The summary survives, which is the whole point.
-    assert without["deeds"]
-    assert without["deedCount"] == 2
-    assert without["ownerCount"] == 2
-
-    with_geom = build_map_payload(bundle, include_geometry=True)
-    assert with_geom["geometryIncluded"] is True
-    assert with_geom["polygons"]
-    # Dropping the geometry is a large fraction of the payload.
-    assert len(json.dumps(without)) < len(json.dumps(with_geom))
+def test_get_map_has_no_rest_route(client: TestClient) -> None:
+    r = client.get("/preview/get_map.json")
+    assert r.status_code == 400
+    assert r.json() == {"error": "Unknown tool: get_map"}

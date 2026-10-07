@@ -1391,8 +1391,8 @@ a.k-card:visited {
 }
 
 /* --- World map (/map, eco-app#82) -------------------------------------- */
-/* The live preview blown up to a readable size, with deed polygons, biome
-   highlight rasters, and activity-hotspot rings stacked in one square frame. */
+/* The live preview blown up to a readable size, with biome highlight rasters
+   and activity-hotspot rings stacked in one square frame. */
 .map-figure {
   margin: 0 0 0.5rem;
 }

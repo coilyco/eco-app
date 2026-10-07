@@ -167,8 +167,8 @@ export const REFRESH_CONTRACTS = {
   map: {
     mode: "static",
     rationale:
-      "Deed polygons and biome rasters change when land changes hands, which is a reload-" +
-      "worthy event rather than a per-minute one.",
+      "Biome rasters change when the terrain does, which is a reload-worthy event " +
+      "rather than a per-minute one.",
   },
   fairPrice: {
     mode: "static",

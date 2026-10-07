@@ -8,8 +8,8 @@ Covers:
 - Polluter attribution via the action-exporter CSV stream.
 - The MCP tool wiring end-to-end (call_tool returns markdown + JSON,
   and no widget — just-data per eco-app#87).
-- The ``get_map`` pollution overlay pulls ``Layers/Pollution.gif`` and
-  exposes it as ``pollutionDataUri``.
+- The SPA map plane pulls ``Layers/Pollution.gif`` and exposes it as
+  ``pollutionDataUri``.
 """
 
 from __future__ import annotations
@@ -40,6 +40,7 @@ from eco_mcp_app.climate import (
     compute_climate_payload,
     fetch_climate,
 )
+from eco_mcp_app.ecoregion import BIOME_LAYERS
 from eco_mcp_app.server import (
     DEFAULT_ECO_INFO_URL,
     build_server,
@@ -1038,6 +1039,12 @@ _TINY_GIF = bytes.fromhex(
 )
 
 
+def _mock_biome_rasters_off(base: str) -> None:
+    """The map bundle also asks for per-biome rasters; answer them all disabled."""
+    for layer in BIOME_LAYERS:
+        respx.get(f"{base}/Layers/{layer}.gif").mock(return_value=httpx.Response(401))
+
+
 @pytest.mark.asyncio
 @respx.mock
 async def test_map_bundle_includes_pollution_overlay_when_present() -> None:
@@ -1045,13 +1052,13 @@ async def test_map_bundle_includes_pollution_overlay_when_present() -> None:
     respx.get(f"{base}/api/v1/map/dimension").mock(
         return_value=httpx.Response(200, json={"x": 720, "y": 200, "z": 720})
     )
-    respx.get(f"{base}/api/v1/map/property").mock(return_value=httpx.Response(200, json={}))
     respx.get(f"{base}/Layers/WorldPreview.gif").mock(
         return_value=httpx.Response(200, content=_TINY_GIF)
     )
     respx.get(f"{base}/Layers/Pollution.gif").mock(
         return_value=httpx.Response(200, content=_TINY_GIF)
     )
+    _mock_biome_rasters_off(base)
 
     bundle = await eco_map.fetch_map_bundle()
     assert bundle["pollution_gif"] == _TINY_GIF
@@ -1068,11 +1075,11 @@ async def test_map_bundle_omits_pollution_overlay_when_404() -> None:
     respx.get(f"{base}/api/v1/map/dimension").mock(
         return_value=httpx.Response(200, json={"x": 720, "y": 200, "z": 720})
     )
-    respx.get(f"{base}/api/v1/map/property").mock(return_value=httpx.Response(200, json={}))
     respx.get(f"{base}/Layers/WorldPreview.gif").mock(
         return_value=httpx.Response(200, content=_TINY_GIF)
     )
     respx.get(f"{base}/Layers/Pollution.gif").mock(return_value=httpx.Response(404))
+    _mock_biome_rasters_off(base)
 
     bundle = await eco_map.fetch_map_bundle()
     assert bundle["pollution_gif"] is None

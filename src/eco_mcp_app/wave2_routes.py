@@ -66,20 +66,6 @@ class ExplainItemInput(BaseModel):
     )
 
 
-class MapInput(BoundedServerInput):
-    """Select an Eco server, and choose whether to include render geometry."""
-
-    include_geometry: bool = Field(
-        default=False,
-        description=(
-            "Include the SVG polygon geometry and per-owner colour map. Off by default: "
-            "the `points` coordinate strings run to ~30 KB that no text consumer can "
-            "interpret. `deeds` always carries each deed's owner, centroid, bounding box "
-            "and approximate area, which is what a question about land actually needs."
-        ),
-    )
-
-
 class FairPriceInput(ServerInput):
     """Select an Eco item and optional calibration context."""
 
@@ -123,7 +109,6 @@ class PriceByStageInput(BaseModel):
 
 WAVE2_PATHS = {
     "get_economy": "/preview/get_economy.json",
-    "get_map": "/preview/get_map.json",
     "get_milestones": "/preview/get_milestones.json",
     "get_species": "/preview/get_species.json",
     "explain_item": "/preview/explain_item.json",
@@ -162,20 +147,6 @@ def register_wave2_routes(registry: DualRouteRegistry, invoke: ToolInvoker) -> N
         ),
         rest_path=WAVE2_PATHS["get_economy"],
         input_model=ServerInput,
-    )
-    register_json_route(
-        registry,
-        invoke,
-        name="get_map",
-        title="Eco - world map and property deeds",
-        description=(
-            "Return the live Eco world preview and property deeds. Each deed carries its "
-            "owner, centroid, bounding box and approximate area in world blocks. SVG "
-            "polygon geometry is opt-in via `include_geometry`. The richer browser-only "
-            "biome raster projection remains separate."
-        ),
-        rest_path=WAVE2_PATHS["get_map"],
-        input_model=MapInput,
     )
     register_json_route(
         registry,

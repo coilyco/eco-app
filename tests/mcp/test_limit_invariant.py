@@ -12,7 +12,7 @@ should not be read as more than it proves:
 * The set of tools advertising `limit` is pinned, so adding a `limit`-bearing
   tool without wiring it to a helper trips a test rather than shipping.
 
-It does NOT drive all 25 tools end to end against truncating fixtures, which
+It does NOT drive all 24 tools end to end against truncating fixtures, which
 would need each one's upstream mocked.
 """
 
@@ -35,7 +35,6 @@ LIMIT_BEARING = {
     "get_climate",
     "get_crafting_atlas",
     "get_currency",
-    "get_map",
     "get_market",
     "get_recipes",
     "get_social",
@@ -60,10 +59,11 @@ async def _advertised_tools() -> list[mt.Tool]:
 
 
 @pytest.mark.asyncio
-async def test_the_surface_is_still_twenty_five_tools() -> None:
-    """#6076 audited "all 25 MCP tools". trade_watchers left in #8404 and price_by_stage
-    joined in #8423, whose stages array is bounded by the 13 upgrade stages."""
-    assert len(await _advertised_tools()) == 25
+async def test_the_surface_is_still_twenty_four_tools() -> None:
+    """#6076 audited "all 25 MCP tools". trade_watchers left in #8404, price_by_stage
+    joined in #8423 (its stages array is bounded by the 13 upgrade stages), and
+    get_map left in COI-2092."""
+    assert len(await _advertised_tools()) == 24
 
 
 @pytest.mark.asyncio

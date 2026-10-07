@@ -464,9 +464,8 @@ function ClimateSection({ snap, pageLoadedAt }: { snap: ClimateSnapshot; pageLoa
 }
 
 // ---------------------------------------------------------------------------
-// The map itself: base preview plus per-biome highlight rasters (#82). The
-// owner-coloured deed polygons were removed at Kai's request, since the overlay
-// never lined up (eco-app#8349). The payload still carries them for MCP.
+// The map itself: base preview plus per-biome highlight rasters (#82). Deed
+// polygons never lined up (eco-app#8349) and the payload no longer carries them.
 // ---------------------------------------------------------------------------
 function WorldMap({
   map,
@@ -496,8 +495,7 @@ function WorldMap({
         ))}
       </div>
       <p className="map-meta" data-testid="map-meta">
-        {map.deedCount} deed{map.deedCount === 1 ? "" : "s"} // {map.ownerCount} owner
-        {map.ownerCount === 1 ? "" : "s"} // world size {map.worldDim.x} × {map.worldDim.z}
+        world size {map.worldDim.x} × {map.worldDim.z}
       </p>
     </div>
   )
@@ -508,8 +506,8 @@ export default function MapPage() {
   const [pageLoadedAt] = useState(() => new Date())
 
   // Three independent planes with three different refresh contracts
-  // (eco-app#201). Climate advances with the simulation and polls; deed
-  // polygons change on a land transfer and do not; species populations are
+  // (eco-app#201). Climate advances with the simulation and polls; the map
+  // rasters change with the terrain and do not; species populations are
   // sampled slowly and refresh on demand. A failure in one degrades that
   // section rather than the page.
   const region = useFreshData("region", fetchEcoregion)

@@ -4,10 +4,11 @@ Map, climate, biome, and species state.
 
 ## Map and environmental state
 
-`get_map` and `get_world` cover terrain and world totals.
-`/preview/preview-map.json` is a separate browser-only projection that adds
-biome rasters, which the MCP form deliberately omits: a raster is a picture, not
-a tool result.
+`get_world` covers terrain and world totals.
+`/preview-map.json` is a browser-only projection of the world preview, pollution
+and biome rasters for the SPA `/map` page. It has no MCP form: a raster is a
+picture, not a tool result. Property deeds were dropped from it with the
+`get_map` tool (COI-2092).
 
 ## Climate source freshness
 

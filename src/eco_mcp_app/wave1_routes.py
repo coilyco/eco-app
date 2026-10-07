@@ -200,8 +200,7 @@ def register_wave1_routes(registry: DualRouteRegistry, invoke: ToolInvoker) -> N
             "turnout, population movement, and settlements, including how many "
             "settlements and homesteads have been started. For the laws and elected titles in "
             "force right now use "
-            "get_government, and for who owns one particular plot or deed use "
-            "get_map. "
+            "get_government. "
             "Requires the server-side admin API key."
         ),
         rest_path="/preview/civics.json",

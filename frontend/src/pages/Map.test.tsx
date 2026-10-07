@@ -106,34 +106,6 @@ const MAP: MapPayload = {
   gifDataUri: _TINY,
   pollutionDataUri: null,
   biomeLayers: [{ name: "OceanBiome", display: "Ocean", color: "#4a9cb8", dataUri: _TINY }],
-  polygons: [
-    {
-      owner: "alice",
-      deed: "Alice's Homestead",
-      points: "10,10 20,10 20,20 10,20",
-      seamCopy: false,
-    },
-  ],
-  geometryIncluded: true,
-  ownerStyles: { alice: { fill: "hsla(1,50%,50%,0.4)", stroke: "hsla(1,60%,35%,0.9)" } },
-  deedCount: 1,
-  ownerCount: 1,
-  owners: ["alice"],
-  polygonCount: 1,
-  deeds: [
-    {
-      deed: "Alice's Homestead",
-      owner: "alice",
-      centroid: { x: 15, z: 15 },
-      bbox: { minX: 10, minZ: 10, maxX: 20, maxZ: 20 },
-      areaBlocks: 100,
-      vertexCount: 4,
-      seamCrossing: false,
-    },
-  ],
-  deedsNote: "Areas are approximate.",
-  seamCopyCount: 0,
-  seamNote: "seamCopy: true marks wrap copies.",
 }
 
 // Climate folded into the world page as its environmental overlay (eco-app#90).
@@ -248,15 +220,16 @@ describe("Map page", () => {
     expect(screen.getByTestId("loading")).toBeInTheDocument()
   })
 
-  it("draws the map without the deed overlay or its owner legend", async () => {
+  it("draws the map rasters with no deed overlay or its owner legend", async () => {
     stubFetch()
     renderPage()
     await waitFor(() => expect(screen.getByTestId("map-frame")).toBeInTheDocument())
-    // Removed at Kai's request (eco-app#8349): the overlay never lined up.
+    // Deeds are gone from the plane (COI-2092), not just hidden.
     expect(screen.queryByTestId("map-overlay")).not.toBeInTheDocument()
     expect(screen.getByTestId("map-frame").querySelector("polygon")).toBeNull()
     expect(screen.queryByTestId("map-owners")).not.toBeInTheDocument()
-    expect(screen.getByTestId("map-meta")).toHaveTextContent("1 deed")
+    expect(screen.getByTestId("map-meta")).toHaveTextContent("world size 1000 × 1000")
+    expect(screen.getByTestId("map-meta")).not.toHaveTextContent("deed")
   })
 
   it("reclassifies water so unclassified is far below the old 61%", async () => {

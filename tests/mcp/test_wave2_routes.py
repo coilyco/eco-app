@@ -17,10 +17,6 @@ from eco_mcp_app.wave2_routes import WAVE2_PATHS, WAVE2_TOOL_NAMES, register_wav
 
 WAVE2_ARGUMENTS: dict[str, dict[str, Any]] = {
     "get_economy": {"server": "eco.test:3001"},
-    # include_geometry is spelled out for the same reason as include_image:
-    # it defaults to False and the registry passes the resolved model through.
-    # SVG coordinates are opt-in so an MCP caller stays readable (eco-app#264).
-    "get_map": {"server": "eco.test:3001", "include_geometry": False, "limit": 50},
     "get_milestones": {"server": "eco.test:3001"},
     # include_image is spelled out because it defaults to False and the
     # registry passes the resolved model through — inlined images are opt-in so

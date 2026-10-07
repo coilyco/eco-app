@@ -1,34 +1,19 @@
-"""Fetch + shape data for the `get_map` tool.
+"""Fetch + shape the browser-only world-map plane (`/preview-map.json`).
 
-The card renders by overlaying SVG polygons on the live WorldPreview.gif
-(inlined as a data URI to satisfy Claude Desktop's CSP — see
-claude-ai-mcp#40). We deliberately do **not** pull in Pillow just to draw
-filled polygons onto the GIF: an SVG overlay handles both the fill and the
-hover tooltip cleanly, keeping the dep surface small. The task spec allows
-either approach; this picks the lighter one.
+The SPA `/map` page stacks the live WorldPreview.gif (inlined as a data URI so
+no external origin is needed under the page CSP), the optional pollution raster,
+and one raster per biome for the hover-highlight. There is no MCP tool for this
+plane: a raster is a picture, not a tool result. The property-deed path and the
+`get_map` tool that read it were deleted (COI-2092).
 
-Coordinate system — caveats worth internalizing before touching this module:
-
-* The Eco server reports `{x, y, z}` dimensions where `y` is elevation
-  (0-200) and the world is `x` by `z` in the horizontal plane. Today the
-  server returns `{x:720, y:200, z:720}`.
-* The `/api/v1/map/property` payload's `{x, y}` pairs are actually `{x, z}`
-  — the 2D projection names the vertical screen axis "y" even though it's
-  the world's `z`. We treat the payload's `y` as the world's `z` and scale
-  by `dimension.z`.
-* The world wraps toroidally. A single deed can contain verts near x=0 and
-  verts near x=720 — rendering them as one polygon would cut a line across
-  the whole map. When consecutive verts differ by more than half the
-  dimension, we split the polygon at the seam so each side renders on its
-  own half of the image.
+The Eco server reports `{x, y, z}` dimensions where `y` is elevation (0-200)
+and the world is `x` by `z` in the horizontal plane.
 """
 
 from __future__ import annotations
 
 import asyncio
 import base64
-import hashlib
-import math
 import os
 from typing import Any, cast
 
@@ -40,10 +25,8 @@ ECO_BASE_URL_DEFAULT = os.environ.get("ECO_MAP_BASE_URL", "http://eco.coilysiren
     "/"
 )
 
-# Match the GIF's native framing. The preview is square 256x256-ish (Eco
-# renders it at world aspect 1:1); we reproject to this logical size for
-# the SVG overlay so polygon coordinates are stable regardless of how the
-# browser scales the <img>.
+# The logical square the SPA lays hotspot rings over, whatever size the browser
+# scales the <img> stack to (it maps world coords by renderSize / worldDim).
 MAP_RENDER_SIZE = 512
 
 
@@ -78,31 +61,23 @@ async def _fetch_biome_raster(
     return None
 
 
-async def fetch_map_bundle(
-    server: str | None = None, *, include_biomes: bool = False
-) -> dict[str, Any]:
-    """Fetch the upstream payloads needed to render the map card.
+async def fetch_map_bundle(server: str | None = None) -> dict[str, Any]:
+    """Fetch the upstream payloads needed to render the map page.
 
     Returns a dict with:
       * `dimension`: `{x, y, z}` — raw.
-      * `property`: `{deed_name: [{x, y}, ...]}` — raw.
       * `preview_gif`: `bytes` of the animated GIF.
       * `pollution_gif`: `bytes` or `None`. Eco serves world-layer rasters at
         ``/Layers/<Name>.gif``; the pollution layer isn't always exposed (the
         config can disable individual rasters), so 404 is normal — we just
         omit the overlay.
-      * `biome_rasters`: `{LayerName: bytes}` — only populated when
-        ``include_biomes`` is set (the SPA `/map` page); the compact MCP card
-        never fetches them, keeping the in-chat path lean.
+      * `biome_rasters`: `{LayerName: bytes}` — one per layer that came back.
       * `base_url`: the base URL used (for display).
     """
     base = _world_base_url(server)
-    biome_rasters: dict[str, bytes] = {}
     async with httpx.AsyncClient(timeout=10.0) as client:
         dim_r = await client.get(f"{base}/api/v1/map/dimension")
         dim_r.raise_for_status()
-        prop_r = await client.get(f"{base}/api/v1/map/property")
-        prop_r.raise_for_status()
         gif_r = await client.get(f"{base}/Layers/WorldPreview.gif")
         gif_r.raise_for_status()
         # Pollution overlay — best-effort. A 404 means the server config
@@ -116,14 +91,12 @@ async def fetch_map_bundle(
             pollution_gif = None
         # Per-biome rasters for the hover-highlight — fetched concurrently and
         # best-effort so a slow/disabled layer never stalls the map.
-        if include_biomes:
-            results = await asyncio.gather(
-                *(_fetch_biome_raster(client, base, layer) for layer in BIOME_LAYERS)
-            )
-            biome_rasters = dict(r for r in results if r is not None)
+        results = await asyncio.gather(
+            *(_fetch_biome_raster(client, base, layer) for layer in BIOME_LAYERS)
+        )
+        biome_rasters = dict(r for r in results if r is not None)
     return {
         "dimension": dim_r.json(),
-        "property": prop_r.json(),
         "preview_gif": gif_r.content,
         "pollution_gif": pollution_gif,
         "biome_rasters": biome_rasters,
@@ -131,258 +104,13 @@ async def fetch_map_bundle(
     }
 
 
-def _parse_deed_key(key: str) -> tuple[str, str]:
-    """Split "Foo's Homestead, Owner: Bar" into (deed, owner)."""
-    marker = ", Owner: "
-    if marker in key:
-        deed, owner = key.rsplit(marker, 1)
-        return deed, owner
-    return key, "Unknown"
-
-
-def _owner_color(owner: str) -> str:
-    """Stable pastel HSL color per owner — 40% alpha so the map shows through."""
-    h = int(hashlib.md5(owner.encode("utf-8"), usedforsecurity=False).hexdigest(), 16)
-    hue = h % 360
-    return f"hsla({hue}, 50%, 50%, 0.4)"
-
-
-def _owner_stroke(owner: str) -> str:
-    h = int(hashlib.md5(owner.encode("utf-8"), usedforsecurity=False).hexdigest(), 16)
-    hue = h % 360
-    return f"hsla({hue}, 60%, 35%, 0.9)"
-
-
-def _order_by_polar_angle(pts: list[tuple[float, float]]) -> list[tuple[float, float]]:
-    """Sort points around their centroid — the upstream payload is set-like.
-
-    Not a convex hull: deeds can be genuinely non-convex, and polar ordering
-    around the centroid is good enough for the small, roughly-round plots
-    Eco produces (5-30 verts apiece).
-    """
-    if len(pts) < 3:
-        return pts
-    cx = sum(p[0] for p in pts) / len(pts)
-    cy = sum(p[1] for p in pts) / len(pts)
-    return sorted(pts, key=lambda p: math.atan2(p[1] - cy, p[0] - cx))
-
-
-def _seam_crosses(
-    pts: list[tuple[float, float]], world_x: float, world_z: float
-) -> tuple[bool, bool]:
-    """Detect whether the centroid→vert distances exceed half the world on each axis.
-
-    Using the centroid — not consecutive-vert distance — because we call this
-    on the *unordered* set. A single oversized span is enough; we don't need
-    to know how many times it wraps.
-    """
-    if len(pts) < 3:
-        return (False, False)
-    xs = [p[0] for p in pts]
-    zs = [p[1] for p in pts]
-    crosses_x = (max(xs) - min(xs)) > (world_x / 2.0)
-    crosses_z = (max(zs) - min(zs)) > (world_z / 2.0)
-    return (crosses_x, crosses_z)
-
-
-def _unwrap_for_seam(
-    pts: list[tuple[float, float]],
-    world_x: float,
-    world_z: float,
-) -> list[tuple[float, float]]:
-    """Translate near-edge verts across the seam so the polygon is contiguous.
-
-    When a deed straddles x=0/x=720, some verts are near 0 and some near
-    720 — a naive draw cuts a line across the whole map. If we shift the
-    low-x verts by +world_x, the set becomes contiguous in `[half, half+world_x]`
-    and polar-ordering + drawing it there produces one clean polygon. The
-    caller then renders it both as-is (covers the high-x side of the map)
-    and translated by -world_x (covers the low-x side); SVG clips to the
-    viewBox so the off-screen halves disappear naturally.
-    """
-    crosses_x, crosses_z = _seam_crosses(pts, world_x, world_z)
-    if not crosses_x and not crosses_z:
-        return pts
-    half_x = world_x / 2.0
-    half_z = world_z / 2.0
-    out: list[tuple[float, float]] = []
-    for x, z in pts:
-        if crosses_x and x < half_x:
-            x = x + world_x
-        if crosses_z and z < half_z:
-            z = z + world_z
-        out.append((x, z))
-    return out
-
-
-def _split_seam_crossings(
-    pts: list[tuple[float, float]],
-    world_x: float,
-    world_z: float,
-) -> list[list[tuple[float, float]]]:
-    """Return 1 or more polygons that together cover the seam-crossing deed.
-
-    When a polygon wraps the world edge, we first unwrap it into an
-    "extended coordinates" polygon (so it's contiguous), then emit copies
-    translated by ±world dimensions so the rendered SVG covers both sides
-    of the seam. SVG viewBox clipping handles what ends up off-screen.
-    """
-    if len(pts) < 3:
-        return [pts]
-    crosses_x, crosses_z = _seam_crosses(pts, world_x, world_z)
-    if not crosses_x and not crosses_z:
-        return [pts]
-    unwrapped = _unwrap_for_seam(pts, world_x, world_z)
-    copies: list[list[tuple[float, float]]] = [unwrapped]
-    if crosses_x:
-        copies.append([(x - world_x, z) for (x, z) in unwrapped])
-    if crosses_z:
-        copies.append([(x, z - world_z) for (x, z) in unwrapped])
-    if crosses_x and crosses_z:
-        copies.append([(x - world_x, z - world_z) for (x, z) in unwrapped])
-    return copies
-
-
-def build_polygons(
-    property_data: dict[str, list[dict[str, Any]]],
-    dimension: dict[str, Any],
-    render_size: int = MAP_RENDER_SIZE,
-) -> list[dict[str, Any]]:
-    """Turn the raw property payload into render-ready SVG polygon specs.
-
-    Each item is `{owner, deed, fill, stroke, points}` where `points` is an
-    SVG `points` attribute string (space-separated "x,y" pairs) scaled by
-    `render_size / world_size`. Seam-crossing deeds emit copies with
-    coords translated beyond `[0, render_size]`; the SVG viewBox clips
-    the out-of-frame halves. Deeds with fewer than 3 verts or empty
-    point lists are dropped — they can't form a polygon.
-    """
-    world_x = float(dimension.get("x") or 720)
-    # The payload's "y" is the world's z. Use dimension.z as the z extent.
-    world_z = float(dimension.get("z") or 720)
-    sx = render_size / world_x
-    sz = render_size / world_z
-    out: list[dict[str, Any]] = []
-    for key, verts in (property_data or {}).items():
-        if not verts:
-            continue
-        deed, owner = _parse_deed_key(key)
-        # Work in world coords so the seam-splitter can reason about the wrap.
-        pts = [(float(v["x"]), float(v["y"])) for v in verts if "x" in v and "y" in v]
-        if len(pts) < 3:
-            continue
-        ordered = _order_by_polar_angle(pts)
-        for index, sub in enumerate(_split_seam_crossings(ordered, world_x, world_z)):
-            if len(sub) < 3:
-                continue
-            # Re-order after splitting — bucketing can scramble the angle order.
-            sub = _order_by_polar_angle(sub)
-            scaled = [(x * sx, z * sz) for (x, z) in sub]
-            pts_attr = " ".join(f"{x:.1f},{y:.1f}" for (x, y) in scaled)
-            out.append(
-                {
-                    "owner": owner,
-                    "deed": deed,
-                    # Fill and stroke live once in `ownerStyles`, keyed by
-                    # owner, rather than repeated on every polygon (#264).
-                    "points": pts_attr,
-                    # Index 0 is the deed at its true position; anything after
-                    # it is the same deed translated across the world seam so
-                    # an SVG viewBox can clip it. Those carry deliberately
-                    # out-of-range (often negative) coordinates, so a consumer
-                    # that scales to the data — rather than to renderSize —
-                    # has to know to skip them (#229).
-                    "seamCopy": index > 0,
-                }
-            )
-    return out
-
-
-def _polygon_area(pts: list[tuple[float, float]]) -> float:
-    """Shoelace area of a polygon in world units (blocks²)."""
-    total = 0.0
-    for i, (x1, z1) in enumerate(pts):
-        x2, z2 = pts[(i + 1) % len(pts)]
-        total += x1 * z2 - x2 * z1
-    return abs(total) / 2.0
-
-
-def build_deed_summaries(
-    property_data: dict[str, list[dict[str, Any]]],
-    dimension: dict[str, Any],
-) -> list[dict[str, Any]]:
-    """Per-deed centroid, bounding box and approximate area, in world coords.
-
-    This is what a text consumer asked "who owns the land near Phantom
-    Springs" can actually reason about. The SVG `points` strings it replaces
-    ran to ~150 coordinate pairs per deed and meant nothing to a language
-    model (#264).
-
-    Coordinates are world blocks, not the scaled render coordinates, because a
-    render-space number is only meaningful next to the SVG it was scaled for.
-    """
-    world_x = float(dimension.get("x") or 720)
-    world_z = float(dimension.get("z") or 720)
-    summaries: list[dict[str, Any]] = []
-    for key, verts in (property_data or {}).items():
-        if not verts:
-            continue
-        deed, owner = _parse_deed_key(key)
-        pts = [(float(v["x"]), float(v["y"])) for v in verts if "x" in v and "y" in v]
-        if len(pts) < 3:
-            continue
-        crosses_x, crosses_z = _seam_crosses(pts, world_x, world_z)
-        # Measure the unwrapped shape: a deed straddling the seam has a
-        # bounding box spanning the whole world if measured naively.
-        measured = _order_by_polar_angle(_unwrap_for_seam(pts, world_x, world_z))
-        xs = [x for x, _ in measured]
-        zs = [z for _, z in measured]
-        summaries.append(
-            {
-                "deed": deed,
-                "owner": owner,
-                # Wrapped back into world range so the point names a real place.
-                "centroid": {
-                    "x": round((sum(xs) / len(xs)) % world_x, 1),
-                    "z": round((sum(zs) / len(zs)) % world_z, 1),
-                },
-                "bbox": {
-                    "minX": round(min(xs), 1),
-                    "minZ": round(min(zs), 1),
-                    "maxX": round(max(xs), 1),
-                    "maxZ": round(max(zs), 1),
-                },
-                "areaBlocks": round(_polygon_area(measured)),
-                "vertexCount": len(pts),
-                "seamCrossing": bool(crosses_x or crosses_z),
-            }
-        )
-    summaries.sort(key=lambda d: (-d["areaBlocks"], d["deed"]))
-    return summaries
-
-
 def gif_to_data_uri(gif_bytes: bytes) -> str:
     return f"data:image/gif;base64,{base64.b64encode(gif_bytes).decode()}"
 
 
-def build_map_payload(
-    bundle: dict[str, Any],
-    *,
-    include_geometry: bool = True,
-) -> dict[str, Any]:
-    """Shape the payload the map partial consumes.
-
-    ``include_geometry`` controls the SVG rendering half — the per-polygon
-    `points` strings and the per-owner styling maps. The browser overlay needs
-    them; a text consumer cannot interpret a coordinate list, and they ran to
-    ~30 KB against ~2 KB of actual information (#264). `deeds` carries the
-    centroid / bounding box / area summary either way.
-    """
+def build_map_payload(bundle: dict[str, Any]) -> dict[str, Any]:
+    """Shape the payload the SPA `/map` page consumes."""
     dim = bundle.get("dimension") or {}
-    prop = bundle.get("property") or {}
-    polygons = build_polygons(prop, dim)
-    deeds = build_deed_summaries(prop, dim)
-    owners = sorted({p["owner"] for p in polygons})
     pollution_bytes = bundle.get("pollution_gif")
     pollution_data_uri = gif_to_data_uri(cast(bytes, pollution_bytes)) if pollution_bytes else None
     # Biome rasters (SPA hover-highlight) — one entry per layer that came back,
@@ -398,7 +126,7 @@ def build_map_payload(
         for layer in BIOME_LAYERS
         if layer in biome_rasters
     ]
-    payload: dict[str, Any] = {
+    return {
         "view": "eco_map",
         "sourceUrl": bundle.get("base_url"),
         "worldDim": {"x": dim.get("x"), "y": dim.get("y"), "z": dim.get("z")},
@@ -406,43 +134,4 @@ def build_map_payload(
         "gifDataUri": gif_to_data_uri(cast(bytes, bundle.get("preview_gif") or b"")),
         "pollutionDataUri": pollution_data_uri,
         "biomeLayers": biome_layers,
-        # Distinct deeds, not polygons: a seam-crossing deed emits one polygon
-        # per side of the wrap (#229).
-        "deedCount": len({p["deed"] for p in polygons}),
-        "polygonCount": len(polygons),
-        # Centroid / bbox / area per deed, in world blocks. Present whether or
-        # not the render geometry is.
-        "deeds": deeds,
-        "deedsNote": (
-            "Centroid, bounding box and approximate area are in world blocks. Area is "
-            "the shoelace area of the deed's vertex hull, so it approximates the claimed "
-            "footprint rather than counting plots."
-        ),
-        "seamCopyCount": sum(1 for p in polygons if p.get("seamCopy")),
-        "seamNote": (
-            "A deed that crosses the world seam is emitted once at its true position and "
-            "again translated by the world size, so an SVG viewBox clips the overflow. The "
-            "translated copies carry seamCopy: true and coordinates outside 0..renderSize, "
-            "including negatives. Skip them unless you are rendering with clipping."
-        ),
-        "ownerCount": len(owners),
-        "owners": owners,
     }
-    if include_geometry:
-        payload["polygons"] = polygons
-        # One styling representation, keyed by owner. The fill and stroke used
-        # to be repeated on every polygon *and* in two parallel per-owner maps
-        # — three copies of the same data, none of which a text consumer can
-        # use (#264). Polygons reference it by `owner`.
-        payload["ownerStyles"] = {
-            o: {"fill": _owner_color(o), "stroke": _owner_stroke(o)} for o in owners
-        }
-        payload["geometryIncluded"] = True
-    else:
-        payload["geometryIncluded"] = False
-        payload["geometryNote"] = (
-            "SVG polygon geometry and the per-owner colour map are omitted. Pass "
-            "include_geometry=true for the render payload; `deeds` above carries the "
-            "centroid, bounding box and area for each deed."
-        )
-    return payload

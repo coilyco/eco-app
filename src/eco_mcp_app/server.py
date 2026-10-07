@@ -39,7 +39,6 @@ from .civics import civics_markdown, fetch_civics
 from .crafting import atlas_markdown, fetch_atlas
 from .dual_routes import DualRouteRegistry
 from .logistics import fetch_logistics, logistics_markdown
-from .map import build_map_payload, fetch_map_bundle
 from .progression import fetch_history, history_markdown
 from .public_routes import STORES_MAX_JSON_BYTES, STORES_NESTED_LIMIT, STORES_ROW_LIMIT
 from .reply_templates import with_reply_templates
@@ -776,39 +775,6 @@ def _format_milestones_markdown(payload: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def _format_map_markdown(payload: dict[str, Any]) -> str:
-    """Plain-text fallback for hosts without the iframe."""
-    dim = payload.get("worldDim") or {}
-    lines = [
-        f"**Eco world map** — {dim.get('x', '?')} x {dim.get('z', '?')}",
-        "",
-        f"- Deeds: **{payload['deedCount']}** across "
-        f"**{payload['ownerCount']}** owner{'s' if payload['ownerCount'] != 1 else ''}",
-    ]
-    owners = payload.get("owners") or []
-    if owners:
-        shown = ", ".join(owners[:10])
-        more = f" (+{len(owners) - 10} more)" if len(owners) > 10 else ""
-        lines.append(f"- Owners: {shown}{more}")
-    # The largest deeds, with where they actually are. This is the part of the
-    # map a text consumer can reason about; the SVG coordinates never were.
-    deeds = payload.get("deeds") or []
-    if deeds:
-        lines.append("")
-        lines.append("**Largest deeds:**")
-        for deed in deeds[:10]:
-            centroid = deed["centroid"]
-            lines.append(
-                f"- {deed['deed']} ({deed['owner']}) — "
-                f"~{deed['areaBlocks']:,} blocks at ({centroid['x']:.0f}, {centroid['z']:.0f})"
-            )
-        if len(deeds) > 10:
-            lines.append(f"- _+{len(deeds) - 10} more deeds_")
-    if payload.get("sourceUrl"):
-        lines.append(f"- Source: `{payload['sourceUrl']}`")
-    return "\n".join(lines)
-
-
 def _resolve_species_id(name: str) -> str:
     """Turn user input into a CamelCase species id.
 
@@ -1019,7 +985,6 @@ TOOL_SITE_PATHS: dict[str, str] = {
     "get_civics": "/civics",
     "get_government": "/civics",
     "get_world": "/map",
-    "get_map": "/map",
     "get_region": "/map",
     "get_climate": "/map",
     "get_species": "/species",
@@ -2748,30 +2713,6 @@ def build_server(
                 content=[
                     TextContent(type="text", text=_format_economy_markdown(payload)),
                     TextContent(type="text", text=json.dumps(payload, default=str)),
-                ],
-            )
-
-        if name == "get_map":
-            server_arg = arguments.get("server") if arguments else None
-            try:
-                bundle = await fetch_map_bundle(server_arg)
-            except httpx.HTTPError as e:
-                return _unreachable_result("Eco server", e)
-            payload = build_map_payload(
-                bundle,
-                include_geometry=_is_truthy_arg((arguments or {}).get("include_geometry")),
-            )
-            json_payload = {
-                k: v for k, v in payload.items() if k not in ("gifDataUri", "pollutionDataUri")
-            }
-            # Markdown off the full payload, deeds bounded after: deedCount and
-            # polygonCount keep describing every one (eco-app#6076).
-            map_markdown = _format_map_markdown(payload)
-            _bound_rows(json_payload, _resolve_limit(arguments or {}), "deeds", "owners")
-            return CallToolResult(
-                content=[
-                    TextContent(type="text", text=map_markdown),
-                    TextContent(type="text", text=json.dumps(json_payload)),
                 ],
             )
 
