@@ -11,6 +11,7 @@ from .public_routes import (
     BoundedServerInput,
     ServerInput,
     ToolInvoker,
+    TradesInput,
     register_json_route,
 )
 
@@ -244,13 +245,14 @@ def register_wave2_routes(registry: DualRouteRegistry, invoke: ToolInvoker) -> N
         description=(
             "List individual past trades: who bought what from whom, at which store, for "
             "how much, and when, plus top buyers and sellers per currency. Answers 'list "
-            "today's copper ore trades' and 'who bought my iron'. For which "
-            "players or stores trade the most overall use get_stores, for where to buy "
-            "or sell an item now use find_trade, and for price trends get_market. "
+            "today's copper ore trades' and 'who bought my iron'. Pass item to get only "
+            "that item's trades, matched across the whole ledger before limit applies. For "
+            "which players or stores trade the most overall use get_stores, for where to "
+            "buy or sell an item now use find_trade, and for price trends get_market. "
             "Requires the server-side admin API key."
         ),
         rest_path=WAVE2_PATHS["get_trades"],
-        input_model=BoundedServerInput,
+        input_model=TradesInput,
     )
     register_json_route(
         registry,

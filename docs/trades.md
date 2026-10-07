@@ -16,6 +16,11 @@ computed values below are explicitly detailed-rows-only.
 
 - **Detailed row-level trades** - newest first, capped at
   `ECO_TRADES_LEDGER_ROWS` (default 4000). Older rollups are not rows.
+- **Item filter** - `item` resolves through `Norms.find_qualified`, the same
+  resolver `price_by_stage` uses (names, ids, plurals, bare metals, upgrade
+  shorthand). It filters every ledger row before `limit` applies, and drops a
+  stage qualifier since a trade has none. An unresolved word returns no rows
+  and an `itemFilter` block with candidates. The summary arrays stay whole.
 - **Top buyers and sellers** - currency spent by `Buyer` and earned by
   `Seller`, from detailed rows only.
 - **Per-currency volume** - includes summed rollup amounts. Most-traded items

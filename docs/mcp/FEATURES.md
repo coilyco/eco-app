@@ -23,7 +23,7 @@ Defined in [src/eco_mcp_app/server.py](../../src/eco_mcp_app/server.py) and the 
 - **get_species** - Species card. iNaturalist/Wikipedia taxonomy + in-game population chart, thinned to evenly-spaced samples for MCP callers ([#256](https://forgejo.coilysiren.me/coilyco-gaming/eco-app/issues/256)).
 - **explain_item** - Wikidata + Wikipedia lookup. Images, category facts resolved to labels rather than raw entity ids, and canonical Eco item ids (`SteelAxeItem`) accepted alongside common names. 7-day cache ([#262](https://forgejo.coilysiren.me/coilyco-gaming/eco-app/issues/262)).
 - **get_crafting_atlas** - Live crafting from action-log exporter. Top items, station util, leaderboard.
-- **get_trades** - Detailed trade ledger with parties, items, stores, currencies, and price history.
+- **get_trades** - Detailed trade ledger with parties, items, stores, currencies, and price history. `item` filters the whole ledger, resolved like `price_by_stage`, before `limit`.
 - **get_stores** - Store and trader directories derived from trade history.
 - **get_progression** - Server-wide profession and specialty progression history.
 - **get_social** - Community activity from the `Play`, `FirstLogin`, and `ReputationTransfer` action exporters: play volume, recent arrivals, and a who-reps-whom reputation graph. `ChatSent` is deliberately not fetched or returned ([#185](https://forgejo.coilysiren.me/coilyco-gaming/eco-app/issues/185)). Player names are hashed to stable handles by default. Names in the clear remain operator-gated (`ECO_SOCIAL_ALLOW_NAMES` + `reveal_names`) and never reach the public JSON path.

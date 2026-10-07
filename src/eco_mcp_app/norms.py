@@ -277,6 +277,25 @@ class Norms:
                 return name, {}
         return None, {}
 
+    def find_qualified(
+        self, word: str | None, catalog: Catalog = (), stage: str | None = None
+    ) -> tuple[str | None, dict[str, Any], str | None]:
+        """`find`, then "iron at au3": the shorthand qualifies and the rest is the item (#8425).
+        The third value is the qualifier, the caller's `stage` when it gave one."""
+        from . import upgrade_words as uw
+
+        name, miss = self.find(word, catalog)
+        if name is None and not miss and stage is None and word:
+            rest, token = uw.split_qualifier(word)
+            if token:
+                name, miss = self.find(rest, catalog)
+                return name, miss, token
+        return name, miss, stage
+
+    def is_item(self, name: str, trade_item: str) -> bool:
+        """Whether a ledger row's item (an Eco id such as `IronBarItem`) is the resolved item."""
+        return self.key(trade_item) == name or prettify_eco_name(trade_item) == name
+
     def first_traded_stage(self, name: str) -> int | None:
         """The lowest stage the item ever traded at, in any currency or barter.
         `crossCycle` holds primary-currency trades only, so it can read too high."""
@@ -359,14 +378,7 @@ class Norms:
         lines pool, one observation per trade line."""
         from . import upgrade_words as uw
 
-        name, miss = self.find(word, catalog)
-        qualifier = stage
-        # "iron at au3": the shorthand qualifies, the rest is the item (#8425).
-        if name is None and not miss and qualifier is None and word:
-            rest, token = uw.split_qualifier(word)
-            if token:
-                name, miss = self.find(rest, catalog)
-                qualifier = token
+        name, miss, qualifier = self.find_qualified(word, catalog, stage)
         if name is None:
             missing: dict[str, Any] = {
                 "query": word,
