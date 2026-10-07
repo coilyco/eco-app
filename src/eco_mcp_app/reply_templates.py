@@ -82,6 +82,16 @@ REPLY_TEMPLATES: dict[str, list[dict[str, Any]]] = {
         },
     ],
     "get_server_status": [
+        # Renders only once the meteor is destroyed: destroyedOnDay is null in
+        # every other state, so this entry drops out and the next one answers.
+        {
+            "when_args": [],
+            "text": (
+                "{{players.online}} players online on day {{cycle.daysRunning}}. "
+                "The meteor was destroyed on day {{cycle.meteor.destroyedOnDay}}. "
+                "Server version {{server.version}}."
+            ),
+        },
         {
             "when_args": [],
             "text": (

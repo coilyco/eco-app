@@ -107,3 +107,19 @@ def test_help_needs_no_upstream() -> None:
     payload = asyncio.run(service().render("help"))
     assert payload.kind is EmbedKind.SUCCESS
     assert payload.url == "https://eco.example/"
+
+
+@respx.mock
+async def test_status_embed_names_a_destroyed_meteor() -> None:
+    cycle = {
+        "daysRunning": 70,
+        "daysUntilMeteor": None,
+        "meteor": {"state": "destroyed", "summary": "The meteor was destroyed on day 57."},
+    }
+    respx.get(f"{BASE}/preview.json").mock(
+        return_value=httpx.Response(200, json={"players": {}, "cycle": cycle, "server": {}})
+    )
+    payload = await service().render("status")
+    meteor = next(f for f in payload.fields if f.name == "Meteor")
+    assert "destroyed on day 57" in meteor.value
+    assert "unknown" not in meteor.value

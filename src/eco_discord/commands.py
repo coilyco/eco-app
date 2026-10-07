@@ -18,6 +18,16 @@ def _mapping(value: Any) -> dict[str, Any]:
     return value if isinstance(value, dict) else {}
 
 
+def _meteor_text(cycle: dict[str, Any]) -> str:
+    """The meteor field, naming a destroyed or absent meteor instead of a null countdown."""
+    meteor = _mapping(cycle.get("meteor"))
+    if meteor.get("state") == "destroyed":
+        return str(meteor.get("summary") or "Destroyed")
+    if meteor.get("state") == "none":
+        return "No meteor in this world"
+    return f"{_reported(cycle.get('daysUntilMeteor'))} days remaining"
+
+
 def _reported(value: Any) -> str:
     """Render an optional status number, naming the absent case.
 
@@ -101,9 +111,7 @@ class CommandService:
                     True,
                 ),
                 EmbedField("World age", f"Day {_reported(cycle.get('daysRunning'))}", True),
-                EmbedField(
-                    "Meteor", f"{_reported(cycle.get('daysUntilMeteor'))} days remaining", True
-                ),
+                EmbedField("Meteor", _meteor_text(cycle), True),
                 EmbedField("Version", str(server.get("version") or "Unavailable"), True),
             ],
         )

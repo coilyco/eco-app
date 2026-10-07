@@ -490,6 +490,59 @@ def _opt_float(info: dict[str, Any], key: str) -> float | None:
         return None
 
 
+# Once the meteor is destroyed /info keeps HasMeteor true but stops sending a
+# countdown, so the only record of it is the world achievement line
+# "Destroyed the meteor on Day 57, 23:13" (COI-2044). The SPA parses the same
+# text in frontend/src/lib/serverBrief.ts, keep the two patterns in step.
+_METEOR_DESTROYED = re.compile(
+    r"destroyed the meteor on day\s+(\d+)(?:,\s*(\d{1,2}:\d{2}))?", re.IGNORECASE
+)
+
+
+def _meteor_state(
+    info: dict[str, Any], has_meteor: bool, days_until_meteor: int | None
+) -> dict[str, Any]:
+    """Name the meteor's state in words, so a null countdown never has to be read.
+
+    ``state`` is ``destroyed`` (achievement text wins over any countdown),
+    ``pending`` (a countdown is reported), ``none`` (the world has no meteor), or
+    ``unreported`` (a meteor is flagged but upstream sent neither a countdown nor
+    a destruction record).
+    """
+    for text in (info.get("ServerAchievementsDict") or {}).values():
+        match = _METEOR_DESTROYED.search(_ACHIEVEMENT_MARKUP.sub("", str(text)))
+        if match:
+            day, time = int(match.group(1)), match.group(2)
+            when = f"day {day}" + (f" at {time}" if time else "")
+            return {
+                "state": "destroyed",
+                "destroyedOnDay": day,
+                "destroyedAtTime": time,
+                "summary": f"The meteor was destroyed on {when}. There is no countdown.",
+            }
+    if days_until_meteor is not None:
+        unit = "day" if days_until_meteor == 1 else "days"
+        return {
+            "state": "pending",
+            "destroyedOnDay": None,
+            "destroyedAtTime": None,
+            "summary": f"The meteor is still coming, {days_until_meteor} {unit} away.",
+        }
+    if not has_meteor:
+        return {
+            "state": "none",
+            "destroyedOnDay": None,
+            "destroyedAtTime": None,
+            "summary": "This world has no meteor.",
+        }
+    return {
+        "state": "unreported",
+        "destroyedOnDay": None,
+        "destroyedAtTime": None,
+        "summary": "A meteor is flagged but the server did not report a countdown.",
+    }
+
+
 def to_payload(info: dict[str, Any]) -> dict[str, Any]:
     """Shape the public status payload from a bounded subset of ``/info``.
 
@@ -505,6 +558,7 @@ def to_payload(info: dict[str, Any]) -> dict[str, Any]:
     days_until_meteor = _opt_int(info, "DaysUntilMeteor") if has_meteor else None
     if days_until_meteor is not None and days_until_meteor < 0:
         days_until_meteor = None
+    meteor = _meteor_state(info, has_meteor, days_until_meteor)
     animals = _opt_int(info, "Animals")
     return {
         "view": "eco_status",
@@ -552,6 +606,7 @@ def to_payload(info: dict[str, Any]) -> dict[str, Any]:
         "cycle": {
             "daysRunning": _opt_int(info, "DaysRunning"),
             "daysUntilMeteor": days_until_meteor,
+            "meteor": meteor,
             # Raw world clock in seconds since cycle start (1 in-game day = 3600s).
             # The SPA folds this into a day+hour caption via formatDayHour (eco-app#97).
             # Eco 0.13's /info does not send TimeSinceStart at all, so this is
@@ -1109,6 +1164,19 @@ def _fmt_num(value: float | int | None, spec: str = ",") -> str:
     return format(value, spec)
 
 
+def _meteor_line(cycle: dict[str, Any]) -> str:
+    """One markdown phrase for the meteor, naming a destroyed or absent one."""
+    meteor = cycle["meteor"]
+    if meteor["state"] == "pending":
+        return f"{_fmt_num(cycle['daysUntilMeteor'])} days away"
+    if meteor["state"] == "destroyed":
+        at = f" at {meteor['destroyedAtTime']}" if meteor["destroyedAtTime"] else ""
+        return f"destroyed on day {meteor['destroyedOnDay']}{at}, no countdown"
+    if meteor["state"] == "none":
+        return "none in this world"
+    return _UNREPORTED
+
+
 def _format_markdown(payload: dict[str, Any]) -> str:
     p = payload["players"]
     w = payload["world"]
@@ -1121,8 +1189,7 @@ def _format_markdown(payload: dict[str, Any]) -> str:
         "",
         f"- Online: **{_fmt_num(p['online'])} / {_fmt_num(p['total'])}** players"
         f" (peak {_fmt_num(p['peakActive'])}, active {_fmt_num(p['activeAndOnline'])})",
-        f"- Days until meteor: **{_fmt_num(c['daysUntilMeteor'])}**"
-        + (" ☄" if c["hasMeteor"] else ""),
+        f"- Meteor: **{_meteor_line(c)}**" + (" ☄" if c["hasMeteor"] else ""),
         f"- World: {w['size']} · {_fmt_num(w['plants'])} plants"
         f" · {_fmt_num(w['animals'])} animals"
         f" · {_fmt_num(laws)} law{'' if laws == 1 else 's'}"
