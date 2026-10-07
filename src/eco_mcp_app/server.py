@@ -35,6 +35,7 @@ from . import norms as norms_mod
 from . import species as species_mod
 from . import vocab as vocab_mod
 from . import wave1_routes, wave2_routes, wave3_routes
+from .caveats import reorder_result
 from .civics import civics_markdown, fetch_civics
 from .crafting import atlas_markdown, fetch_atlas
 from .dual_routes import DualRouteRegistry
@@ -3009,7 +3010,7 @@ def build_server(
         # (teable:coilyco/eco-app#8368). See norms.py.
         result = await _dispatch_call_tool_raw(name, arguments)
         if name not in norms_mod.PRICE_FIELDS or result.isError:
-            return result
+            return reorder_result(result)
         ctx = await norms_mod.live_context((arguments or {}).get("server"))
         for index, block in enumerate(result.content):
             if not isinstance(block, TextContent):
@@ -3026,7 +3027,7 @@ def build_server(
             if isinstance(result.structuredContent, dict):
                 result.structuredContent = payload
             break
-        return result
+        return reorder_result(result)
 
     wave1_routes.register_wave1_routes(dual_routes, _dispatch_call_tool)
     wave2_routes.register_wave2_routes(dual_routes, _dispatch_call_tool)
