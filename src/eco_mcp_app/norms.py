@@ -520,6 +520,12 @@ async def _currency_names(server: str | None) -> dict[str, str]:
         return await fetch_currency_id_map(client, _normalize_admin_base(server), headers)
 
 
+def cycle_from_info(info: dict[str, Any]) -> int | None:
+    """The cycle number a server's /info description names, or None."""
+    m = _CYCLE.search(_TAGS.sub("", str(info.get("Description") or "")))
+    return int(m[1]) if m else None
+
+
 async def live_context(
     server: str | None,
     *,
@@ -539,9 +545,9 @@ async def live_context(
     cycle = norms.latest if norms else None
     try:
         info = await fetch_info(server)
-        m = _CYCLE.search(_TAGS.sub("", str(info.get("Description") or "")))
-        if m:
-            cycle = int(m[1])
+        named = cycle_from_info(info)
+        if named is not None:
+            cycle = named
         else:
             notes.append("live cycle not named by the server, assuming the latest in the file")
     except Exception:  # a norm lookup must never break a price tool

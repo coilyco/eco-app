@@ -40,6 +40,7 @@ _INVENTORY: dict[str, list[str]] = {
     ],
     "TradesLedger": ["byCurrency", "byItem", "topBuyers", "topSellers", "trades"],
     "SocialSurface": [
+        "cycles",
         "firstLoginsByDay",
         "newArrivals",
         "playByDay",

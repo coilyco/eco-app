@@ -13,11 +13,14 @@ import pytest
 import respx
 from starlette.testclient import TestClient
 
+from eco_mcp_app import server as eco_server
 from eco_mcp_app import social as social_mod
 from eco_mcp_app.http_app import create_app
 from eco_mcp_app.server import build_server
 from eco_mcp_app.social import (
     SocialSurface,
+    _ActivityEvent,
+    _surface_from_dict,
     build_surface,
     fetch_social,
     hash_handle,
@@ -76,7 +79,7 @@ def test_parse_and_fold_shapes() -> None:
     assert surface.total_reputation_transfers == 2
     assert surface.total_first_logins == 1
     assert surface.total_play_events == 2
-    assert surface.play_by_day == [(0, 2)]
+    assert surface.play_by_day == [(0, 0, 2)]
     assert surface.top_reputation_receivers[0] == ("ekans", pytest.approx(8.0))
     edge = next(edge for edge in surface.reputation_edges if edge["source"] == "coilysiren")
     assert edge["target"] == "ekans"
@@ -448,3 +451,196 @@ async def test_get_social_declares_its_limit() -> None:
     tool = next(t for t in result.root.tools if t.name == "get_social")
 
     assert "limit" in tool.inputSchema["properties"]
+
+
+DAY = social_mod.SECONDS_PER_DAY
+
+
+def _events(kind: str, days: list[float]) -> list[_ActivityEvent]:
+    return [_ActivityEvent(time_s=d * DAY, day=d, citizen_id="1", kind=kind) for d in days]
+
+
+def _surface_for(play_days: list[float], login_days: list[float] | None = None) -> SocialSurface:
+    surface = SocialSurface(fetched_at_iso="t", source_base_url="b")
+    activity = _events("play", play_days) + _events("firstlogin", login_days or [])
+    build_surface(surface, [], activity, {}, show_names=False)
+    return surface
+
+
+def test_the_day_series_says_what_its_index_is() -> None:
+    """COI-750: a bare [index, count] read as days ago inverts the trend."""
+    surface = _surface_for([0, 0, 0, 1, 1, 2])
+    surface.apply_world_clock({"DaysRunning": 5, "Description": "<b>Eco</b> | Cycle 14 | x"})
+
+    payload = surface.to_dict()
+
+    assert "not days ago" in payload["dayAxisNote"]
+    assert "oldest first" in payload["dayAxisNote"]
+    assert payload["playByDay"] == [
+        {"cycle": 14, "cyclesAgo": 0, "day": 0, "count": 3},
+        {"cycle": 14, "cyclesAgo": 0, "day": 1, "count": 2},
+        {"cycle": 14, "cyclesAgo": 0, "day": 2, "count": 1},
+    ]
+    assert payload["today"] == {"cycle": 14, "day": 5}
+    assert payload["recentWindow"] == {
+        "cycle": 14,
+        "fromDay": -1,
+        "toDay": 5,
+        "endsAt": "today",
+        "playEvents": 6,
+        "firstLogins": 0,
+    }
+    assert payload["cycles"] == [
+        {
+            "cycle": 14,
+            "cyclesAgo": 0,
+            "current": True,
+            "firstDay": 0,
+            "lastDay": 2,
+            "playEvents": 6,
+            "firstLogins": 0,
+        }
+    ]
+
+
+def test_the_recent_window_counts_only_the_last_seven_days() -> None:
+    surface = _surface_for([0, 1, 1, 86, 88, 88, 88, 91], login_days=[0, 90])
+    surface.apply_world_clock({"DaysRunning": 94})
+
+    window = surface.to_dict()["recentWindow"]
+
+    assert (window["fromDay"], window["toDay"]) == (88, 94)
+    assert window["playEvents"] == 4
+    assert window["firstLogins"] == 1
+
+
+def test_without_the_world_clock_today_is_null_and_the_window_ends_at_the_last_active_day() -> None:
+    payload = _surface_for([0, 1, 2]).to_dict()
+
+    assert payload["today"] is None
+    assert payload["recentWindow"]["endsAt"] == "lastActiveDay"
+    assert payload["recentWindow"]["toDay"] == 2
+    assert all(bucket["cycle"] is None for bucket in payload["playByDay"])
+
+
+def test_a_clock_restart_splits_the_series_into_cycles_instead_of_merging_day_five() -> None:
+    """The replay file survives a cycle cut while the game clock restarts at zero."""
+    surface = _surface_for([0.2, 5, 5, 59, 0.1, 5, 5, 5, 7])
+    surface.apply_world_clock({"DaysRunning": 8, "Description": "Cycle 15"})
+
+    buckets = surface.to_dict()["playByDay"]
+
+    day_five = [b for b in buckets if b["day"] == 5]
+    assert [(b["cycle"], b["count"]) for b in day_five] == [(14, 2), (15, 3)]
+    ages = [b["cyclesAgo"] for b in buckets]
+    assert ages == sorted(ages, reverse=True)
+    older, newest = surface.to_dict()["cycles"]
+    assert (older["cycle"], older["current"], older["lastDay"]) == (14, False, 59)
+    assert (newest["cycle"], newest["current"], newest["playEvents"]) == (15, True, 5)
+
+
+def test_jitter_inside_one_cycle_and_untimed_rows_do_not_invent_a_cycle() -> None:
+    surface = SocialSurface(fetched_at_iso="t", source_base_url="b")
+    events = _events("play", [3, 2.5, 4, 3.9, 6])
+    events.insert(2, _ActivityEvent(time_s=0.0, day=0.0, citizen_id="1", kind="play"))
+    build_surface(surface, [], events, {}, show_names=False)
+
+    assert {ago for ago, _, _ in surface.play_by_day} == {0}
+
+
+def test_older_cycles_align_from_the_newest_end_per_series() -> None:
+    """FirstLogin may hold one cycle where Play holds two, so ages count back from the newest."""
+    surface = _surface_for([0, 59, 0, 3], login_days=[0, 2])
+
+    assert {a for a, _, _ in surface.play_by_day} == {0, 1}
+    assert {a for a, _, _ in surface.first_logins_by_day} == {0}
+
+
+def test_the_markdown_states_direction_and_today() -> None:
+    surface = _surface_for([0, 0, 0, 1, 40, 41], login_days=[0])
+    surface.total_play_events = 6
+    surface.apply_world_clock({"DaysRunning": 44, "Description": "Cycle 14"})
+
+    text = social_markdown(surface)
+
+    assert "not days ago" in text
+    assert "cycle 14" in text
+    assert "today is day 44" in text
+    assert "Peak was day 0 (3 events)" in text
+    assert "days 38 to 44 held 2 play events" in text
+
+
+def test_the_markdown_warns_when_one_day_number_covers_two_cycles() -> None:
+    surface = _surface_for([0, 59, 0, 3])
+    surface.total_play_events = 4
+
+    assert "spans 2 cycles" in social_markdown(surface)
+
+
+def test_the_cache_round_trip_keeps_the_cycle_buckets() -> None:
+    surface = _surface_for([0, 59, 0, 3], login_days=[0, 2])
+
+    again = _surface_from_dict(surface.to_dict())
+
+    assert again.play_by_day == surface.play_by_day
+    assert again.first_logins_by_day == surface.first_logins_by_day
+
+
+async def _call_get_social() -> tuple[str, dict[str, Any]]:
+    handler = build_server().request_handlers[mt.CallToolRequest]
+    result = await handler(
+        mt.CallToolRequest(
+            method="tools/call",
+            params=mt.CallToolRequestParams(
+                name="get_social", arguments={"server": "eco.example.com:3001"}
+            ),
+        )
+    )
+    blocks = result.root.content
+    return blocks[0].text, json.loads(blocks[1].text)
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_get_social_labels_the_axis_and_names_today(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("ECO_ADMIN_API_KEY", "k")
+    respx.get(PLAY_URL).mock(return_value=httpx.Response(200, text=_PLAY_CSV))
+    respx.get(LOGIN_URL).mock(return_value=httpx.Response(200, text=_LOGIN_CSV))
+    respx.get(REP_URL).mock(return_value=httpx.Response(200, text=_REP_CSV))
+    respx.get(CITIZENS_URL).mock(return_value=httpx.Response(200, json=_CITIZENS_JSON))
+
+    async def _info(_server: str | None = None) -> dict[str, Any]:
+        return {"DaysRunning": 3, "Description": "<color=green>Eco</color> | Cycle 14"}
+
+    monkeypatch.setattr(eco_server, "fetch_eco_info", _info)
+
+    text, payload = await _call_get_social()
+
+    assert payload["today"] == {"cycle": 14, "day": 3}
+    assert payload["playByDay"] == [{"cycle": 14, "cyclesAgo": 0, "day": 0, "count": 2}]
+    assert "not days ago" in text
+    assert "today is day 3" in text
+    keys = list(payload)
+    assert keys.index("dayAxisNote") < keys.index("playByDay")
+    assert keys.index("warnings") < keys.index("playByDay")
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_get_social_survives_an_unreachable_info(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("ECO_ADMIN_API_KEY", "k")
+    respx.get(PLAY_URL).mock(return_value=httpx.Response(200, text=_PLAY_CSV))
+    respx.get(LOGIN_URL).mock(return_value=httpx.Response(200, text=_LOGIN_CSV))
+    respx.get(REP_URL).mock(return_value=httpx.Response(200, text=_REP_CSV))
+    respx.get(CITIZENS_URL).mock(return_value=httpx.Response(200, json=_CITIZENS_JSON))
+
+    async def _down(_server: str | None = None) -> dict[str, Any]:
+        raise httpx.ConnectError("down")
+
+    monkeypatch.setattr(eco_server, "fetch_eco_info", _down)
+
+    _text, payload = await _call_get_social()
+
+    assert payload["today"] is None
+    assert payload["playByDay"][0]["cycle"] is None
+    assert any(w.startswith("world clock:") for w in payload["warnings"])

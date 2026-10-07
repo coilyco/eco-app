@@ -39,6 +39,7 @@ from .crafting import (
     _stream_csv_rows,
     fetch_citizen_name_map,
 )
+from .norms import cycle_from_info
 
 PLAY_ACTION = "Play"
 FIRST_LOGIN_ACTION = "FirstLogin"
@@ -52,6 +53,17 @@ MAX_NEW_ARRIVALS = int(os.environ.get("ECO_SOCIAL_ARRIVALS", "60"))
 # other array here that runs away. See eco-app#6076.
 MAX_REPUTATION_EDGES = int(os.environ.get("ECO_SOCIAL_REPUTATION_EDGES", "120"))
 SECONDS_PER_DAY = 86400.0
+# A game clock this far behind its own high-water mark has restarted. The exporter rows
+# carry no cycle id, so a restart is the only cycle boundary the data holds (COI-750).
+CYCLE_RESET_DROP_S = 10 * SECONDS_PER_DAY
+RECENT_WINDOW_DAYS = 7
+DAY_AXIS_NOTE = (
+    "playByDay and firstLoginsByDay hold one bucket per world day, oldest first. `day` counts "
+    "forward from the start of that bucket's cycle (0 is launch). It is not days ago, so a "
+    "falling count means activity declined since launch. The export carries no cycle id, so "
+    "`cyclesAgo` (0 is the newest cycle) is inferred from the game clock restarting. "
+    "`today.day` is the server's own DaysRunning counter, not derived from the buckets."
+)
 NAMES_ALLOW_ENV = "ECO_SOCIAL_ALLOW_NAMES"
 
 _ACTIVITY_CITIZEN = ("Citizen", "Player", "User")
@@ -142,8 +154,12 @@ class SocialSurface:
     total_reputation_transfers: int = 0
     total_first_logins: int = 0
     total_play_events: int = 0
-    play_by_day: list[tuple[int, int]] = field(default_factory=list)
-    first_logins_by_day: list[tuple[int, int]] = field(default_factory=list)
+    # (cycles_ago, day, count), oldest cycle first. cycles_ago 0 is the newest cycle.
+    play_by_day: list[tuple[int, int, int]] = field(default_factory=list)
+    first_logins_by_day: list[tuple[int, int, int]] = field(default_factory=list)
+    # The live world clock from /info, applied after the fetch by `apply_world_clock`.
+    today_day: int | None = None
+    live_cycle: int | None = None
     new_arrivals: list[dict[str, Any]] = field(default_factory=list)
     reputation_edges: list[dict[str, Any]] = field(default_factory=list)
     top_reputation_givers: list[tuple[str, float]] = field(default_factory=list)
@@ -152,6 +168,64 @@ class SocialSurface:
     reputation_columns_seen: list[str] = field(default_factory=list)
     top_reputation_receivers: list[tuple[str, float]] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
+
+    def apply_world_clock(self, info: dict[str, Any]) -> None:
+        """Take today's day index and the live cycle number from the server's /info."""
+        try:
+            self.today_day = int(info["DaysRunning"])
+        except (KeyError, TypeError, ValueError):
+            self.today_day = None
+        self.live_cycle = cycle_from_info(info)
+
+    def _cycle_of(self, cycles_ago: int) -> int | None:
+        return None if self.live_cycle is None else self.live_cycle - cycles_ago
+
+    def _buckets(self, rows: list[tuple[int, int, int]]) -> list[dict[str, Any]]:
+        return [
+            {"cycle": self._cycle_of(ago), "cyclesAgo": ago, "day": day, "count": count}
+            for ago, day, count in rows
+        ]
+
+    def cycles(self) -> list[dict[str, Any]]:
+        """One row per cycle the day series covers, oldest first."""
+        out: list[dict[str, Any]] = []
+        rows = (*self.play_by_day, *self.first_logins_by_day)
+        for ago in sorted({row[0] for row in rows}, reverse=True):
+            plays = [(day, n) for a, day, n in self.play_by_day if a == ago]
+            logins = [(day, n) for a, day, n in self.first_logins_by_day if a == ago]
+            days = [day for day, _ in (*plays, *logins)]
+            out.append(
+                {
+                    "cycle": self._cycle_of(ago),
+                    "cyclesAgo": ago,
+                    "current": ago == 0,
+                    "firstDay": min(days),
+                    "lastDay": max(days),
+                    "playEvents": sum(n for _, n in plays),
+                    "firstLogins": sum(n for _, n in logins),
+                }
+            )
+        return out
+
+    def recent_window(self) -> dict[str, Any] | None:
+        """The newest cycle's last RECENT_WINDOW_DAYS days, ending at today when /info said."""
+        plays = [(day, n) for ago, day, n in self.play_by_day if ago == 0]
+        logins = [(day, n) for ago, day, n in self.first_logins_by_day if ago == 0]
+        if self.today_day is not None:
+            end, ends_at = self.today_day, "today"
+        elif plays or logins:
+            end, ends_at = max(day for day, _ in (*plays, *logins)), "lastActiveDay"
+        else:
+            return None
+        start = end - RECENT_WINDOW_DAYS + 1
+        return {
+            "cycle": self._cycle_of(0),
+            "fromDay": start,
+            "toDay": end,
+            "endsAt": ends_at,
+            "playEvents": sum(n for day, n in plays if start <= day <= end),
+            "firstLogins": sum(n for day, n in logins if start <= day <= end),
+        }
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -162,8 +236,16 @@ class SocialSurface:
             "totalReputationTransfers": self.total_reputation_transfers,
             "totalFirstLogins": self.total_first_logins,
             "totalPlayEvents": self.total_play_events,
-            "playByDay": [[d, c] for d, c in self.play_by_day],
-            "firstLoginsByDay": [[d, c] for d, c in self.first_logins_by_day],
+            "dayAxisNote": DAY_AXIS_NOTE,
+            "today": (
+                None
+                if self.today_day is None
+                else {"cycle": self.live_cycle, "day": self.today_day}
+            ),
+            "cycles": self.cycles(),
+            "recentWindow": self.recent_window(),
+            "playByDay": self._buckets(self.play_by_day),
+            "firstLoginsByDay": self._buckets(self.first_logins_by_day),
             "newArrivals": list(self.new_arrivals),
             "reputationEdges": list(self.reputation_edges),
             "topReputationGivers": [[n, a] for n, a in self.top_reputation_givers],
@@ -330,6 +412,31 @@ class _Redactor:
         return identity if self.show_names else hash_handle(identity)
 
 
+def _cycles_ago(events: list[_ActivityEvent]) -> list[int]:
+    """Per event, how many cycles back it is (0 is the newest), from export order.
+
+    A row with no timestamp parses as 0.0 and never starts a cycle."""
+    segment = 0
+    peak = 0.0
+    segments: list[int] = []
+    for event in events:
+        if event.time_s > 0:
+            if event.time_s < peak - CYCLE_RESET_DROP_S:
+                segment += 1
+                peak = 0.0
+            peak = max(peak, event.time_s)
+        segments.append(segment)
+    return [segment - seen for seen in segments]
+
+
+def _day_buckets(events: list[_ActivityEvent]) -> list[tuple[int, int, int]]:
+    counts: dict[tuple[int, int], int] = defaultdict(int)
+    for event, ago in zip(events, _cycles_ago(events), strict=True):
+        counts[(ago, int(event.day))] += 1
+    ordered = sorted(counts, key=lambda key: (-key[0], key[1]))
+    return [(ago, day, counts[(ago, day)]) for ago, day in ordered]
+
+
 def build_surface(
     surface: SocialSurface,
     edges: list[_RepEdge],
@@ -341,17 +448,10 @@ def build_surface(
     redactor = _Redactor(name_map, show_names)
     surface.redacted = not show_names
 
-    play_day: dict[int, int] = defaultdict(int)
-    login_day: dict[int, int] = defaultdict(int)
-    for event in activity:
-        if event.kind == "firstlogin":
-            login_day[int(event.day)] += 1
-        else:
-            play_day[int(event.day)] += 1
+    surface.play_by_day = _day_buckets([e for e in activity if e.kind != "firstlogin"])
+    surface.first_logins_by_day = _day_buckets([e for e in activity if e.kind == "firstlogin"])
     surface.total_play_events = sum(1 for event in activity if event.kind == "play")
     surface.total_first_logins = sum(1 for event in activity if event.kind == "firstlogin")
-    surface.play_by_day = sorted(play_day.items())
-    surface.first_logins_by_day = sorted(login_day.items())
     arrivals = sorted(
         (event for event in activity if event.kind == "firstlogin"),
         key=lambda event: event.time_s,
@@ -517,9 +617,12 @@ def _surface_from_dict(data: dict[str, Any]) -> SocialSurface:
         total_reputation_transfers=int(data.get("totalReputationTransfers", 0)),
         total_first_logins=int(data.get("totalFirstLogins", 0)),
         total_play_events=int(data.get("totalPlayEvents", 0)),
-        play_by_day=[(int(day), int(count)) for day, count in data.get("playByDay", [])],
+        play_by_day=[
+            (int(b["cyclesAgo"]), int(b["day"]), int(b["count"])) for b in data.get("playByDay", [])
+        ],
         first_logins_by_day=[
-            (int(day), int(count)) for day, count in data.get("firstLoginsByDay", [])
+            (int(b["cyclesAgo"]), int(b["day"]), int(b["count"]))
+            for b in data.get("firstLoginsByDay", [])
         ],
         new_arrivals=list(data.get("newArrivals", [])),
         reputation_edges=list(data.get("reputationEdges", [])),
@@ -573,6 +676,36 @@ def social_template_context(
     }
 
 
+def _day_axis_lines(surface: SocialSurface) -> list[str]:
+    """Say in words what the day series counts, which index is today, and the recent window."""
+    current = [(day, n) for ago, day, n in surface.play_by_day if ago == 0]
+    if not current:
+        return []
+    cycle = f"cycle {surface.live_cycle}" if surface.live_cycle is not None else "the newest cycle"
+    line = (
+        "- Play by day: `day` counts up from the start of each cycle (0 is launch), oldest "
+        f"first, not days ago. Newest is {cycle}"
+    )
+    if surface.today_day is not None:
+        line += f", today is day {surface.today_day}"
+    window = surface.recent_window()
+    peak_day, peak = max(current, key=lambda row: row[1])
+    line += f". Peak was day {peak_day} ({peak:,} events)"
+    if window is not None:
+        line += (
+            f", days {window['fromDay']} to {window['toDay']} held "
+            f"{window['playEvents']:,} play events and {window['firstLogins']:,} arrivals"
+        )
+    lines = [line + "."]
+    older = len(surface.cycles()) - 1
+    if older > 0:
+        lines.append(
+            f"- The day series spans {older + 1} cycles, so a day number repeats once per cycle. "
+            "Read each bucket's `cycle` before summing across days."
+        )
+    return lines
+
+
 def social_markdown(surface: SocialSurface) -> str:
     """Return a compact markdown summary for non-SPA MCP hosts."""
     if (
@@ -589,6 +722,7 @@ def social_markdown(surface: SocialSurface) -> str:
         f"(`{surface.source_base_url}`)",
         "",
     ]
+    lines.extend(_day_axis_lines(surface))
     if surface.top_reputation_receivers:
         top = ", ".join(
             f"{name} ({amount:,.0f})" for name, amount in surface.top_reputation_receivers[:5]

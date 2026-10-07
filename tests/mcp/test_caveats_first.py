@@ -93,7 +93,7 @@ def _world() -> WorldActivity:
 def _social() -> SocialSurface:
     return SocialSurface(
         **HEAD,
-        play_by_day=[(i, 1) for i in range(BULK)],
+        play_by_day=[(0, i, 1) for i in range(BULK)],
         new_arrivals=list(DICT_ROWS),
         reputation_edges=list(DICT_ROWS),
         top_reputation_givers=[(f"G{i}", 1.0) for i in range(BULK)],

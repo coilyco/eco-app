@@ -2671,6 +2671,12 @@ def build_server(
                 )
             except httpx.HTTPError as e:
                 return _unreachable_result("Eco exporter", e)
+            try:
+                surface.apply_world_clock(await fetch_eco_info(server_arg))
+            except Exception:  # the clock only labels the day series, it must not break the tool
+                surface.warnings.append(
+                    "world clock: /info unreachable, so `today` and the cycle numbers are omitted"
+                )
             # Markdown first, off the full surface: rule 5 of eco-app#6076 keeps
             # summaries describing every row regardless of `limit`.
             markdown = social_markdown(surface)
