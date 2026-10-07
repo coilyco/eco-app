@@ -451,3 +451,107 @@ async def test_limit_reaches_every_growing_array(monkeypatch) -> None:
             f"{key} truncated without saying so"
         )
     assert payload["totalCurrencyVolume"] == 9999.0
+
+
+# --- the item filter resolves like price_by_stage and runs before limit ------
+
+
+async def _filtered_trades(
+    monkeypatch: pytest.MonkeyPatch, arguments: dict[str, object]
+) -> tuple[str, dict[str, Any]]:
+    """get_trades over a ledger holding 60 newer wheat rows ahead of 3 iron bars and 2
+    Basic Upgrade 1 rows, so a limit applied first would hide every match."""
+    from eco_mcp_app import server as eco_server
+
+    ledger = TradesLedger(fetched_at_iso="t", source_base_url="b")
+    ledger.total_trades = 65
+    ledger.trades = (
+        [{"item": "WheatItem", "buyer": f"w{i}"} for i in range(60)]
+        + [{"item": "IronBarItem", "buyer": f"iron{i}"} for i in range(3)]
+        + [{"item": "BasicUpgradeLvl1Item", "buyer": f"bu{i}"} for i in range(2)]
+    )
+
+    async def _fake_fetch(**_kwargs: object) -> TradesLedger:
+        return ledger
+
+    monkeypatch.setattr(eco_server, "fetch_ledger", _fake_fetch)
+    handler = eco_server.build_server().request_handlers[mt.CallToolRequest]
+    result = await handler(
+        mt.CallToolRequest(
+            method="tools/call",
+            params=mt.CallToolRequestParams(name="get_trades", arguments=arguments),
+        )
+    )
+    text, blob = result.root.content
+    return getattr(text, "text", ""), json.loads(getattr(blob, "text", ""))
+
+
+@pytest.mark.asyncio
+async def test_item_filter_runs_over_the_whole_ledger_before_limit(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    text, payload = await _filtered_trades(monkeypatch, {"item": "iron", "limit": 2})
+    assert [t["buyer"] for t in payload["trades"]] == ["iron0", "iron1"]
+    assert payload["itemFilter"] == {
+        "query": "iron",
+        "resolved": "Iron Bar",
+        "of": 65,
+        "matched": 3,
+    }
+    assert any("showing 2 of 3 rows" in w for w in payload["warnings"])
+    assert any(w.startswith("item filter:") for w in payload["warnings"])
+    assert "Item filter: Iron Bar, 3 of 65 ledger rows" in text
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("word", ["Iron Bar", "IronBarItem", "irons", "some iron"])
+async def test_item_filter_takes_a_name_an_id_a_plural_or_a_bare_metal(
+    monkeypatch: pytest.MonkeyPatch, word: str
+) -> None:
+    _, payload = await _filtered_trades(monkeypatch, {"item": word, "limit": 0})
+    assert len(payload["trades"]) == 3 and payload["itemFilter"]["resolved"] == "Iron Bar"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("word", ["bu1", "BU 1", "basic upgrade 1"])
+async def test_item_filter_reads_upgrade_shorthand_as_the_item(
+    monkeypatch: pytest.MonkeyPatch, word: str
+) -> None:
+    _, payload = await _filtered_trades(monkeypatch, {"item": word, "limit": 0})
+    assert [t["buyer"] for t in payload["trades"]] == ["bu0", "bu1"]
+    assert payload["itemFilter"]["resolved"] == "Basic Upgrade 1"
+
+
+@pytest.mark.asyncio
+async def test_item_filter_drops_a_stage_qualifier_and_says_so(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _, payload = await _filtered_trades(monkeypatch, {"item": "iron at au3", "limit": 0})
+    assert len(payload["trades"]) == 3
+    assert payload["itemFilter"]["stageIgnored"] == "au3"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("word", ["unobtainium", "mu0"])
+async def test_an_unresolved_item_empties_trades_instead_of_dumping_the_ledger(
+    monkeypatch: pytest.MonkeyPatch, word: str
+) -> None:
+    text, payload = await _filtered_trades(monkeypatch, {"item": word, "limit": 0})
+    assert payload["trades"] == []
+    assert payload["itemFilter"]["resolved"] is None and payload["itemFilter"]["matched"] == 0
+    assert "could not be matched" in text
+
+
+@pytest.mark.asyncio
+async def test_no_item_leaves_the_ledger_unfiltered(monkeypatch: pytest.MonkeyPatch) -> None:
+    _, payload = await _filtered_trades(monkeypatch, {"limit": 0})
+    assert len(payload["trades"]) == 65 and "itemFilter" not in payload
+
+
+@pytest.mark.asyncio
+async def test_the_tool_description_and_schema_name_the_item_filter() -> None:
+    handler = build_server().request_handlers[mt.ListToolsRequest]
+    result = await handler(mt.ListToolsRequest(method="tools/list"))
+    tool = next(t for t in result.root.tools if t.name == "get_trades")
+    assert "Pass item" in (tool.description or "")
+    assert "item" in tool.inputSchema["properties"]

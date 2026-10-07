@@ -93,6 +93,20 @@ class StoresInput(ServerInput):
     )
 
 
+class TradesInput(BoundedServerInput):
+    """Select an Eco server, bound the ledger rows, or filter them to one item."""
+
+    item: str | None = Field(
+        default=None,
+        description=(
+            "Optional item word. Resolved like price_by_stage's item: a name, an Eco id, "
+            "a plural, a bare metal such as iron, or upgrade shorthand such as bu3 or "
+            "'iron at au3' (the stage part is dropped, trades have none). Filters the "
+            "whole ledger before `limit` applies."
+        ),
+    )
+
+
 class CurrencyInput(BoundedServerInput):
     """Select an Eco server and optionally one currency."""
 

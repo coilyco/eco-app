@@ -1493,6 +1493,42 @@ def _fit_directory(payload: dict[str, Any], max_bytes: int) -> None:
         )
 
 
+def _filter_trades_by_item(
+    payload: dict[str, Any], trade_norms: norms_mod.Norms, word: str
+) -> dict[str, Any]:
+    """Keep only the ledger rows for the item `word` names, resolved as `price_by_stage` does.
+
+    A stage qualifier ("iron at au3") is read and dropped, since a trade row carries no
+    upgrade stage. An unresolved word empties `trades` and says why, never dumps the
+    ledger. The summary arrays still describe every item, and the warning says so."""
+    name, miss, qualifier = trade_norms.find_qualified(word, _recipe_items())
+    rows = payload.get("trades") or []
+    info: dict[str, Any] = {"query": word, "resolved": name, "of": len(rows)}
+    if qualifier is not None:
+        info["stageIgnored"] = qualifier
+    if name is None:
+        info["candidates"] = miss.get("candidates") or trade_norms.candidates(word, _recipe_items())
+        if "note" in miss:
+            info["note"] = miss["note"]
+        payload["trades"] = []
+        info["matched"] = 0
+    else:
+        payload["trades"] = [r for r in rows if trade_norms.is_item(name, r.get("item") or "")]
+        info["matched"] = len(payload["trades"])
+    payload["itemFilter"] = info
+    payload.setdefault("warnings", []).append(
+        "item filter: trades holds the matching rows only. byItem, byCurrency, topBuyers, "
+        "topSellers and the totals still describe every item"
+    )
+    return info
+
+
+def _item_filter_line(info: dict[str, Any]) -> str:
+    if info["resolved"] is None:
+        return f"- Item filter: `{info['query']}` could not be matched to one Eco item."
+    return f"- Item filter: {info['resolved']}, {info['matched']:,} of {info['of']:,} ledger rows."
+
+
 def _bound_rows(payload: dict[str, Any], limit: int, *keys: str) -> None:
     """Truncate unbounded detail arrays, and say what was dropped.
 
@@ -2352,6 +2388,19 @@ def build_server(
             except httpx.HTTPError as e:
                 return _unreachable_result("Eco exporter", e)
             ledger_payload = ledger.to_dict()
+            item_arg = ((arguments or {}).get("item") or "").strip()
+            item_filter: dict[str, Any] | None = None
+            if item_arg:
+                trade_norms = norms_mod.load()
+                if trade_norms is None:
+                    return CallToolResult(
+                        content=[
+                            TextContent(type="text", text="the trade norms file is not bundled")
+                        ],
+                        isError=True,
+                    )
+                # Whole ledger first, so `limit` bounds the matches and not the newest rows.
+                item_filter = _filter_trades_by_item(ledger_payload, trade_norms, item_arg)
             # Every one of these grows with the world: byItem with the item
             # catalogue, byCurrency with the currency roster, and topBuyers /
             # topSellers hold one row per trading citizen despite the name.
@@ -2365,9 +2414,12 @@ def build_server(
                 "topBuyers",
                 "topSellers",
             )
+            ledger_text = ledger_markdown(ledger)
+            if item_filter is not None:
+                ledger_text += "\n" + _item_filter_line(item_filter)
             return CallToolResult(
                 content=[
-                    TextContent(type="text", text=ledger_markdown(ledger)),
+                    TextContent(type="text", text=ledger_text),
                     TextContent(type="text", text=json.dumps(ledger_payload)),
                 ],
             )
