@@ -195,6 +195,16 @@
       "note": "A Gaussian splat of the cycle 14 BioDrive station, with a still (COI-2368). Indexed on Kai's say, matching the castle."
     },
     {
+      "path": "/cycle-14/terrace-farms",
+      "component": "TerraceFarmsSplat",
+      "crawl": "index",
+      "image": "/og/cycle-14-terrace-farms.png",
+      "art": "terrace-farms.jpg",
+      "title": "Terrace farms",
+      "description": "Ice Dragon's terrace farms and bridge in Phantom Springs, cycle 14, captured from 315 frames as a Gaussian splat of 616,523 points.",
+      "note": "A Gaussian splat of Ice Dragon's cycle 14 terrace farms, with a still (COI-2541). Indexed on Kai's say, matching the castle."
+    },
+    {
       "path": "/replay",
       "component": "Replay",
       "crawl": "noindex",

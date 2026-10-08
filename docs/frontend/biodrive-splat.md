@@ -9,7 +9,7 @@ styles are [the castle page's](castle-splat.md). The page is
 
 ## Add another build
 
-Copy `BioDriveSplat.tsx`: a new splat URL, still, words, facts and `view`, then a
+Copy `BioDriveSplat.tsx` (`TerraceFarmsSplat.tsx`, COI-2541, is the first copy): a new splat URL, still, words, facts and `view`, then a
 route in `data/spa_routes.json` and a name in `frontend/src/routes.tsx`. The viewer
 takes its camera from `view`, in blocks (`frontend/src/lib/splatViewer.ts`).
 

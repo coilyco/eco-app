@@ -17,6 +17,7 @@ import Recipe from "./pages/Recipe"
 import Recipes from "./pages/Recipes"
 import Replay from "./pages/Replay"
 import Species from "./pages/Species"
+import TerraceFarmsSplat from "./pages/TerraceFarmsSplat"
 import Trade from "./pages/Trade"
 import Uses from "./pages/Uses"
 import UsesArbitrage from "./pages/UsesArbitrage"
@@ -62,6 +63,7 @@ const PAGES: Record<string, () => ReactElement> = {
   Replay,
   CastleSplat,
   BioDriveSplat,
+  TerraceFarmsSplat,
 }
 
 export interface RouteSpec {
