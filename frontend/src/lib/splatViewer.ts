@@ -1,6 +1,6 @@
-// The one place the PlayCanvas engine is touched, imported on demand so only
-// /cycle-14/castle pays for it. The page owns every state a person can see
-// (loading, failed, unsupported); this module owns the camera and the input.
+// The one place the PlayCanvas engine is touched, imported on demand so only the
+// splat routes pay for it. The page owns every state a person can see (loading,
+// failed, unsupported); this module owns the camera and the input.
 // docs/frontend/castle-splat.md.
 
 export interface SplatViewer {
@@ -11,26 +11,43 @@ export interface SplatViewer {
   zoom(factor: number): void
 }
 
-// The v2 splat is in Eco blocks, about 150 across, so the numbers below are blocks.
-// The reference viewer starts at [90, 70, -90] looking at [0, 10, 0], fov 50, in the
-// y-up frame this page draws in.
-const TARGET: [number, number, number] = [0, 10, 0]
-const REFERENCE: [number, number, number] = [90, 70, -90]
-const offset = REFERENCE.map((value, axis) => value - TARGET[axis])
-const reach = Math.hypot(...offset)
-const START = { yaw: Math.atan2(offset[0], offset[2]), pitch: Math.asin(offset[1] / reach), distance: reach }
-const FOV = 50
+// A splat's frame is in Eco blocks, so every number here is blocks, in the y-up frame
+// the page draws in. `reference` is the reference viewer's start camera, `target` what
+// it looks at, and the clip planes and zoom range scale with the size of the build.
+export interface ViewSpec {
+  name: string
+  target: [number, number, number]
+  reference: [number, number, number]
+  fov: number
+  distanceRange: [number, number]
+  farClip: number
+}
+
+// The castle is about 150 blocks across.
+export const CASTLE_VIEW: ViewSpec = {
+  name: "castle",
+  target: [0, 10, 0],
+  reference: [90, 70, -90],
+  fov: 50,
+  distanceRange: [15, 400],
+  farClip: 2000,
+}
+
 const ORBIT_SPEED = 0.15 // radians per second
 const PITCH_LIMIT = 1.45
-const DISTANCE_RANGE: [number, number] = [15, 400]
 
 const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n))
 
 export async function startViewer(
   canvas: HTMLCanvasElement,
   url: string,
-  options: { playing: boolean },
+  options: { playing: boolean; view?: ViewSpec },
 ): Promise<SplatViewer> {
+  const view = options.view ?? CASTLE_VIEW
+  const { target: TARGET, fov: FOV, distanceRange: DISTANCE_RANGE } = view
+  const offset = view.reference.map((value, axis) => value - TARGET[axis]!)
+  const reach = Math.hypot(...offset)
+  const START = { yaw: Math.atan2(offset[0]!, offset[2]!), pitch: Math.asin(offset[1]! / reach), distance: reach }
   const pc = await import("playcanvas")
   const app = new pc.Application(canvas, {
     graphicsDeviceOptions: { antialias: false, alpha: false, powerPreference: "high-performance" },
@@ -44,7 +61,7 @@ export async function startViewer(
   // The hero still's flat sky (#8B9EBF), so the handoff from still to live view does not flash.
   const SKY = new pc.Color(0x8b / 255, 0x9e / 255, 0xbf / 255)
   const camera = new pc.Entity("camera")
-  camera.addComponent("camera", { clearColor: SKY, fov: FOV, nearClip: 0.1, farClip: 2000 })
+  camera.addComponent("camera", { clearColor: SKY, fov: FOV, nearClip: 0.1, farClip: view.farClip })
   app.root.addChild(camera)
 
   const state = { ...START, playing: options.playing, dragging: false }
@@ -66,14 +83,14 @@ export async function startViewer(
   }
 
   try {
-    const asset = new pc.Asset("castle", "gsplat", { url })
+    const asset = new pc.Asset(view.name, "gsplat", { url })
     app.assets.add(asset)
     await new Promise<void>((resolve, reject) => {
       asset.once("load", () => resolve())
       asset.once("error", (message: unknown) => reject(new Error(String(message))))
       app.assets.load(asset)
     })
-    const splat = new pc.Entity("castle")
+    const splat = new pc.Entity(view.name)
     // 3DGS is y-down, so a capture arrives upside down without this turn. v2 is y-down too.
     splat.setLocalEulerAngles(0, 0, 180)
     splat.addComponent("gsplat", { asset })

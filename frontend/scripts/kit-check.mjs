@@ -37,6 +37,7 @@ const FLOOR_PX = 16
 // a data app: a route's weight is mostly its API payloads, not the shell.
 const DEFAULT_BUDGET = 900
 // /cycle-14/castle moves 11974K: 8386K splat, 2388K of its engine, 437K shell, 435K posters, 177K still.
+// /cycle-14/biodrive, estimated before deploy: 15187K splat, 2388K engine, 437K shell, 161K still.
 // The splat host sends no Timing-Allow-Origin, so weight is summed on the wire, not by Resource Timing.
 const BUDGETS = {
   "/jobs": 3200,
@@ -45,6 +46,7 @@ const BUDGETS = {
   "/uses/resolve": 3200,
   "/map": 2400,
   "/cycle-14/castle": 12300,
+  "/cycle-14/biodrive": 18700,
 }
 
 const SAMPLE = {
