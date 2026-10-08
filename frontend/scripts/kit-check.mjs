@@ -38,6 +38,7 @@ const FLOOR_PX = 16
 const DEFAULT_BUDGET = 900
 // /cycle-14/castle moves 11974K: 8386K splat, 2388K of its engine, 437K shell, 435K posters, 177K still.
 // /cycle-14/biodrive, estimated before deploy: 15187K splat, 2388K engine, 437K shell, 161K still.
+// /cycle-14/terrace-farms, estimated before deploy: 11760K splat, 2388K engine, 440K shell, 245K still.
 // The splat host sends no Timing-Allow-Origin, so weight is summed on the wire, not by Resource Timing.
 const BUDGETS = {
   "/jobs": 3200,
@@ -47,6 +48,7 @@ const BUDGETS = {
   "/map": 2400,
   "/cycle-14/castle": 12300,
   "/cycle-14/biodrive": 18700,
+  "/cycle-14/terrace-farms": 15300,
 }
 
 const SAMPLE = {
