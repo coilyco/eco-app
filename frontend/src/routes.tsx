@@ -3,6 +3,7 @@ import { Navigate, Route } from "react-router-dom"
 import manifest from "../../data/spa_routes.json"
 import PageMeta from "./components/PageMeta"
 import PagePassword from "./components/PagePassword"
+import BioDriveSplat from "./pages/BioDriveSplat"
 import CastleSplat from "./pages/CastleSplat"
 import Civics from "./pages/Civics"
 import Crafting from "./pages/Crafting"
@@ -60,6 +61,7 @@ const PAGES: Record<string, () => ReactElement> = {
   Species,
   Replay,
   CastleSplat,
+  BioDriveSplat,
 }
 
 export interface RouteSpec {

@@ -185,6 +185,16 @@
       "note": "A Gaussian splat of the cycle 14 castle, with a still and two flythroughs (eco-app#8572, #8601). Indexed on Kai's say, 2026-10-01."
     },
     {
+      "path": "/cycle-14/biodrive",
+      "component": "BioDriveSplat",
+      "crawl": "index",
+      "image": "/og/cycle-14-biodrive.png",
+      "art": "biodrive.jpg",
+      "title": "BioDrive station",
+      "description": "Scuba Steve's BioDrive station in Phantom Springs, cycle 14, captured from 287 frames as a Gaussian splat of 881,854 points.",
+      "note": "A Gaussian splat of the cycle 14 BioDrive station, with a still (COI-2368). Indexed on Kai's say, matching the castle."
+    },
+    {
       "path": "/replay",
       "component": "Replay",
       "crawl": "noindex",

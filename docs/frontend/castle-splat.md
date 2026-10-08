@@ -4,7 +4,8 @@
 live view of a Gaussian splat, and two flythroughs of it. It started as the first
 test capture for epic 49 (`teable:coilyco/eco-app#8572`) and is now v2
 (`teable:coilyco/eco-app#8601`). The page is `frontend/src/pages/CastleSplat.tsx`.
-The engine-facing code is `frontend/src/lib/splatViewer.ts`.
+The engine-facing code is `frontend/src/lib/splatViewer.ts`. The BioDrive station
+page reuses this one's markup and styles: [biodrive-splat.md](biodrive-splat.md).
 
 ## Where the files live
 
