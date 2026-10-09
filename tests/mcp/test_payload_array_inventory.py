@@ -20,7 +20,8 @@ from typing import Any
 # surface class -> module, plus any constructor arguments beyond the two every
 # surface shares. Derived from each surface's own to_dict, never hand-listed.
 _SURFACES: dict[str, tuple[str, dict[str, Any]]] = {
-    "CraftingAtlas": ("crafting", {}),
+    # byMiner is null until the DigOrMine fetch is recorded, so the probe records one.
+    "CraftingAtlas": ("crafting", {"per_action_counts": {"DigOrMine": 0}}),
     "TradesLedger": ("trades", {}),
     "SocialSurface": ("social", {}),
     "CivicsReport": ("civics", {}),
@@ -35,6 +36,7 @@ _INVENTORY: dict[str, list[str]] = {
         "byCitizenIterations",
         "byCrafted",
         "byGathered",
+        "byMiner",
         "byStation",
         "flows",
     ],
@@ -68,6 +70,9 @@ _INVENTORY: dict[str, list[str]] = {
     ],
     "WorldActivity": [
         "byCitizen",
+        # One group per category (at most seven), each holding a players list that
+        # grows with the player count and that _bound_nested_rows bounds (COI-2048).
+        "byCitizenByCategory",
         "byObject",
         "byPolluter",
         "categories",

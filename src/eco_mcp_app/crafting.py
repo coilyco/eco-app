@@ -31,7 +31,7 @@ import re
 import sqlite3
 import time
 from collections import defaultdict
-from collections.abc import AsyncIterator, Iterable
+from collections.abc import AsyncIterator, Iterable, Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -66,6 +66,18 @@ CRAFT_ACTION_TYPES = (
 # plant biomass. We therefore keep two separate item boards: crafted counts
 # iterations from per-event rows, gathered counts *events*. See eco-app#70.
 CRAFTED_ACTION_TYPE = "ItemCraftedAction"
+MINING_ACTION_TYPE = "DigOrMine"
+
+# Rides the payload as a `*Note` key, so caveats_first fronts it ahead of the
+# bulk arrays. The scientist's probe saw `byCitizenIterations` read as a mining
+# count because nothing beside it said which actions it totals (COI-2049).
+BY_MINER_NOTE = (
+    "byMiner ranks players by DigOrMine exporter rows, one per dig or mine event "
+    "(not blocks removed, not the Count magnitude), and is the board to read for "
+    "the busiest miner. null means the DigOrMine exporter was not fetched, see "
+    "warnings. byCitizen and byCitizenIterations total all four action types and "
+    "are not mining counts."
+)
 
 DEFAULT_BASE_URL = os.environ.get("ECO_ADMIN_BASE_URL", "http://eco.coilysiren.me:3001")
 DEFAULT_CACHE_TTL_S = float(os.environ.get("ECO_CRAFTING_CACHE_TTL", "300"))
@@ -219,6 +231,10 @@ class CraftingAtlas:
     # stay event-weighted here too, so a plant harvester's biomass cannot
     # dominate the ranking (eco-app#70).
     by_citizen_iterations: list[tuple[str, int]] = field(default_factory=list)
+    # DigOrMine exporter rows per citizen: one per dig or mine event, never the
+    # Count magnitude. The only board that answers "busiest miner" - the two
+    # boards above total every action type (COI-2049).
+    by_miner: list[tuple[str, int]] = field(default_factory=list)
     # Sankey edges: (source_station, target_item, event_count). Event-weighted
     # for the same reason — a single 200k-biomass chop would otherwise swamp the
     # diagram. See eco-app#70.
@@ -243,6 +259,14 @@ class CraftingAtlas:
             "byStation": [[n, c] for n, c in self.by_station],
             "byCitizen": [[n, c] for n, c in self.by_citizen],
             "byCitizenIterations": [[n, c] for n, c in self.by_citizen_iterations],
+            # null, never [], when the DigOrMine exporter was not fetched, so a
+            # failed fetch cannot read as "nobody mines" (COI-2049).
+            "byMiner": (
+                [[n, c] for n, c in self.by_miner]
+                if MINING_ACTION_TYPE in self.per_action_counts
+                else None
+            ),
+            "byMinerNote": BY_MINER_NOTE,
             "flows": [[s, t, c] for s, t, c in self.flows],
             "perActionCounts": dict(self.per_action_counts),
             "rollupEvents": self.rollup_events,
@@ -297,6 +321,7 @@ def _cache_get(base_url: str, api_key: str | None, ttl_s: float) -> CraftingAtla
         by_station=[(n, int(c)) for n, c in data.get("byStation", [])],
         by_citizen=[(n, int(c)) for n, c in data.get("byCitizen", [])],
         by_citizen_iterations=[(n, int(c)) for n, c in data.get("byCitizenIterations", [])],
+        by_miner=[(n, int(c)) for n, c in data.get("byMiner") or []],
         flows=[(s, t, float(c)) for s, t, c in data.get("flows", [])],
         per_action_counts=dict(data.get("perActionCounts", {})),
         rollup_events=int(data.get("rollupEvents", 0)),
@@ -431,6 +456,7 @@ def aggregate_rows(
     # to names once, after every action has folded. See eco-app#5.
     by_citizen: dict[str, int] = dict(atlas.by_citizen)
     by_citizen_iterations: dict[str, int] = dict(atlas.by_citizen_iterations)
+    by_miner: dict[str, int] = dict(atlas.by_miner)
     flows: dict[tuple[str, str], float] = {(s, t): c for s, t, c in atlas.flows}
 
     # Only crafts contribute a meaningful unit Count; everything else is
@@ -506,6 +532,8 @@ def aggregate_rows(
             # (eco-app#70).
             weight = int(max(count, 1.0)) if is_crafted else 1
             by_citizen_iterations[citizen] = by_citizen_iterations.get(citizen, 0) + weight
+            if action_name == MINING_ACTION_TYPE:
+                by_miner[citizen] = by_miner.get(citizen, 0) + 1
         consumed += 1
 
     atlas.total_events += consumed
@@ -517,6 +545,7 @@ def aggregate_rows(
     atlas.by_citizen_iterations = sorted(
         by_citizen_iterations.items(), key=lambda kv: kv[1], reverse=True
     )
+    atlas.by_miner = sorted(by_miner.items(), key=lambda kv: kv[1], reverse=True)
     atlas.flows = sorted(
         ((s, t, c) for (s, t), c in flows.items()),
         key=lambda edge: edge[2],
@@ -571,6 +600,23 @@ async def fetch_citizen_name_map(
     return mapping
 
 
+def rank_citizen_counts(
+    counts: Mapping[str, int], name_map: Mapping[str, str]
+) -> list[tuple[str, int]]:
+    """Per-citizen-id counts as ranked ``(display name, count)`` pairs.
+
+    Shared by the atlas's miner board and get_world's per-category boards, which
+    fold the same exporter rows keyed by numeric Citizen id. An id the join
+    misses renders as ``Citizen #<id>`` so the player still ranks, and ids that
+    resolve to one name add together. Ties break by name so the order is stable.
+    """
+    resolved: dict[str, int] = {}
+    for cid, count in counts.items():
+        label = name_map.get(cid) or f"Citizen #{cid}"
+        resolved[label] = resolved.get(label, 0) + count
+    return sorted(resolved.items(), key=lambda kv: (-kv[1], kv[0]))
+
+
 def _apply_citizen_names(atlas: CraftingAtlas, name_map: dict[str, str]) -> None:
     """Rewrite both citizen boards' id keys to display names, in place.
 
@@ -596,6 +642,7 @@ def _apply_citizen_names(atlas: CraftingAtlas, name_map: dict[str, str]) -> None
 
     atlas.by_citizen, matched = relabel(atlas.by_citizen)
     atlas.by_citizen_iterations, _ = relabel(atlas.by_citizen_iterations)
+    atlas.by_miner = rank_citizen_counts(dict(atlas.by_miner), name_map)
     if matched == 0 and CITIZEN_NAMES_UNAVAILABLE_WARNING not in atlas.warnings:
         atlas.warnings.append(CITIZEN_NAMES_UNAVAILABLE_WARNING)
 
@@ -728,6 +775,10 @@ def atlas_markdown(atlas: CraftingAtlas) -> str:
         lines.extend(["", "**Station utilization:**"])
         for index, (name, count) in enumerate(atlas.by_station[:10], 1):
             lines.append(f"{index}. {prettify_eco_name(name)} — {count:,} events")
+    if atlas.by_miner:
+        lines.extend(["", "**Top miners** (dig and mine events):"])
+        for index, (name, count) in enumerate(atlas.by_miner[:10], 1):
+            lines.append(f"{index}. {name} — {count:,} events")
     if atlas.by_citizen_iterations:
         # Name the unit. This board weighs crafts by iteration count, so its
         # values legitimately exceed totalEvents — unlabelled, that read as a

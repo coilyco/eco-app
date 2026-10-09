@@ -34,6 +34,15 @@ World activity reads the same action-row exporter the crafting and trades
 surfaces use, with the same realignment for undeclared extra columns and the
 same numeric-id to name join.
 
+`byCitizenByCategory` splits the same rows by player within each category, keyed
+like `categories` (COI-2048). Each group is `{key, label, events, players}` and
+each `players` pair is `[name, events]`, one event per exporter row, the unit of
+`categories[].events` and `byCitizen`. The first `roads` pair is the top road
+builder, the first `extraction` pair the top digger or chopper. `players` is
+`null` when every action behind the category failed to fetch, and a category
+fetched with no rows is absent, as in `categories`. `limit` bounds every group's
+`players` and warns per group as `byCitizenByCategory.<key>.players`.
+
 Results cache in an in-process `TTLCache` keyed per base URL, matching the
 other data surfaces.
 

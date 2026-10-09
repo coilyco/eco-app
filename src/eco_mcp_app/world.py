@@ -55,6 +55,7 @@ from .crafting import (
     _stream_csv_rows,
     fetch_citizen_name_map,
     prettify_eco_name,
+    rank_citizen_counts,
 )
 from .trades import SECONDS_PER_DAY
 
@@ -85,6 +86,21 @@ CATEGORY_LABELS: dict[str, str] = {
     "extraction": "Extraction",
 }
 CATEGORY_ORDER: tuple[str, ...] = tuple(CATEGORY_LABELS.keys())
+
+# Rides the payload as a `*Note` key, so caveats_first fronts it ahead of the
+# bulk arrays. Names the unit because the unlabelled byCitizen total was the
+# only per-player number get_world carried, and "who built the roads" had no
+# honest answer from it (COI-2048).
+BY_CITIZEN_BY_CATEGORY_NOTE = (
+    "byCitizenByCategory splits the world-action exporter rows by player within "
+    "each category key, the same keys as categories. Each players pair is "
+    "[name, events]: one event per exporter row, the unit of categories[].events "
+    "and byCitizen, not blocks placed and not volume. roads is TampRoad rows, so "
+    "the first roads pair is the top road builder. Rows with no numeric Citizen "
+    "are attributed to no one. players is null when every "
+    "action behind the category failed to fetch (see warnings), and a category "
+    "with a partly failed action lists only the players it could count."
+)
 
 DEFAULT_BASE_URL = os.environ.get("ECO_ADMIN_BASE_URL", "http://eco.coilysiren.me:3001")
 DEFAULT_CACHE_TTL_S = float(os.environ.get("ECO_WORLD_CACHE_TTL", "300"))
@@ -130,6 +146,12 @@ class WorldAccumulator:
     # Pollution-category events per citizen — the headline for the /climate
     # cross-link (who is filling the air), split out from the overall shaper board.
     by_polluter: dict[str, int] = field(default_factory=lambda: defaultdict(int))
+    # category → citizen → events: the same rows as by_citizen, split by category
+    # so "top road builder" has an answer (COI-2048). Ids until names resolve.
+    by_citizen_category: dict[str, dict[str, int]] = field(default_factory=dict)
+    # Actions whose exporter fetch errored, so a category with no rows because
+    # nothing was fetched reads as unavailable and not as nobody did it.
+    failed_actions: set[str] = field(default_factory=set)
     # Pollution rows whose actor column was absent or non-numeric (#226).
     pollution_rows_without_actor: int = 0
     # "Most-touched objects" is a count of *events* touching each object — how
@@ -233,6 +255,8 @@ def aggregate_world_rows(
             acc.by_object[obj] += 1
         if citizen and _INT_RE.match(citizen):
             acc.by_citizen[citizen] += 1
+            per_category = acc.by_citizen_category.setdefault(category, {})
+            per_category[citizen] = per_category.get(citizen, 0) + 1
             if category == "pollution":
                 acc.by_polluter[citizen] += 1
         elif category == "pollution":
@@ -269,6 +293,10 @@ def apply_citizen_names(acc: WorldAccumulator, name_map: dict[str, str]) -> None
         acc.by_citizen = _resolve_ids(acc.by_citizen, name_map)
     if acc.by_polluter:
         acc.by_polluter = _resolve_ids(acc.by_polluter, name_map)
+    acc.by_citizen_category = {
+        category: dict(rank_citizen_counts(counts, name_map))
+        for category, counts in acc.by_citizen_category.items()
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -290,6 +318,12 @@ class WorldActivity:
     timeline: list[tuple[int, dict[str, int]]] = field(default_factory=list)
     by_citizen: list[tuple[str, int]] = field(default_factory=list)
     by_polluter: list[tuple[str, int]] = field(default_factory=list)
+    # (category_key, events or None, ranked (player, events) or None), in
+    # CATEGORY_ORDER. None, never an empty list, when every action behind the
+    # category failed to fetch.
+    by_citizen_category: list[tuple[str, int | None, list[tuple[str, int]] | None]] = field(
+        default_factory=list
+    )
     # (object id, touch-event count) — see WorldAccumulator.by_object.
     by_object: list[tuple[str, int]] = field(default_factory=list)
     # (x, z, events) coarse-binned, ranked by event count.
@@ -315,6 +349,16 @@ class WorldActivity:
             "timeline": [{"day": d, "counts": dict(c)} for d, c in self.timeline],
             "byCitizen": [[n, e] for n, e in self.by_citizen],
             "byPolluter": [[n, e] for n, e in self.by_polluter],
+            "byCitizenByCategory": [
+                {
+                    "key": k,
+                    "label": CATEGORY_LABELS.get(k, k),
+                    "events": e,
+                    "players": None if players is None else [[n, c] for n, c in players],
+                }
+                for k, e, players in self.by_citizen_category
+            ],
+            "byCitizenByCategoryNote": BY_CITIZEN_BY_CATEGORY_NOTE,
             "byObject": [[n, e] for n, e in self.by_object],
             "hotspots": [{"x": x, "z": z, "events": e} for x, z, e in self.hotspots],
             "warnings": list(self.warnings),
@@ -336,6 +380,14 @@ class WorldActivity:
             ],
             by_citizen=[(n, int(e)) for n, e in data.get("byCitizen", [])],
             by_polluter=[(n, int(e)) for n, e in data.get("byPolluter", [])],
+            by_citizen_category=[
+                (
+                    str(c["key"]),
+                    None if c.get("events") is None else int(c["events"]),
+                    None if c.get("players") is None else [(n, int(e)) for n, e in c["players"]],
+                )
+                for c in data.get("byCitizenByCategory", [])
+            ],
             by_object=[(n, int(e)) for n, e in data.get("byObject", [])],
             hotspots=[
                 (int(h["x"]), int(h["z"]), int(h["events"])) for h in data.get("hotspots", [])
@@ -378,6 +430,17 @@ def finalize(
         key=lambda t: t[2],
         reverse=True,
     )[:top_hotspots]
+    by_citizen_category: list[tuple[str, int | None, list[tuple[str, int]] | None]] = []
+    for key in CATEGORY_ORDER:
+        events = acc.category_events.get(key, 0)
+        actions = {a for a, c in WORLD_ACTIONS if c == key}
+        if not events and actions <= acc.failed_actions:
+            by_citizen_category.append((key, None, None))
+        elif events:
+            ranked = sorted(
+                acc.by_citizen_category.get(key, {}).items(), key=lambda kv: (-kv[1], kv[0])
+            )
+            by_citizen_category.append((key, events, ranked[:top_citizens]))
     warnings = list(acc.warnings)
     if acc.pollution_rows_without_actor and not by_polluter:
         warnings.append(
@@ -393,6 +456,7 @@ def finalize(
         timeline=timeline,
         by_citizen=list(by_citizen),
         by_polluter=list(by_polluter),
+        by_citizen_category=by_citizen_category,
         by_object=list(by_object),
         hotspots=hotspots,
         warnings=warnings,
@@ -524,8 +588,10 @@ async def fetch_world(
             try:
                 await _stream_action_into(http, url, headers, action, category, acc)
             except httpx.HTTPStatusError as e:
+                acc.failed_actions.add(action)
                 acc.warnings.append(f"{action}: HTTP {e.response.status_code}")
             except httpx.HTTPError as e:
+                acc.failed_actions.add(action)
                 acc.warnings.append(f"{action}: {type(e).__name__}: {e}")
 
         if acc.by_citizen:
@@ -608,6 +674,12 @@ def world_markdown(activity: WorldActivity) -> str:
         lines.append("**Top world-shapers:**")
         for i, (name, events) in enumerate(activity.by_citizen[:10], 1):
             lines.append(f"{i}. {name} — {events:,} events")
+    leaders = [(k, players[0]) for k, _, players in activity.by_citizen_category if players]
+    if leaders:
+        lines.append("")
+        lines.append("**Top player per category** (events):")
+        for k, (name, events) in leaders:
+            lines.append(f"- {CATEGORY_LABELS.get(k, k)}: {name} — {events:,} events")
     if activity.by_object:
         lines.append("")
         lines.append("**Most-touched objects:**")

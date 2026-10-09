@@ -300,3 +300,130 @@ async def test_list_tools_includes_get_world() -> None:
     result = await handler(mt.ListToolsRequest(method="tools/list"))
     names = {tool.name for tool in result.root.tools}
     assert "get_world" in names
+
+
+# Roads: ekans tamps three times, coilysiren once, so ekans is the top road
+# builder even though coilysiren has more events overall (COI-2048).
+_ROADS_CSV = (
+    "Block,Citizen,ActionLocation,Count,Time\n"
+    '"DirtRoadItem",130409,"300,70,300",4.0,8000\n'
+    '"DirtRoadItem",130409,"301,70,300",4.0,8100\n'
+    '"DirtRoadItem",130409,"302,70,300",4.0,8200\n'
+    '"DirtRoadItem",129312,"303,70,300",4.0,8300\n'
+)
+
+
+def _fold_category(acc: WorldAccumulator, action: str, category: str, text: str) -> None:
+    aggregate_world_rows(action, category, _rows(text), acc)
+
+
+def test_fold_splits_events_per_player_by_category() -> None:
+    acc = WorldAccumulator()
+    _fold_category(acc, "ConstructOrDeconstruct", "construction", _CONSTRUCT_CSV)
+    _fold_category(acc, "TampRoad", "roads", _ROADS_CSV)
+
+    assert acc.by_citizen_category["roads"] == {"130409": 3, "129312": 1}
+    assert acc.by_citizen_category["construction"] == {"129312": 1, "130409": 1, "129580": 1}
+    # The split reconciles with the totals it came from.
+    for category, players in acc.by_citizen_category.items():
+        assert sum(players.values()) == acc.category_events[category]
+    assert acc.by_citizen["130409"] == 4
+
+
+def test_two_actions_in_one_category_share_one_board() -> None:
+    """objects is PlaceOrPickUpObject plus MoveWorldObject, one board."""
+    acc = WorldAccumulator()
+    _fold_category(acc, "PlaceOrPickUpObject", "objects", _PLACE_CSV)
+    _fold_category(acc, "MoveWorldObject", "objects", _PLACE_CSV)
+
+    assert acc.by_citizen_category["objects"] == {"129312": 4}
+
+
+def test_finalize_ranks_each_category_and_resolves_names() -> None:
+    acc = WorldAccumulator()
+    _fold_category(acc, "TampRoad", "roads", _ROADS_CSV)
+    apply_citizen_names(acc, {"130409": "ekans"})  # 129312 is a join miss
+
+    activity = finalize(acc, "t", "u")
+    payload = activity.to_dict()
+
+    roads = next(g for g in payload["byCitizenByCategory"] if g["key"] == "roads")
+    assert roads["label"] == "Roads"
+    assert roads["events"] == 4
+    assert roads["players"] == [["ekans", 3], ["Citizen #129312", 1]]
+    assert "TampRoad" in payload["byCitizenByCategoryNote"]
+    # Keyed by the same category names the server-wide split already uses.
+    assert {g["key"] for g in payload["byCitizenByCategory"]} <= {
+        c["key"] for c in payload["categories"]
+    }
+
+
+def test_a_category_whose_actions_all_failed_is_null_not_empty() -> None:
+    acc = WorldAccumulator()
+    _fold_category(acc, "ConstructOrDeconstruct", "construction", _CONSTRUCT_CSV)
+    acc.failed_actions.add("TampRoad")
+    acc.failed_actions.add("PolluteAir")  # pollution's only action
+    acc.failed_actions.add("MoveWorldObject")  # objects keeps PlaceOrPickUpObject
+
+    groups = {g["key"]: g for g in finalize(acc, "t", "u").to_dict()["byCitizenByCategory"]}
+
+    assert groups["roads"] == {"key": "roads", "label": "Roads", "events": None, "players": None}
+    assert groups["pollution"]["players"] is None
+    assert groups["construction"]["players"] is not None
+    # A fetched category with no rows is simply absent, as in categories.
+    assert "garbage" not in groups
+    assert "objects" not in groups
+
+
+def test_world_activity_round_trips_the_per_category_boards() -> None:
+    from eco_mcp_app.world import WorldActivity
+
+    acc = WorldAccumulator()
+    _fold_category(acc, "TampRoad", "roads", _ROADS_CSV)
+    acc.failed_actions.add("PolluteAir")
+    payload = finalize(acc, "t", "u").to_dict()
+
+    again = WorldActivity.from_dict(payload).to_dict()
+
+    assert again["byCitizenByCategory"] == payload["byCitizenByCategory"]
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_the_tool_names_the_top_road_builder_at_every_limit(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Through the registered handler, at limit=0 (the SPA) and limit=1 (an MCP client)."""
+    import json
+
+    monkeypatch.setenv("ECO_ADMIN_API_KEY", "k")
+    _mock_all_actions({"ConstructOrDeconstruct": _CONSTRUCT_CSV, "TampRoad": _ROADS_CSV})
+    respx.get(CITIZENS_URL).mock(return_value=httpx.Response(200, json=_CITIZENS_JSON))
+    handler = build_server().request_handlers[mt.CallToolRequest]
+
+    async def call(limit: int) -> dict:
+        result = await handler(
+            mt.CallToolRequest(
+                method="tools/call",
+                params=mt.CallToolRequestParams(
+                    name="get_world",
+                    arguments={"server": "eco.example.com:3001", "limit": limit},
+                ),
+            )
+        )
+        assert "Top player per category" in result.root.content[0].text
+        return json.loads(result.root.content[-1].text)
+
+    full = await call(0)
+    one = await call(1)
+
+    full_roads = next(g for g in full["byCitizenByCategory"] if g["key"] == "roads")
+    one_roads = next(g for g in one["byCitizenByCategory"] if g["key"] == "roads")
+    assert full_roads["players"] == [["ekans", 3], ["coilysiren", 1]]
+    assert one_roads["players"] == [["ekans", 3]]
+    assert any(w.startswith("byCitizenByCategory.roads.players:") for w in one["warnings"])
+    assert not any(w.startswith("byCitizenByCategory.") for w in full.get("warnings", []))
+    # Every group's list obeys limit, and the server-wide summary is whole.
+    assert all(len(g["players"]) <= 1 for g in one["byCitizenByCategory"])
+    assert one["perActionCounts"]["TampRoad"] == 4
+    assert list(one).index("byCitizenByCategoryNote") < list(one).index("byCitizen")

@@ -1531,6 +1531,27 @@ def _bound_rows(payload: dict[str, Any], limit: int, *keys: str) -> None:
         )
 
 
+def _bound_nested_rows(payload: dict[str, Any], limit: int, key: str, inner: str) -> None:
+    """Bound the ``inner`` list of every entry in ``payload[key]``, and say so.
+
+    `_bound_rows` only sees top-level lists, so a list of groups each carrying
+    its own growing list would slip past it. Each inner list gets the same
+    `limit` and its own warning, so no group's truncation is silent (COI-2048).
+    """
+    if limit <= 0:
+        return
+    for group in payload.get(key) or []:
+        rows = group.get(inner) if isinstance(group, dict) else None
+        if not isinstance(rows, list) or len(rows) <= limit:
+            continue
+        total = len(rows)
+        group[inner] = rows[:limit]
+        payload.setdefault("warnings", []).append(
+            f"{key}.{group.get('key')}.{inner}: showing {limit:,} of {total:,} rows; "
+            "pass limit=0 for all of them"
+        )
+
+
 def _thin_series(payload: dict[str, Any], limit: int, *keys: str) -> None:
     """Thin time series in place, and say what was thinned.
 
@@ -2321,6 +2342,7 @@ def build_server(
                 "byStation",
                 "byCitizen",
                 "byCitizenIterations",
+                "byMiner",
                 "flows",
             )
             return CallToolResult(
@@ -2353,6 +2375,7 @@ def build_server(
                 "byObject",
                 "hotspots",
             )
+            _bound_nested_rows(world_payload, world_limit, "byCitizenByCategory", "players")
             return CallToolResult(
                 content=[
                     TextContent(type="text", text=world_text),

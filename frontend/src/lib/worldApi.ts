@@ -10,6 +10,16 @@ export interface WorldCategory {
   volume: number
 }
 
+// One category's players, ranked (COI-2048). Each pair is [name, events], the
+// unit of WorldCategory.events. players is null when every action behind the
+// category failed to fetch, never an empty list standing in for "nobody".
+export interface WorldCategoryPlayers {
+  key: string
+  label: string
+  events: number | null
+  players: Array<[string, number]> | null
+}
+
 export interface WorldTimelineDay {
   day: number
   counts: Record<string, number>
@@ -32,6 +42,8 @@ export interface WorldActivity {
   timeline: WorldTimelineDay[]
   byCitizen: Array<[string, number]>
   byPolluter: Array<[string, number]>
+  byCitizenByCategory?: WorldCategoryPlayers[]
+  byCitizenByCategoryNote?: string
   byObject: Array<[string, number]>
   hotspots: WorldHotspot[]
   warnings: string[]

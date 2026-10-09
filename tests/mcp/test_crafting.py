@@ -512,6 +512,8 @@ async def test_the_atlas_bounds_every_array_not_only_flows(monkeypatch) -> None:
     atlas.by_station = [(f"s{i}", i) for i in range(40)]
     atlas.by_citizen = [(f"c{i}", i) for i in range(40)]
     atlas.by_citizen_iterations = [(f"c{i}", i) for i in range(40)]
+    atlas.by_miner = [(f"c{i}", i) for i in range(40)]
+    atlas.per_action_counts = {"DigOrMine": 780}
     atlas.flows = [(f"a{i}", f"b{i}", i) for i in range(40)]
 
     async def stub(**_):
@@ -534,6 +536,7 @@ async def test_the_atlas_bounds_every_array_not_only_flows(monkeypatch) -> None:
         "byStation",
         "byCitizen",
         "byCitizenIterations",
+        "byMiner",
         "flows",
     ):
         assert len(payload[key]) == 5, f"{key} ignored limit"
@@ -543,3 +546,128 @@ async def test_the_atlas_bounds_every_array_not_only_flows(monkeypatch) -> None:
 
     # Rule 5: the summary still describes the whole population.
     assert payload["totalEvents"] == 900
+
+
+# DigOrMine rows. Count is a magnitude (one row carries 500), so a miner who
+# dug once big must not outrank one who dug often. Citizen 129312 digs twice,
+# 129580 digs three times, and 4478 once with Count 500.
+_DIG_CSV = (
+    "BlockItemOnDestroy,Position,Citizen,Count,Time\n"
+    '"IronOreItem","1,2,3",129312,1.0,100\n'
+    '"IronOreItem","1,2,3",129312,1.0,200\n'
+    '"DirtItem","1,2,3",129580,1.0,300\n'
+    '"DirtItem","1,2,3",129580,1.0,400\n'
+    '"DirtItem","1,2,3",129580,1.0,500\n'
+    '"StoneItem","1,2,3",4478,500.0,600\n'
+)
+
+
+def test_aggregate_rows_counts_dig_events_per_miner_not_count_magnitude() -> None:
+    atlas = CraftingAtlas(fetched_at_iso="t", source_base_url="b")
+    aggregate_rows("DigOrMine", _rows(_DIG_CSV), atlas)
+
+    assert dict(atlas.by_miner) == {"129580": 3, "129312": 2, "4478": 1}
+    assert atlas.by_miner[0] == ("129580", 3)
+    # The per-miner events reconcile with the server-wide count in the payload.
+    assert sum(c for _, c in atlas.by_miner) == atlas.per_action_counts["DigOrMine"]
+
+
+def test_other_actions_never_feed_the_miner_board() -> None:
+    atlas = CraftingAtlas(fetched_at_iso="t", source_base_url="b")
+    aggregate_rows("ItemCraftedAction", _rows(_CRAFT_CSV), atlas)
+    aggregate_rows("ChopTree", _rows(_CHOP_CSV), atlas)
+    aggregate_rows("HarvestOrHunt", _rows(_HARVEST_CSV), atlas)
+
+    assert atlas.by_miner == []
+    # Those rows still land on the all-actions boards that were being misread.
+    assert atlas.by_citizen and atlas.by_citizen_iterations
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_fetch_atlas_names_the_busiest_miner_apart_from_the_busiest_producer() -> None:
+    """The scientist's probe: Kirdec led byCitizenIterations from crafting alone."""
+    respx.get(CRAFT_URL).mock(return_value=httpx.Response(200, text=_CRAFT_CSV))
+    respx.get(HARVEST_URL).mock(return_value=httpx.Response(200, text=_HARVEST_CSV))
+    respx.get(CHOP_URL).mock(return_value=httpx.Response(200, text=_CHOP_CSV))
+    respx.get(DIG_URL).mock(return_value=httpx.Response(200, text=_DIG_CSV))
+    respx.get(CITIZENS_URL).mock(return_value=httpx.Response(200, json=_CITIZENS_JSON))
+
+    atlas = await fetch_atlas(base_url=BASE, api_key="k", cache_ttl_s=0)
+    payload = atlas.to_dict()
+
+    assert payload["byMiner"] == [["redwood", 3], ["coilysiren", 2], ["hammerhand", 1]]
+    # hammerhand leads the iteration board on a 189-iteration craft rollup, and is
+    # the last miner: the two boards answer different questions.
+    assert payload["byCitizenIterations"][0][0] == "hammerhand"
+    assert "busiest miner" in payload["byMinerNote"]
+    assert payload["perActionCounts"]["DigOrMine"] == 6
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_byminer_is_null_not_empty_when_the_dig_exporter_is_unavailable() -> None:
+    respx.get(CRAFT_URL).mock(return_value=httpx.Response(200, text=_CRAFT_CSV))
+    respx.get(HARVEST_URL).mock(return_value=httpx.Response(200, text=_HARVEST_CSV))
+    respx.get(CHOP_URL).mock(return_value=httpx.Response(200, text=_CHOP_CSV))
+    respx.get(DIG_URL).mock(return_value=httpx.Response(401))
+    respx.get(CITIZENS_URL).mock(return_value=httpx.Response(200, json=_CITIZENS_JSON))
+
+    payload = (await fetch_atlas(base_url=BASE, api_key="k", cache_ttl_s=0)).to_dict()
+
+    assert payload["byMiner"] is None
+    assert any(w.startswith("DigOrMine:") for w in payload["warnings"])
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_byminer_survives_the_sqlite_cache_round_trip() -> None:
+    respx.get(CRAFT_URL).mock(return_value=httpx.Response(200, text=_CRAFT_CSV))
+    respx.get(HARVEST_URL).mock(return_value=httpx.Response(200, text=_HARVEST_CSV))
+    respx.get(CHOP_URL).mock(return_value=httpx.Response(200, text=_CHOP_CSV))
+    respx.get(DIG_URL).mock(return_value=httpx.Response(200, text=_DIG_CSV))
+    respx.get(CITIZENS_URL).mock(return_value=httpx.Response(200, json=_CITIZENS_JSON))
+
+    first = await fetch_atlas(base_url=BASE, api_key="k", cache_ttl_s=60)
+    cached = await fetch_atlas(base_url=BASE, api_key="k", cache_ttl_s=60)
+
+    assert cached.to_dict()["byMiner"] == first.to_dict()["byMiner"]
+    assert cached.to_dict()["byMiner"][0] == ["redwood", 3]
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_the_tool_bounds_byminer_and_leads_with_its_note(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """At limit=0 the whole board ships, at limit=1 one row and a warning."""
+    import json
+
+    monkeypatch.setenv("ECO_ADMIN_API_KEY", "k")
+    respx.get(CRAFT_URL).mock(return_value=httpx.Response(200, text=_CRAFT_CSV))
+    respx.get(HARVEST_URL).mock(return_value=httpx.Response(200, text=_HARVEST_CSV))
+    respx.get(CHOP_URL).mock(return_value=httpx.Response(200, text=_CHOP_CSV))
+    respx.get(DIG_URL).mock(return_value=httpx.Response(200, text=_DIG_CSV))
+    respx.get(CITIZENS_URL).mock(return_value=httpx.Response(200, json=_CITIZENS_JSON))
+    handler = build_server().request_handlers[mt.CallToolRequest]
+
+    async def call(limit: int) -> dict:
+        result = await handler(
+            mt.CallToolRequest(
+                method="tools/call",
+                params=mt.CallToolRequestParams(
+                    name="get_crafting_atlas",
+                    arguments={"server": "eco.example.com:3001", "limit": limit},
+                ),
+            )
+        )
+        return json.loads(result.root.content[-1].text)
+
+    full = await call(0)
+    one = await call(1)
+
+    assert len(full["byMiner"]) == 3
+    assert not any(w.startswith("byMiner:") for w in full.get("warnings", []))
+    assert one["byMiner"] == [["redwood", 3]]
+    assert any(w.startswith("byMiner:") for w in one["warnings"])
+    assert list(one).index("byMinerNote") < list(one).index("byCrafted")

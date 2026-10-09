@@ -205,7 +205,9 @@ def register_wave1_routes(registry: DualRouteRegistry, invoke: ToolInvoker) -> N
             "Show what players have done to the world and who did it: "
             "construction, terraforming, road building, polluting actions, "
             "garbage dumping, and other world activity from the action history. "
-            "For current pollution levels in the air, water, and ground use "
+            "byCitizenByCategory ranks players within each category, so read its roads "
+            "entry for the top road builder, while byCitizen is one total across all "
+            "categories. For current pollution levels in the air, water, and ground use "
             "get_climate. Requires the server-side admin API key."
         ),
         rest_path="/preview/world.json",

@@ -17,6 +17,11 @@
 // byCitizen counts events, matching get_world.byCitizen, while
 // byCitizenIterations weighs crafts by Count. The iteration board legitimately
 // exceeds totalEvents, so it has to be labelled wherever it is shown.
+//
+// byMiner is the one mining board (COI-2049): DigOrMine rows per player, one
+// per dig or mine event. Neither citizen board above is a mining count. It is
+// null when the DigOrMine exporter was not fetched, and optional here because
+// the page does not render it yet.
 
 export interface CraftingAtlas {
   fetchedAtISO: string
@@ -27,6 +32,8 @@ export interface CraftingAtlas {
   byStation: Array<[string, number]>
   byCitizen: Array<[string, number]>
   byCitizenIterations: Array<[string, number]>
+  byMiner?: Array<[string, number]> | null
+  byMinerNote?: string
   flows: Array<[string, string, number]>
   perActionCounts: Record<string, number>
   rollupEvents: number

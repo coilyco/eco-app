@@ -21,6 +21,15 @@ What the server produces, from what, at which stations, and by whom.
   thickness as event count, so it is event-weighted.
 - **Per-citizen leaderboard** - top producers by total production events across
   all four action types.
+- **Per-miner leaderboard (`byMiner`)** - `DigOrMine` rows per player, one per
+  dig or mine event, never the `Count` magnitude. It is the only mining board:
+  `byCitizen` (events) and `byCitizenIterations` (craft iterations plus gather
+  events) both total all four action types, so a crafter leads them without
+  mining at all. `byMiner` is `null` when the `DigOrMine` exporter was not
+  fetched and `[]` when it was fetched and empty. It sums to
+  `perActionCounts.DigOrMine` less rows with no numeric `Citizen`. `limit`
+  bounds it like the other boards, and `byMinerNote` leads the payload.
+  The per-player ranking is `rank_citizen_counts`, which `get_world` shares.
 
 ## Messy bits handled
 

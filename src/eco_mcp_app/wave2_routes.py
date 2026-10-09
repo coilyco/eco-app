@@ -201,8 +201,10 @@ def register_wave2_routes(registry: DualRouteRegistry, invoke: ToolInvoker) -> N
             "Show who has been producing the most and what: the busiest players by "
             "crafting, harvesting, hunting, tree chopping, and mining actions, the most "
             "crafted and gathered items, and the busiest crafting stations. Answers 'who is "
-            "the busiest miner' and 'what gets crafted most'. For what a station can "
-            "make use get_recipes. Requires the "
+            "the busiest miner' and 'what gets crafted most'. byMiner ranks players by dig "
+            "and mine events alone, so read it for the busiest miner, while byCitizen and "
+            "byCitizenIterations total every action type and are not mining counts. For "
+            "what a station can make use get_recipes. Requires the "
             "server-side admin API key."
         ),
         rest_path=WAVE2_PATHS["get_crafting_atlas"],

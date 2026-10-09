@@ -124,6 +124,39 @@ def test_thin_series_never_exceeds_its_limit_and_never_thins_silently(
             assert payload["series"][0] == points[0]
 
 
+@pytest.mark.parametrize("total", [0, 1, 2, 5, 50])
+@pytest.mark.parametrize("limit", [1, 2, 10])
+def test_bound_nested_rows_bounds_every_group_and_warns_per_group(total: int, limit: int) -> None:
+    """A list of groups each holding its own growing list slips past _bound_rows."""
+    payload: dict[str, Any] = {
+        "groups": [
+            {"key": "roads", "players": [[f"p{i}", i] for i in range(total)]},
+            {"key": "gone", "players": None},
+        ]
+    }
+
+    eco_server._bound_nested_rows(payload, limit, "groups", "players")
+
+    roads, gone = payload["groups"]
+    assert len(roads["players"]) <= limit or total <= limit
+    assert gone["players"] is None
+    truncated = total > limit
+    warned = any(w.startswith("groups.roads.players:") for w in payload.get("warnings", []))
+    assert warned == truncated
+    if truncated:
+        assert len(roads["players"]) == limit
+
+
+def test_bound_nested_rows_limit_zero_means_every_row() -> None:
+    rows = [[f"p{i}", i] for i in range(200)]
+    payload: dict[str, Any] = {"groups": [{"key": "roads", "players": list(rows)}]}
+
+    eco_server._bound_nested_rows(payload, 0, "groups", "players")
+
+    assert payload["groups"][0]["players"] == rows
+    assert "warnings" not in payload
+
+
 @pytest.mark.parametrize("helper", ["_bound_rows", "_thin_series"])
 def test_limit_zero_means_every_row(helper: str) -> None:
     """Both helpers read 0 as no limit, which is what the schema text promises."""
