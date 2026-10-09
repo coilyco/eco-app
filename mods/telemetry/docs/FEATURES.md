@@ -37,7 +37,7 @@ Operational tooling, resilience, and packaging live in [operations.md](operation
 
 - **Version** - v0.1.0 (early). Targets `net10.0` to match current Eco `EcoServerTargetFramework`. Pinned to OpenTelemetry SDK 1.12.0.
 - **Out of scope (today)** - `PluginManager`-wide init spans and a Kestrel request-pipeline hook (both need live-server integration points, see internals.md). No `IConfigurablePlugin` web UI integration. No runtime modification of game-simulation logic. Publishing to mod.io.
-- **Eco version coupling** - Depends on the `Eco.ReferenceAssemblies` NuGet package (currently 0.13.0.4-beta-release-1024, matching the live kai-server build). No forward or backward compatibility guarantees.
+- **Eco version coupling** - Depends on the `Eco.ReferenceAssemblies` NuGet package (currently 0.14.2-beta-release-1099, matching the cycle 15 server on 14.2.0). No forward or backward compatibility guarantees.
 - **Public repo discipline** - All references anchor to public wikis (`wiki.play.eco/en/Modding`, `docs.play.eco/`) and the official ModKit on GitHub. No internal Eco source leaks.
 
 ## See also
