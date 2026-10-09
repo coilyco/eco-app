@@ -40,6 +40,7 @@ from .caveats import reorder_result
 from .civics import civics_markdown, fetch_civics
 from .crafting import CraftingAtlas, atlas_markdown, fetch_atlas
 from .dual_routes import DualRouteRegistry
+from .ledger_freshness import WorldClock, apply_freshness, read_world_clock
 from .logistics import fetch_logistics, logistics_markdown, resolved_item_id
 from .mods import read_mods
 from .progression import fetch_history, history_markdown
@@ -933,6 +934,18 @@ def _unreachable_result(subject: str, exc: Exception) -> CallToolResult:
     )
 
 
+async def _world_clock(server_arg: str | None) -> WorldClock:
+    """The cycle clock for the ledger freshness check, or why there is none.
+
+    Never raises: the ledger reads from the exporter, not `/info`, so an `/info` outage
+    must leave the ledger answering and only the lag comparison unknown (COI-2067).
+    """
+    try:
+        return read_world_clock(await fetch_eco_info(server_arg))
+    except Exception as e:  # any failure leaves the clock unknown, never zero
+        return WorldClock(days_running=None, trades_total=None, error=_fetch_failure(e))
+
+
 def _is_truthy_arg(value: Any) -> bool:
     """Query-param truthiness, matching the SPA's `?cost=1` convention."""
     return str(value or "").strip().lower() in {"1", "true", "yes", "on"}
@@ -1770,6 +1783,7 @@ def build_server(
             except httpx.HTTPError as e:
                 return _unreachable_result("Eco exporter", e)
             ledger_payload = ledger.to_dict()
+            stale_warning = apply_freshness(ledger_payload, await _world_clock(server_arg))
             item_arg = ((arguments or {}).get("item") or "").strip()
             item_filter: dict[str, Any] | None = None
             if item_arg:
@@ -1797,6 +1811,8 @@ def build_server(
                 "topSellers",
             )
             ledger_text = ledger_markdown(ledger)
+            if stale_warning:
+                ledger_text += f"\n- ⚠ {stale_warning}"
             if item_filter is not None:
                 ledger_text += "\n" + _item_filter_line(item_filter)
             return CallToolResult(
@@ -2201,7 +2217,10 @@ def build_server(
             # Markdown first: its totals describe every market, and the JSON
             # rows are what a client truncates blind.
             market_payload = intel.to_dict()
+            stale_warning = apply_freshness(market_payload, await _world_clock(server_arg))
             market_markdown = market_mod.market_markdown(intel)
+            if stale_warning:
+                market_markdown += f"\n- ⚠ {stale_warning}"
             # One optional field, present only when an item filter was passed. Null
             # with no warning when the item has no FRED mapping (the common case),
             # null with one when the lookup itself failed.

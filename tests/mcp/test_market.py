@@ -424,6 +424,9 @@ async def test_get_market_benchmark_leaves_existing_keys_intact(_fred_env: None)
         if key == "markets":
             # The dispatch layer adds a price `norm` to each row, which is not ours to compare.
             got = [{k: v for k, v in row.items() if k != "norm"} for row in got]
+        if key == "warnings":
+            # The freshness warning (COI-2067) leads the list, and is not the benchmark's to match.
+            got = [w for w in got if not w.startswith("ledger freshness")]
         assert got == value, key
     benchmark = payload["commodityBenchmark"]
     assert isinstance(benchmark, dict)

@@ -36,3 +36,17 @@ def fixed_norms_context(monkeypatch: pytest.MonkeyPatch) -> None:
         return norms.LiveContext(stage="Modern 4", cycle=14, home=server in (None, ""))
 
     monkeypatch.setattr(norms, "live_context", fixed)
+
+
+@pytest.fixture(autouse=True)
+def stubbed_world_clock(monkeypatch: pytest.MonkeyPatch) -> None:
+    """get_trades and get_market read the cycle clock from `/info` for the freshness check
+    (COI-2067). Tests that do not care must not reach the live server, so the clock reads
+    as unavailable. test_ledger_freshness.py restores the real reader."""
+    from eco_mcp_app import server as eco_server
+    from eco_mcp_app.ledger_freshness import WorldClock
+
+    async def unavailable(_server: str | None) -> WorldClock:
+        return WorldClock(days_running=None, trades_total=None, error="stubbed in tests")
+
+    monkeypatch.setattr(eco_server, "_world_clock", unavailable)

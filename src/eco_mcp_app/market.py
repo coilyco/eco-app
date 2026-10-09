@@ -128,6 +128,11 @@ class MarketIntelligence:
     total_trades: int = 0
     markets: list[ItemMarket] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
+    # The ledger's own newest day, and what the top-N cap left out of `markets`
+    # (COI-2067). None = not measured.
+    newest_trade_day: float | None = None
+    markets_total: int | None = None
+    newest_priced_day: int | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -135,6 +140,10 @@ class MarketIntelligence:
             "fetchedAtISO": self.fetched_at_iso,
             "sourceBaseUrl": self.source_base_url,
             "totalTrades": self.total_trades,
+            "newestTradeDay": self.newest_trade_day,
+            "marketsTotal": self.markets_total,
+            "newestPricedDay": self.newest_priced_day,
+            "newestBucketDay": max((m.latest_day for m in self.markets), default=None),
             "markets": [m.to_dict() for m in self.markets],
             "warnings": list(self.warnings),
         }
@@ -304,15 +313,36 @@ async def fetch_market(
     warnings propagate so the caller can tell "thin" from "capped".
     """
     ledger = await fetch_ledger(base_url=base_url, api_key=api_key, client=client)
-    markets = build_market(ledger.trades, item=item, currency=currency)
+    everything = build_market(ledger.trades, top_markets=0, item=item, currency=currency)
+    markets = everything[:TOP_MARKETS] if TOP_MARKETS > 0 else everything
     warnings = list(ledger.warnings)
     warnings.extend(_explain_empty_market(ledger.trades, markets, item=item, currency=currency))
+    newest_priced = max((m.latest_day for m in everything), default=None)
+    newest_shown = max((m.latest_day for m in markets), default=None)
+    if len(everything) > len(markets):
+        # The cap keeps the busiest markets, and the newest trades sit in the thinnest, so
+        # `markets` can end weeks before the ledger does. That read as a stalled exporter.
+        lag = (
+            f" The newest priced trade is day {newest_priced}, against day {newest_shown} "
+            "in the markets shown."
+            if newest_priced is not None
+            and newest_shown is not None
+            and newest_priced > newest_shown
+            else ""
+        )
+        warnings.append(
+            f"market list capped: showing the top {len(markets):,} of {len(everything):,} "
+            f"(item, currency) markets by trade count. The thinner markets are not listed.{lag}"
+        )
     return MarketIntelligence(
         fetched_at_iso=ledger.fetched_at_iso,
         source_base_url=ledger.source_base_url,
         total_trades=ledger.total_trades,
         markets=markets,
         warnings=warnings,
+        newest_trade_day=ledger.newest_trade_day,
+        markets_total=len(everything),
+        newest_priced_day=newest_priced,
     )
 
 

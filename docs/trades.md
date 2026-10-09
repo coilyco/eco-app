@@ -28,6 +28,26 @@ computed values below are explicitly detailed-rows-only.
 - **Price over time** - unit price is `CurrencyAmount / NumberOfItems`, averaged
   per in-game day, for the busiest detailed items.
 
+## Freshness
+
+The ledger reads Eco's action exporter. The cycle clock reads `/info`. They fail
+independently, so a ledger days behind `cycle.daysRunning` is either a quiet
+server or a stalled exporter, and one read cannot say which (COI-2067).
+`get_trades` and `get_market` both carry a `ledgerFreshness` block, with its
+warning first in `warnings`:
+
+- `status` - `current`, `lagging` (newest trade more than `ECO_LEDGER_LAG_WARN_DAYS`,
+  default 2, behind the cycle), `empty`, or `unverifiable` (no clock, so no lag).
+- `newestTradeDay`, `daysRunning`, `lagDays` - null when not measured, never zero.
+- `infoReachable`, `infoError`, `infoTradesTotal` - Eco's own trade counter beside the
+  ledger. A counter that rises while `newestTradeDay` stays put across two reads is a
+  stalled exporter. An `/info` outage leaves the ledger answering and reports
+  `unverifiable` with the error.
+
+`newestTradeDay` counts rollup rows too. `get_market` also reports `marketsTotal`,
+`newestPricedDay` and `newestBucketDay`: its list keeps the 24 busiest markets, so
+buckets can end weeks before the ledger does, and the cap now says so.
+
 ## Messy bits handled
 
 - **Numeric party ids** - `Buyer`, `Seller`, `ShopOwner`, and `Citizen` are

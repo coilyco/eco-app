@@ -20,6 +20,7 @@ CAVEAT_KEYS: tuple[str, ...] = (
     "warnings",
     "warning",
     "itemFilter",
+    "ledgerFreshness",
     "unavailableActions",
     "adminAvailable",
     "datasets_unavailable",

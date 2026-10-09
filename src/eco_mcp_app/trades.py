@@ -128,6 +128,9 @@ class TradesLedger:
     # currency totals are safe, but party/item/store attribution is not.
     rollup_rows: int = 0
     rollup_trades: int = 0
+    # Day of the newest exporter row, rollups included (None = no rows). The freshness
+    # check compares it with the cycle clock (ledger_freshness.py, COI-2067).
+    newest_trade_day: float | None = None
     # CurrencyTrade / BarterTrade -> rows folded (0 = fetched-but-empty).
     per_type_counts: dict[str, int] = field(default_factory=dict)
     # Individual trades, newest first, capped at MAX_LEDGER_ROWS. Each dict is
@@ -175,6 +178,7 @@ class TradesLedger:
             "detailedTrades": self.detailed_trades,
             "rollupRows": self.rollup_rows,
             "rollupTrades": self.rollup_trades,
+            "newestTradeDay": self.newest_trade_day,
             "perTypeCounts": dict(self.per_type_counts),
             # Every count in one place, each labelled with its unit, so a
             # reader never has to guess which of four numbers to believe.
@@ -414,6 +418,7 @@ def build_ledger(
     ledger.detailed_trades = sum(1 for t in parsed if not t.is_rollup)
     ledger.rollup_rows = sum(1 for t in parsed if t.is_rollup)
     ledger.rollup_trades = sum(t.event_count for t in parsed if t.is_rollup)
+    ledger.newest_trade_day = max((t.day for t in parsed), default=None)
 
     by_item_count: dict[str, int] = defaultdict(int)
     by_item_volume: dict[str, float] = defaultdict(float)
@@ -624,6 +629,7 @@ def _ledger_from_dict(data: dict[str, Any]) -> TradesLedger:
         detailed_trades=int(data.get("detailedTrades", data["totalTrades"])),
         rollup_rows=int(data.get("rollupRows", 0)),
         rollup_trades=int(data.get("rollupTrades", 0)),
+        newest_trade_day=data.get("newestTradeDay"),
         per_type_counts=dict(data.get("perTypeCounts", {})),
         trades=list(data.get("trades", [])),
         total_currency_volume=float(data.get("totalCurrencyVolume", 0.0)),
