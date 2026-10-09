@@ -1,6 +1,6 @@
 {
   "_comment": "Player-facing server brief rendered by the homepage (frontend/src/pages/Home.tsx). The inputs live in eco-ops (configs/Configs/*.diff.json, mods/Mods, mods/Configs/SkillsRequirements.eco), but this page describes the world players join, so where the live server has drifted from eco-ops the live value wins (restarts). This file is a reviewed copy, so bump reviewedOn whenever it is re-checked. Cycle number, world size, meteor length, meteor state and the Eco version are deliberately absent: the homepage reads them from live status, and a second copy here is how the old Discord block went stale. Each mod carries its attribution (author, href, source), and source doubles as the reason when there is no public link. serverPlumbing and servicePlugins feed /mods only, never the homepage count.",
-  "reviewedOn": "2026-09-27",
+  "reviewedOn": "2026-10-09",
   "join": {
     "serverName": "Eco via Sirens",
     "discordUrl": "https://discord.gg/mGhwcAb98y",
@@ -11,7 +11,7 @@
       "Read the welcome message the first time you log in."
     ]
   },
-  "nextCycle": "Cycle 15 starts Friday 9 October at 7pm Pacific, on Eco 0.14 with an updated mod list.",
+  "nextCycle": "Cycle 15 opens to players on Friday 9 October at 7pm Pacific, on Eco 0.14. Seven cycle 14 mods are benched this cycle, listed on the Mods page.",
   "configs": [
     {
       "group": "Pace and difficulty",
@@ -28,7 +28,7 @@
         { "label": "Skill cost", "value": "3x" },
         { "label": "Skill gain", "value": "0.5x" },
         { "label": "Late joiner XP", "value": "Boosted, 33 (vanilla 12)" },
-        { "label": "Claims per skill learned", "value": "2 claim papers and 0.1 claim stakes" },
+        { "label": "Claims per skill learned", "value": "5 claim papers and 0.25 claim stakes" },
         { "label": "Abandon a specialty", "value": "Not allowed, choose carefully" }
       ]
     },
@@ -55,7 +55,7 @@
     {
       "group": "World",
       "items": [
-        { "label": "Map shape", "value": "Archipelago, 34 to 44% land across 2 to 3 continents and small islands" },
+        { "label": "Map shape", "value": "Two large continents and a few smaller islands, about 40% land, the rest ocean" },
         { "label": "Rivers", "value": "5 to 10 (vanilla 2 to 5)" },
         { "label": "Coastlines", "value": "Wider beaches and shallows" },
         { "label": "Height limit", "value": "200 blocks for terrain and building (vanilla 120 terrain, 160 build)" },
@@ -87,31 +87,40 @@
       "items": [
         { "name": "BunWulf Agricultural", "summary": "Extended crops, processing, compost, paper, and oils.", "author": "BunWulf", "href": "https://forgejo.coilysiren.me/coilyco/eco-mods/src/branch/main/mods/Mods/UserCode/BunWulfAgricultural", "source": "coilyco/eco-mods" },
         { "name": "Biochemist", "summary": "A plant-based path into industrial chemistry, from BunWulf Biochemical.", "author": "BunWulf", "href": "https://forgejo.coilysiren.me/coilyco/eco-mods/src/branch/main/mods/Mods/UserCode/BunWulfBiochemical", "source": "coilyco/eco-mods" },
-        { "name": "Librarian", "summary": "A profession for skill books, research papers, ink, and paper, from BunWulf Educational.", "author": "BunWulf", "href": "https://forgejo.coilysiren.me/coilyco/eco-mods/src/branch/main/mods/Mods/UserCode/BunWulfEducational", "source": "coilyco/eco-mods" },
         { "name": "BunWulf HardwareCo", "summary": "The Sledgehammer and a low-tech streetlamp.", "author": "BunWulf", "href": "https://forgejo.coilysiren.me/coilyco/eco-mods/src/branch/main/mods/Mods/UserCode/BunWulfHardwareCo", "source": "coilyco/eco-mods" },
-        { "name": "Direct Carbon Capture", "summary": "Late-game direct air capture for pulling CO2 back out.", "author": "Sirens", "href": "https://forgejo.coilysiren.me/coilyco/eco-mods/src/branch/main/mods/Mods/UserCode/DirectCarbonCapture", "source": "coilyco/eco-mods" },
-        { "name": "EcoNil", "summary": "Cloud Seeder and Dehydrator for local rain and soil moisture.", "author": "Sirens", "href": "https://forgejo.coilysiren.me/coilyco/eco-mods/src/branch/main/mods/Mods/UserCode/EcoNil", "source": "coilyco/eco-mods" },
         { "name": "Mines & Quarries & Pits", "summary": "Expensive mines, quarries, and pits built for vertical integration.", "author": "Sirens", "href": "https://forgejo.coilysiren.me/coilyco/eco-mods/src/branch/main/mods/Mods/UserCode/MinesQuarries", "source": "coilyco/eco-mods" },
-        { "name": "Shop Boat", "summary": "A fuelled boat with its own store and storage.", "author": "Sirens", "href": "https://forgejo.coilysiren.me/coilyco/eco-mods/src/branch/main/mods/Mods/UserCode/ShopBoat", "source": "coilyco/eco-mods" },
-        { "name": "World Counter", "summary": "A Bookkeeping Desk that counts nearby blocks and reports totals.", "author": "Sirens", "href": "https://forgejo.coilysiren.me/coilyco/eco-mods/src/branch/main/mods/Mods/UserCode/WorldCounter", "source": "coilyco/eco-mods" }
+        { "name": "Shop Boat", "summary": "A fuelled boat with its own store and storage.", "author": "Sirens", "href": "https://forgejo.coilysiren.me/coilyco/eco-mods/src/branch/main/mods/Mods/UserCode/ShopBoat", "source": "coilyco/eco-mods" }
       ]
     },
     {
       "group": "Quality of life",
       "items": [
         { "name": "Discord Link", "summary": "Bridges in-game chat and events with the Sirens Discord.", "author": "MonzUn", "href": "https://github.com/Eco-DiscordLink/EcoDiscordPlugin", "source": "GitHub" },
-        { "name": "Nutri View", "summary": "Hover your food stats to see the ideal nutrient balance.", "href": "https://mod.io/g/eco/m/opennutriview", "source": "mod.io" },
         { "name": "Skill Trees", "summary": "Advanced skills need their prerequisites, and a few are pick-one. See Skill trees below.", "author": "Thibault-Brocheton", "href": "https://github.com/Thibault-Brocheton/eco-skills-requirements", "source": "GitHub" },
         { "name": "Easy Mining", "summary": "Mined rock goes straight into your pack instead of dropping rubble.", "author": "Stellion", "href": "https://mod.io/g/eco/m/easy-logging-mining-v11", "source": "mod.io" },
-        { "name": "Easy Logging", "summary": "Felled trees hand you their debris and seeds, and stumps clear themselves.", "author": "Stellion", "href": "https://mod.io/g/eco/m/easy-logging-mining-v11", "source": "mod.io" },
-        { "name": "Easy Digging", "summary": "Shovels carry more, 10, 20, 30, and 40 blocks from wooden to modern.", "author": "Sirens", "source": "Sirens tool overrides, no public source" }
+        { "name": "Easy Logging", "summary": "Felled trees hand you their debris and seeds, and a whole log fits in your hands if you have room.", "author": "Stellion", "href": "https://mod.io/g/eco/m/easy-logging-mining-v11", "source": "mod.io" },
+        { "name": "Easy Digging", "summary": "Shovels carry more, 10, 20, 30, and 40 blocks from wooden to modern, and Shift+E digs without the swing.", "author": "Sirens", "source": "Sirens tool overrides, no public source" }
       ]
     }
   ],
+  "benched": [
+    { "name": "Librarian", "summary": "Skill books, research papers, ink, and paper, from BunWulf Educational.", "reason": "One Librarian could supply the whole server's research papers, so it is out for balance.", "author": "BunWulf", "href": "https://forgejo.coilysiren.me/coilyco/eco-mods/src/branch/main/mods/Mods/UserCode/BunWulfEducational", "source": "coilyco/eco-mods" },
+    { "name": "Direct Carbon Capture", "summary": "Late-game direct air capture for pulling CO2 back out.", "reason": "Benched for cycle 15.", "author": "Sirens", "href": "https://forgejo.coilysiren.me/coilyco/eco-mods/src/branch/main/mods/Mods/UserCode/DirectCarbonCapture", "source": "coilyco/eco-mods" },
+    { "name": "EcoNil", "summary": "Cloud Seeder and Dehydrator for local rain and soil moisture.", "reason": "Benched for cycle 15.", "author": "Sirens", "href": "https://forgejo.coilysiren.me/coilyco/eco-mods/src/branch/main/mods/Mods/UserCode/EcoNil", "source": "coilyco/eco-mods" },
+    { "name": "World Counter", "summary": "A Bookkeeping Desk that counts nearby blocks and reports totals.", "reason": "Benched for cycle 15.", "author": "Sirens", "href": "https://forgejo.coilysiren.me/coilyco/eco-mods/src/branch/main/mods/Mods/UserCode/WorldCounter", "source": "coilyco/eco-mods" },
+    { "name": "Nutrition Mod", "summary": "Extra nutrition rules and food information.", "reason": "No Eco 0.14 build upstream.", "href": "https://mod.io/g/eco/m/nutrition-mod", "source": "mod.io" },
+    { "name": "XP Benefits", "summary": "Benefits tied to player experience.", "reason": "No Eco 0.14 build upstream, and its code was no longer installed.", "href": "https://mod.io/g/eco/m/xp-benefits", "source": "mod.io" },
+    { "name": "Nutri View", "summary": "Hover your food stats to see the ideal nutrient balance.", "reason": "No Eco 0.14 build upstream.", "href": "https://mod.io/g/eco/m/opennutriview", "source": "mod.io" }
+  ],
   "serverPlumbing": [
-    { "name": "NidToolbox", "summary": "Server tooling behind the welcome message, player management, cleanup and logging.", "author": "nid", "href": "https://mod.io/g/eco/m/nidtoolbox-full-pack", "source": "mod.io", "includes": [
+    { "name": "NidToolbox", "summary": "Server tooling behind the welcome message, chat tags, timed messages, rules, laws, news, player management, cleanup and logging.", "author": "nid", "href": "https://mod.io/g/eco/m/nidtoolbox-full-pack", "source": "mod.io", "includes": [
         { "name": "Core", "summary": "Shared runtime for every module." },
         { "name": "Motd", "summary": "The welcome message you see on login." },
+        { "name": "Chat Tags", "summary": "Configurable chat tags." },
+        { "name": "Timed Messages", "summary": "Scheduled reminders in chat." },
+        { "name": "Rules", "summary": "The server rules window." },
+        { "name": "Laws", "summary": "Law helpers." },
+        { "name": "News", "summary": "In-game news." },
         { "name": "Player Manager", "summary": "Player management tools for admins." },
         { "name": "Clean Server", "summary": "Scheduled server cleanup." },
         { "name": "Chat Logger", "summary": "Chat logging for moderation." },
@@ -155,7 +164,7 @@
     },
     {
       "title": "Every skill pays claims",
-      "body": "Learning any skill grants 2 claim papers and 0.1 claim stakes, so land grows with what you know."
+      "body": "Learning any skill grants 5 claim papers and 0.25 claim stakes, so land grows with what you know."
     },
     {
       "title": "Specialize on purpose",
