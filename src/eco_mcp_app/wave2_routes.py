@@ -93,7 +93,6 @@ class PriceByStageInput(BaseModel):
 
 
 WAVE2_PATHS = {
-    "get_economy": "/preview/get_economy.json",
     "get_milestones": "/preview/get_milestones.json",
     "get_species": "/preview/get_species.json",
     "explain_item": "/preview/explain_item.json",
@@ -116,22 +115,6 @@ def register_wave2_routes(registry: DualRouteRegistry, invoke: ToolInvoker) -> N
         names = ", ".join(sorted(present))
         raise ValueError(f"Wave 2 routes partially overlap existing tools: {names}")
 
-    register_json_route(
-        registry,
-        invoke,
-        name="get_economy",
-        title="Eco - economic health dashboard",
-        description=(
-            "Show live economic vitals for an Eco server, including trades, contracts, "
-            "loans, wages, tax flow, and volatile-series trends. Answers whether the "
-            "economy as a whole is healthy. For culture score and culture achievements "
-            "use get_milestones, and for one currency use get_currency. A KPI is null "
-            "when its dataset could not be read and zero only when the server reported "
-            "no activity; `datasets_unavailable` names every dataset behind a null."
-        ),
-        rest_path=WAVE2_PATHS["get_economy"],
-        input_model=ServerInput,
-    )
     register_json_route(
         registry,
         invoke,

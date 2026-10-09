@@ -57,7 +57,6 @@ _FLATLIST_URL = f"{_DEFAULT_BASE}/datasets/flatlist"
 def _clean(monkeypatch: pytest.MonkeyPatch) -> None:
     """Each test starts with a clean cache + a known admin token."""
     eco_server._info_cache.clear()
-    eco_server._admin_token_cache.clear()
     currency_mod._clear_cache()
     monkeypatch.setenv("ECO_ADMIN_TOKEN", "test-token")
 
@@ -778,7 +777,7 @@ async def test_a_genuinely_empty_server_still_reads_as_early_cycle() -> None:
 
 
 def test_an_unreachable_holder_ledger_reports_null_not_zero() -> None:
-    """The same rule as get_economy's KPIs, on the block that still broke it.
+    """The measured-zero rule the other currency KPIs follow, on the block that still broke it.
 
     `reachable: False` means the exporter mod is not deployed, so no count was
     observed. Reporting 0 there claims nobody holds the currency, which is a

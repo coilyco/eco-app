@@ -351,7 +351,7 @@ def test_counts_block_reconciles_every_trade_number() -> None:
     assert "exporter rows, not trades" in counts["note"]
     # The /info counter is named as a separate population rather than left to
     # look like a contradiction.
-    assert "get_economy.trades_total" in counts["note"]
+    assert "economy line of get_server_status" in counts["note"]
 
 
 def test_ledger_markdown_names_both_units() -> None:

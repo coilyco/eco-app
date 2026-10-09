@@ -16,7 +16,6 @@ from eco_mcp_app.server import build_server
 from eco_mcp_app.wave2_routes import WAVE2_PATHS, WAVE2_TOOL_NAMES, register_wave2_routes
 
 WAVE2_ARGUMENTS: dict[str, dict[str, Any]] = {
-    "get_economy": {"server": "eco.test:3001"},
     "get_milestones": {"server": "eco.test:3001"},
     # include_image is spelled out because it defaults to False and the
     # registry passes the resolved model through — inlined images are opt-in so
@@ -135,7 +134,7 @@ async def test_wave2_downstream_failure_has_transport_parity() -> None:
         )
 
     registry = _wave2_registry(invoke)
-    rest = TestClient(create_app(registry)).get(WAVE2_PATHS["get_economy"])
+    rest = TestClient(create_app(registry)).get(WAVE2_PATHS["get_milestones"])
     assert rest.status_code == 502
     assert rest.json() == error_payload
 
@@ -144,7 +143,7 @@ async def test_wave2_downstream_failure_has_transport_parity() -> None:
     called = await call_handler(
         mt.CallToolRequest(
             method="tools/call",
-            params=mt.CallToolRequestParams(name="get_economy", arguments={}),
+            params=mt.CallToolRequestParams(name="get_milestones", arguments={}),
         )
     )
     assert called.root.isError is True
@@ -162,7 +161,7 @@ async def test_wave2_unexpected_failure_stays_public_safe() -> None:
         "message": "The operation could not be completed.",
     }
 
-    rest = TestClient(create_app(registry)).get(WAVE2_PATHS["get_economy"])
+    rest = TestClient(create_app(registry)).get(WAVE2_PATHS["get_milestones"])
     assert rest.status_code == 500
     assert rest.json() == expected
 
@@ -171,7 +170,7 @@ async def test_wave2_unexpected_failure_stays_public_safe() -> None:
     called = await call_handler(
         mt.CallToolRequest(
             method="tools/call",
-            params=mt.CallToolRequestParams(name="get_economy", arguments={}),
+            params=mt.CallToolRequestParams(name="get_milestones", arguments={}),
         )
     )
     assert called.root.isError is True

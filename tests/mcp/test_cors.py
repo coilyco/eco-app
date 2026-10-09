@@ -35,7 +35,7 @@ def _preflight(client: TestClient, path: str, origin: str, method: str = "POST")
 
 
 @pytest.mark.parametrize(
-    "path", ["/mcp", "/mcp/", "/preview/get_economy.json", "/preview.json", "/preview-map.json"]
+    "path", ["/mcp", "/mcp/", "/preview/get_milestones.json", "/preview.json", "/preview-map.json"]
 )
 def test_preflight_from_the_dashboard_is_granted(client: TestClient, path: str) -> None:
     r = _preflight(client, path, DASH)

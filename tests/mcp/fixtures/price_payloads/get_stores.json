@@ -11,7 +11,7 @@
   "detailedRows": 535,
   "rollupRows": 3171,
   "rollupTrades": 22508,
-  "note": "perTypeCounts counts exporter rows, not trades; totalTrades counts trade events, with each hourly rollup row standing for its merged Count. Eco's own /info counter (get_economy.trades_total) counts a different population again and will not match."
+  "note": "perTypeCounts counts exporter rows, not trades; totalTrades counts trade events, with each hourly rollup row standing for its merged Count. Eco's own /info counter (the economy line of get_server_status) counts a different population again and will not match."
  },
  "volumeNote": "totalVolume sums currency amounts across every currency a store traded in. Where mixedCurrencyVolume is true it adds unlike units \u2014 read `currencies` for the per-currency breakout instead.",
  "stores": [

@@ -11,8 +11,8 @@ state, not an error:
 1. **Time-series via ``/datasets/get``** — CO2 ppm, sea-level height, average
    ground pollution. Eco's stat catalog has shifted across versions and mods
    can register their own, so we try a list of candidate dataset names and
-   use whichever returns data. Same fan-out + 200/500-tolerant pattern as
-   ``server.fetch_economy``.
+   use whichever returns data. The fan-out tolerates a 200 or a 500 per
+   dataset.
 
 2. **Polluter attribution via ``/api/v1/exporter/actions``** — same stream-
    parse approach as ``crafting.py``. Tries several action-name candidates
@@ -295,9 +295,9 @@ async def _fetch_dataset(
 ) -> DatasetSeries:
     """GET ``/datasets/get`` for one series and retain its source metadata.
 
-    Mirrors ``server._fetch_dataset`` — duplicated rather than imported to
-    keep this module free of a server.py dependency (server.py imports here
-    via the call_tool path).
+    Sibling of the fetchers in currency.py and civics.py, kept local so this
+    module stays free of a server.py dependency (server.py imports here via
+    the call_tool path).
     """
     try:
         r = await client.get(

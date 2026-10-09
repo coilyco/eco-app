@@ -625,7 +625,6 @@ NO_PRICE_TOOLS = frozenset(
         "get_civics",
         "get_progression",
         "get_world",
-        "get_economy",
         "get_milestones",
         "get_species",
         "explain_item",

@@ -211,8 +211,8 @@ class StoreDirectory:
                 "note": (
                     "perTypeCounts counts exporter rows, not trades; totalTrades counts trade "
                     "events, with each hourly rollup row standing for its merged Count. "
-                    "Eco's own /info counter (get_economy.trades_total) counts a different "
-                    "population again and will not match."
+                    "Eco's own /info counter (the economy line of get_server_status) counts "
+                    "a different population again and will not match."
                 ),
             },
             # Reading a store's totalVolume requires knowing whether it mixes

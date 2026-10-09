@@ -86,8 +86,7 @@ case "$action" in
         '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"claude-ai","version":"0.1.0"}}}' \
         '{"jsonrpc":"2.0","method":"notifications/initialized"}' \
         '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' \
-        '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"get_server_status","arguments":{}}}' \
-        '{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"get_economy","arguments":{}}}'
+        '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"get_server_status","arguments":{}}}'
       sleep 8
     ) | uv run python -m eco_mcp_app
     ;;

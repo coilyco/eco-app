@@ -298,7 +298,7 @@ def test_species_accepts_the_shared_admin_token(monkeypatch: pytest.MonkeyPatch)
     """get_species had its own credential path and missed the shared one.
 
     On a deploy that sets ECO_ADMIN_TOKEN, get_region reported
-    adminAvailable: true and get_economy / get_climate reported admin_ok: true,
+    adminAvailable: true and get_climate reported admin_ok: true,
     while get_species alone said "admin API key missing" (eco-app#219).
     """
     monkeypatch.delenv("ECO_ADMIN_API_KEY", raising=False)

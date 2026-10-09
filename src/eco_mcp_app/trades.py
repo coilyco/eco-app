@@ -1,7 +1,7 @@
 """Trades ledger — pull detailed CurrencyTrade / BarterTrade rows.
 
-The economy card (`get_economy`) only consumes aggregate time-series
-counters, but the action exporter ships *every individual trade*:
+Aggregate time-series counters exist elsewhere, but the action exporter ships
+*every individual trade*:
 `/api/v1/exporter/actions?actionName=CurrencyTrade` returns one CSV row per
 trade with columns::
 
@@ -44,9 +44,9 @@ Design notes, mostly cribbed from the crafting atlas (eco-app#5):
 * **Time.** Integer seconds since cycle start (same convention as the species
   population CSV, `species.py`) — in-game day = seconds / 86400.
 
-Cache: an in-process `TTLCache` keyed per (base_url, api_key_hash), mirroring
-`server._economy_cache`. The ledger is viewed in bursts; a short TTL keeps us
-off the admin endpoint without going stale.
+Cache: an in-process `TTLCache` keyed per (base_url, api_key_hash). The ledger
+is viewed in bursts; a short TTL keeps us off the admin endpoint without going
+stale.
 """
 
 from __future__ import annotations
@@ -163,7 +163,8 @@ class TradesLedger:
             f"{self.detailed_trades:,} detail rows (one trade each) + {self.rollup_rows:,} "
             f"hourly rollup rows covering {self.rollup_trades:,} merged trades, so the ledger "
             f"reports {self.total_trades:,} trade events. Eco's own /info counter "
-            "(get_economy.trades_total) counts a different population again and will not match."
+            "(the economy line of get_server_status) counts a different population "
+            "again and will not match."
         )
 
     def to_dict(self) -> dict[str, Any]:

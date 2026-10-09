@@ -18,7 +18,7 @@ Eco server endpoints are upstream dependencies, not routes this service owns.
 
 ## State
 
-The public server defines 21 tools, one of them disabled (`get_economy`).
+The public server defines 20 tools, none of them disabled.
 **Twenty are registered** and serve both
 surfaces, each at `GET /preview/<tool>.json` except the Wave 1 set, which keeps
 its shorter paths: `preview.json` (`get_server_status`), and `world`, `stores`,

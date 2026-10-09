@@ -23,10 +23,9 @@ Two data planes, both already live on the server:
   off the header and never fixed positions.
 * **Daily series** — `GET /datasets/get?dataset=<Name>` for the civic counters
   (see `CIVICS_SERIES`). The same names double as datasets on the server (an
-  action dataset also exposes a daily count series — the `ECONOMY_DATASETS`
-  pattern), so these give turnout / demographic / settlement counts *over
-  time* for the trend charts. Fetched best-effort: an unknown or empty series
-  is skipped, never fatal.
+  action dataset also exposes a daily count series), so these give turnout /
+  demographic / settlement counts *over time* for the trend charts. Fetched
+  best-effort: an unknown or empty series is skipped, never fatal.
 
 Everything degrades on the Day-3 sparse state: "no civic events yet" is a
 valid report, not an error. Laws-in-effect are **not** derivable from the
@@ -93,7 +92,7 @@ CIVICS_ACTION_TYPES: tuple[str, ...] = ELECTION_ACTIONS + DEMOGRAPHIC_ACTIONS + 
 # The trend half: daily counts of the civic actions above, giving turnout /
 # demographic / settlement movement *over time* for the charts. These names
 # resolve as datasets on the server (an action dataset also exposes a daily
-# count series, exactly how `server.ECONOMY_DATASETS` is consumed). Fetched
+# count series). Fetched
 # best-effort — an unknown or empty series is skipped, never fatal.
 CIVICS_SERIES: tuple[str, ...] = (
     "Vote",
@@ -240,7 +239,7 @@ class CivicsReport:
     def admin_available(self) -> bool:
         """Whether any civic exporter answered at all.
 
-        `get_region` and `get_economy` both carry this state; without it a
+        `get_region` carries this state too; without it a
         caller could not tell a quiet server from a rejected admin key (#259).
         """
         return len(self.unavailable_actions) < len(CIVICS_ACTION_TYPES)
@@ -586,8 +585,9 @@ class CivicsFetch:
 def _parse_series_points(data: Any) -> list[tuple[float, float]]:
     """Tolerate the several shapes `/datasets/get` returns for a series.
 
-    Mirrors `server._fetch_dataset`: a list of `{Time, Value}` dicts, a list of
-    `[time, value]` pairs, or a `{"Times": [...], "Values": [...]}` wrapper.
+    Mirrors the `_fetch_dataset` parsers in currency.py and climate.py: a list
+    of `{Time, Value}` dicts, a list of `[time, value]` pairs, or a
+    `{"Times": [...], "Values": [...]}` wrapper.
     """
     out: list[tuple[float, float]] = []
     if isinstance(data, list):

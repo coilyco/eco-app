@@ -169,7 +169,7 @@ def _get_admin_api_key() -> str | None:
     # same SSM parameter through server._get_admin_token(). This module had its
     # own resolution path and missed that route entirely, so on a deploy that
     # sets ECO_ADMIN_TOKEN get_species reported "admin API key missing" while
-    # get_region, get_economy and get_climate all had access (#219). Imported
+    # get_region and get_climate both had access (#219). Imported
     # locally because server imports this module.
     from .server import _get_admin_token
 

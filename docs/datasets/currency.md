@@ -23,7 +23,7 @@ is the admin dataset catalog. `GET /datasets/flatlist` is **public** (no
 * `CurrencyTrade` - action (EventValue) - per-trade rows: buyer/seller/shop-owner ids, `BoughtOrSold` enum (32/33, [#6](https://forgejo.coilysiren.me/coilyco-gaming/eco-app/issues/6)), amount, and the currency traded.
 * `MintCurrency` - action - minting events. A currency that mints is **backed/minted**; the summed amount is its issuance.
 * `CreateCurrency` - action - currency-creation events. The full roster of currencies plus their founder.
-* `TransferMoney` - action - money transfers (already consumed by `get_economy`).
+* `TransferMoney` - action - money transfers.
 * `BarterTrade` - action - itemless barter (no currency leg).
 
 The four series come from `GET /datasets/get?dataset=<Name>&dayStart=0&dayEnd=<day>`
@@ -32,8 +32,8 @@ Both require the admin `X-API-Key`; only `/datasets/flatlist` and `/info` are
 public. This probe ran without a token in the build container, so the exporter
 returned `401` - column shapes are parsed defensively by candidate name (same
 approach `crafting.py` and `climate.py` already use), and the tool degrades to
-the public headline when the token is absent, exactly like the sibling economy
-and climate tools.
+the public headline when the token is absent, exactly like the sibling
+climate tool.
 
 ## Reachable now (built into `get_currency`)
 

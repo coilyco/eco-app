@@ -839,11 +839,11 @@ def _holders_view(rec: CurrencyRecord, *, include_note: bool = True) -> dict[str
 def _currency_view_full(rec: CurrencyRecord) -> dict[str, Any]:
     """List-mode currency view enriched with its live top-holder block.
 
-    The roster view (the ``get_economy`` MCP card, and the money-supply
-    strip on the website ``/trade`` page) renders wealth distribution per
-    currency, so each entry carries ``holders`` (``_holders_view``) next to the
-    issuance / trade facts. The report view builds the same shape inline for its
-    single ``selected`` currency, so the two stay consistent.
+    The roster view (the money-supply strip on the website ``/trade``
+    page) renders wealth distribution per currency, so each entry carries
+    ``holders`` (``_holders_view``) next to the issuance / trade facts. The
+    report view builds the same shape inline for its single ``selected``
+    currency, so the two stay consistent.
     """
     return {**_currency_view(rec), "holders": _holders_view(rec, include_note=False)}
 

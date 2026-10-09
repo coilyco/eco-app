@@ -13,7 +13,7 @@
   "detailedRows": 535,
   "rollupRows": 3171,
   "rollupTrades": 22508,
-  "note": "perTypeCounts counts exporter rows, not trades: 3,706 rows = 535 detail rows (one trade each) + 3,171 hourly rollup rows covering 22,508 merged trades, so the ledger reports 23,043 trade events. Eco's own /info counter (get_economy.trades_total) counts a different population again and will not match."
+  "note": "perTypeCounts counts exporter rows, not trades: 3,706 rows = 535 detail rows (one trade each) + 3,171 hourly rollup rows covering 22,508 merged trades, so the ledger reports 23,043 trade events. Eco's own /info counter (the economy line of get_server_status) counts a different population again and will not match."
  },
  "trades": [
   {

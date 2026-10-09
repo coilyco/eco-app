@@ -55,8 +55,6 @@ _WORLDLAYERS_URL = f"{_DEFAULT_BASE}/api/v1/worldlayers/layers"
 def _clean(monkeypatch: pytest.MonkeyPatch) -> None:
     """Each test starts with a clean cache + a known admin token."""
     eco_server._info_cache.clear()
-    eco_server._economy_cache.clear()
-    eco_server._admin_token_cache.clear()
     climate_mod._clear_cache()
     monkeypatch.setenv("ECO_ADMIN_TOKEN", "test-token")
 
