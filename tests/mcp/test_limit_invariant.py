@@ -21,8 +21,10 @@ from __future__ import annotations
 import json
 from typing import Any
 
+import httpx
 import mcp.types as mt
 import pytest
+import respx
 
 from eco_mcp_app import server as eco_server
 from eco_mcp_app.server import build_server
@@ -35,9 +37,11 @@ LIMIT_BEARING = {
     "get_climate",
     "get_crafting_atlas",
     "get_currency",
+    "get_government",
     "get_market",
     "get_mods",
     "get_recipes",
+    "get_server_status",
     "get_social",
     "get_species",
     "get_stores",
@@ -221,3 +225,119 @@ async def test_the_two_newly_bounded_tools_actually_bound(
 
     assert len(payload[key]) == 5
     assert any(w.startswith(f"{key}:") for w in payload["warnings"])
+
+
+# COI-1649: the arrays the #6076 sweep recorded as small enough to leave alone.
+# Measured on Sirens 2026-10-09: settlements 5, titles 5, onlineNames 0 with a
+# peakActive of 33. Bounded anyway so the rule holds without today's population.
+
+
+async def _call(tool: str, arguments: dict[str, Any]) -> dict[str, Any]:
+    handler = build_server().request_handlers[mt.CallToolRequest]
+    result = await handler(
+        mt.CallToolRequest(
+            method="tools/call",
+            params=mt.CallToolRequestParams(name=tool, arguments=arguments),
+        )
+    )
+    return json.loads(result.root.content[-1].text)
+
+
+def _stub_info(monkeypatch: pytest.MonkeyPatch, names: list[str]) -> None:
+    async def _info(_server: str | None = None) -> dict[str, Any]:
+        return {"OnlinePlayers": len(names), "OnlinePlayersNames": list(names)}
+
+    monkeypatch.setattr(eco_server, "fetch_eco_info", _info)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(("total", "arguments", "kept"), [(60, {}, 50), (60, {"limit": 7}, 7)])
+async def test_online_names_are_bounded_and_say_so(
+    monkeypatch: pytest.MonkeyPatch, total: int, arguments: dict[str, Any], kept: int
+) -> None:
+    _stub_info(monkeypatch, [f"p{i}" for i in range(total)])
+
+    payload = await _call("get_server_status", arguments)
+
+    assert len(payload["players"]["onlineNames"]) == kept
+    assert payload["players"]["online"] == total, "the count still covers every player"
+    assert payload["warnings"] == [
+        f"players.onlineNames: showing {kept:,} of {total:,} rows; pass limit=0 for all of them "
+        "(the counts beside it already cover every row)"
+    ]
+    assert list(payload)[:2] == ["view", "warnings"], "caveats lead the JSON (COI-757)"
+
+
+@pytest.mark.asyncio
+async def test_online_names_limit_zero_and_short_lists_stay_whole(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _stub_info(monkeypatch, [f"p{i}" for i in range(60)])
+    whole = await _call("get_server_status", {"limit": 0})
+    assert len(whole["players"]["onlineNames"]) == 60
+    assert "warnings" not in whole
+
+    _stub_info(monkeypatch, ["a", "b"])
+    short = await _call("get_server_status", {})
+    assert short["players"]["onlineNames"] == ["a", "b"]
+    assert "warnings" not in short
+
+
+def _title(index: int) -> dict[str, Any]:
+    return {
+        "Table": [],
+        "OccupantNames": [f"mayor{index}"],
+        "Id": index,
+        "Name": f"Town{index} Mayor",
+        "State": "Active",
+    }
+
+
+@pytest.mark.asyncio
+@respx.mock
+@pytest.mark.parametrize(("arguments", "kept"), [({}, 50), ({"limit": 3}, 3)])
+async def test_government_settlements_and_titles_are_bounded_and_say_so(
+    arguments: dict[str, Any], kept: int
+) -> None:
+    base = eco_server.DEFAULT_ECO_BASE_URL
+    respx.get(f"{base}/api/v1/elections/titles").mock(
+        return_value=httpx.Response(200, json=[_title(i) for i in range(60)])
+    )
+    respx.get(f"{base}/api/v1/elections").mock(return_value=httpx.Response(200, json=[]))
+    respx.get(f"{base}/api/v1/laws?byStates=Active").mock(return_value=httpx.Response(200, json=[]))
+
+    handler = build_server().request_handlers[mt.CallToolRequest]
+    result = await handler(
+        mt.CallToolRequest(
+            method="tools/call",
+            params=mt.CallToolRequestParams(name="get_government", arguments=arguments),
+        )
+    )
+    markdown = result.root.content[0].text
+    payload = json.loads(result.root.content[-1].text)
+
+    assert len(payload["settlements"]) == kept
+    assert len(payload["titles"]) == kept
+    assert payload["scope"] == "server", "scope was computed before the bound"
+    assert sorted(payload["warnings"]) == sorted(
+        f"{key}: showing {kept:,} of 60 rows; pass limit=0 for all of them "
+        "(the summary fields above already cover every row)"
+        for key in ("settlements", "titles")
+    )
+    assert f"60 settlements, first {kept} shown" in markdown, "the header keeps the true count"
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_government_limit_zero_keeps_every_row() -> None:
+    base = eco_server.DEFAULT_ECO_BASE_URL
+    respx.get(f"{base}/api/v1/elections/titles").mock(
+        return_value=httpx.Response(200, json=[_title(i) for i in range(60)])
+    )
+    respx.get(f"{base}/api/v1/elections").mock(return_value=httpx.Response(200, json=[]))
+    respx.get(f"{base}/api/v1/laws?byStates=Active").mock(return_value=httpx.Response(200, json=[]))
+
+    payload = await _call("get_government", {"limit": 0})
+
+    assert len(payload["settlements"]) == len(payload["titles"]) == 60
+    assert "warnings" not in payload

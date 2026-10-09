@@ -198,9 +198,8 @@ async def test_wave1_routes_share_success_payloads(name: str, path: str) -> None
     # has an optional field the request omits.
     arguments: dict[str, Any]
     resolved: dict[str, Any]
-    if name == "get_server_status":
-        arguments = resolved = {"server": "eco.test:3001"}
-    elif name in (
+    if name in (
+        "get_server_status",
         "get_civics",
         "get_stores",
         "get_world",

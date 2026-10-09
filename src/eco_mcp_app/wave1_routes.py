@@ -77,7 +77,7 @@ def register_wave1_routes(registry: DualRouteRegistry, invoke: ToolInvoker) -> N
             "default."
         ),
         rest_path="/preview.json",
-        input_model=ServerInput,
+        input_model=BoundedServerInput,
     )
     register_json_route(
         registry,

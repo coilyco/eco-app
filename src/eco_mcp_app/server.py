@@ -361,13 +361,17 @@ def _law_preview_lines(text: str) -> list[str]:
     return entries
 
 
-def _format_government_markdown(payload: dict[str, Any]) -> str:
+def _format_government_markdown(
+    payload: dict[str, Any], settlements_total: int | None = None
+) -> str:
     # Say what the payload covers. Captioning a five-settlement answer with one
     # settlement's name invites the reader to filter it as that settlement's
     # government (#238).
     settlements = payload.get("settlements") or []
-    if len(settlements) > 1:
-        header = f"**Server government** — {len(settlements)} settlements: {', '.join(settlements)}"
+    total = settlements_total if settlements_total is not None else len(settlements)
+    if total > 1:
+        shown = f", first {len(settlements)} shown" if total > len(settlements) else ""
+        header = f"**Server government** — {total} settlements{shown}: {', '.join(settlements)}"
     else:
         header = f"**{payload['scope']} — Government**"
     lines = [header, ""]
@@ -1225,6 +1229,29 @@ def _bound_nested_rows(payload: dict[str, Any], limit: int, key: str, inner: str
             f"{key}.{group.get('key')}.{inner}: showing {limit:,} of {total:,} rows; "
             "pass limit=0 for all of them"
         )
+
+
+def _bound_section_rows(payload: dict[str, Any], limit: int, section: str, key: str) -> None:
+    """Bound ``payload[section][key]`` and warn at the top level, where callers look first.
+
+    `_bound_rows` only sees top-level lists and would file its warning inside the
+    section, below the caveats-first line (COI-757). The ``section.key:`` prefix
+    names which list was cut (COI-1649).
+    """
+    if limit <= 0:
+        return
+    inner = payload.get(section)
+    if not isinstance(inner, dict):
+        return
+    rows = inner.get(key)
+    if not isinstance(rows, list) or len(rows) <= limit:
+        return
+    total = len(rows)
+    inner[key] = rows[:limit]
+    payload.setdefault("warnings", []).append(
+        f"{section}.{key}: showing {limit:,} of {total:,} rows; pass limit=0 for all of them "
+        "(the counts beside it already cover every row)"
+    )
 
 
 def _thin_series(payload: dict[str, Any], limit: int, *keys: str) -> None:
@@ -2096,9 +2123,18 @@ def build_server(
             gov_payload = to_government_payload(
                 raw_gov, fetched_at_iso=datetime.now(UTC).isoformat()
             )
+            # settlements and titles grow with the world and with government.
+            # `scope` and `active_laws_count` above were computed from every row.
+            settlements_total = len(gov_payload["settlements"])
+            _bound_rows(gov_payload, _resolve_limit(arguments or {}), "settlements", "titles")
             return CallToolResult(
                 content=[
-                    TextContent(type="text", text=_format_government_markdown(gov_payload)),
+                    TextContent(
+                        type="text",
+                        text=_format_government_markdown(
+                            gov_payload, settlements_total=settlements_total
+                        ),
+                    ),
                     TextContent(type="text", text=json.dumps(gov_payload)),
                 ],
             )
@@ -2287,6 +2323,8 @@ def build_server(
         raw["_fetchedAtISO"] = datetime.now(UTC).isoformat()
 
         payload = to_payload(raw)
+        # onlineNames grows with concurrent players. `players.online` is the count.
+        _bound_section_rows(payload, _resolve_limit(arguments or {}), "players", "onlineNames")
         return CallToolResult(
             content=[
                 TextContent(type="text", text=_format_markdown(payload)),

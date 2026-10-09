@@ -238,5 +238,5 @@ def register_wave2_routes(registry: DualRouteRegistry, invoke: ToolInvoker) -> N
             "current civic state."
         ),
         rest_path=WAVE2_PATHS["get_government"],
-        input_model=ServerInput,
+        input_model=BoundedServerInput,
     )

@@ -29,7 +29,7 @@ WAVE2_ARGUMENTS: dict[str, dict[str, Any]] = {
     "price_by_stage": {"item": "iron", "server": "eco.test:3001"},
     "get_region": {"server": "eco.test:3001"},
     "get_climate": {"server": "eco.test:3001", "limit": 50},
-    "get_government": {"server": "eco.test:3001"},
+    "get_government": {"server": "eco.test:3001", "limit": 50},
 }
 
 
