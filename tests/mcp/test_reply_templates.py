@@ -131,6 +131,34 @@ def test_find_trade_names_the_cheapest_seller() -> None:
     assert text == "The cheapest Limestone is 3 Credits at Shiny Rocks, owned by Snorf."
 
 
+def _stocked(store: str, price: float, owner: str, quantity: float, currency: str) -> ShelfOffer:
+    offer = _offer(store, price, owner)
+    offer.item, offer.item_display = "LumberItem", "Lumber"
+    offer.quantity, offer.currency, offer.source = quantity, currency, "live"
+    return offer
+
+
+def test_find_trade_names_a_store_with_stock_over_a_zero_stock_tie() -> None:
+    """COI-2045: the Lumber shape, 0 stock at 0.7 Barter vs 185 at 0.7 Spectres."""
+    report = build_logistics(
+        [
+            _stocked("RATWORKS", 0.7, "TheBarracksRat", 0, "Barter"),
+            _stocked("Lumberaholics", 0.7, "Scuba Steve", 185, "Spectres"),
+        ],
+        item="lumber",
+    )
+    text = render_reply(REPLY_TEMPLATES["find_trade"], report.to_dict(), {"item": "lumber"})
+    assert text == "The cheapest Lumber is 0.7 Spectres at Lumberaholics, owned by Scuba Steve."
+
+
+def test_find_trade_all_zero_stock_says_sold_out_not_a_price() -> None:
+    report = build_logistics(
+        [_stocked("RATWORKS", 0.7, "TheBarracksRat", 0, "Barter")], item="lumber"
+    )
+    text = render_reply(REPLY_TEMPLATES["find_trade"], report.to_dict(), {"item": "lumber"})
+    assert text == "Every store selling Lumber for Barter is out of stock right now."
+
+
 def test_find_trade_with_no_offers_falls_back() -> None:
     report = build_logistics([], item="limestone")
     assert (

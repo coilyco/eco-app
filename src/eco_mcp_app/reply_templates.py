@@ -33,6 +33,9 @@ REPLY_TEMPLATES: dict[str, list[dict[str, Any]]] = {
                 "{{cheapest.0.offers.0.owner}}."
             ),
         },
+        # Only a row whose sellers are all empty carries soldOutNote, and the
+        # builder sorts such rows after every buyable one (COI-2045).
+        {"when_args": ["item"], "text": "{{cheapest.0.soldOutNote}}"},
     ],
     "get_market": [
         {

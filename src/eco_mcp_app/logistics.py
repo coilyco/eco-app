@@ -264,7 +264,12 @@ def build_logistics(
     market_summaries: list[dict[str, Any]] = []
 
     for (item_name, cur), sides in markets.items():
-        sells = sorted(sides["sell"], key=lambda o: o.price)  # cheapest first
+        all_sells = sorted(sides["sell"], key=lambda o: o.price)  # cheapest first
+        # A shelf line with nothing on it is not a place to buy (COI-2045: a 0-stock
+        # Barter line outranked a 185-stock Spectres line). Every board below reads
+        # `sells`, the buyable lines. `sold_out` only feeds the explicit sold-out row.
+        sells = [o for o in all_sells if o.quantity > 0]
+        sold_out = [o for o in all_sells if o.quantity <= 0]
         buys = sorted(sides["buy"], key=lambda o: o.price, reverse=True)  # best paid first
         pretty = prettify_eco_name(item_name) if item_name else item_name
         median = medians.get((item_name, cur))
@@ -292,8 +297,30 @@ def build_logistics(
                     "itemPretty": pretty,
                     "currency": cur,
                     "sellerCount": len({o.store_key for o in sells}),
+                    "soldOutCount": len({o.store_key for o in sold_out}),
                     "cheapest": round(sells[0].price, 4),
                     "offers": [o.to_dict() for o in sells[:top_per_item]],
+                }
+            )
+        elif sold_out:
+            # Every seller is empty. Say so with null, never a 0 price or a
+            # zero-stock store dressed as the pick; `soldOutNote` is what the
+            # reply template renders (reply_templates.py).
+            cheapest.append(
+                {
+                    "item": item_name,
+                    "itemPretty": pretty,
+                    "currency": cur,
+                    "sellerCount": 0,
+                    "soldOutCount": len({o.store_key for o in sold_out}),
+                    "cheapest": None,
+                    "offers": [],
+                    "soldOutOffers": [o.to_dict() for o in sold_out[:top_per_item]],
+                    "soldOutNote": (
+                        f"Every store selling {pretty} for {cur} is out of stock right now."
+                        if cur
+                        else f"Every store selling {pretty} is out of stock right now."
+                    ),
                 }
             )
 
@@ -358,7 +385,9 @@ def build_logistics(
     # Rank each board. Cheapest/resale by best price achievable; arbitrage by
     # opportunity size (spread * movable volume, both of what the issue asks to
     # rank on); supply gaps by unmet demand quantity.
-    cheapest.sort(key=lambda r: r["cheapest"])
+    # Buyable rows by price, then sold-out rows, so `cheapest[0]` is a store with
+    # stock whenever any market has one.
+    cheapest.sort(key=lambda r: (r["cheapest"] is None, r["cheapest"] or 0.0))
     resale.sort(key=lambda r: r["best"], reverse=True)
     arbitrage.sort(key=lambda r: (r["opportunity"], r["spread"]), reverse=True)
     supply_gaps.sort(key=lambda r: (_GAP_RANK.get(r["reason"], 0), r["demandQty"]), reverse=True)

@@ -93,6 +93,84 @@ def test_cheapest_source_ranks_sellers_ascending() -> None:
     assert [o["price"] for o in row["offers"]] == [2.50, 3.10, 4.00]
 
 
+def test_cheapest_skips_zero_stock_offer_at_equal_price() -> None:
+    """COI-2045: the Lumber case. A 0-stock shelf at 0.7 Barter sat first in the
+    cheapest pick although a store with 185 in stock sold at the same price."""
+    offers = [
+        _offer(
+            "RATWORKS",
+            "LumberItem",
+            "sell",
+            0.7,
+            currency="Barter",
+            quantity=0,
+            source="live",
+            owner="TheBarracksRat",
+        ),
+        _offer(
+            "Lumberaholics",
+            "LumberItem",
+            "sell",
+            0.7,
+            currency="Spectres",
+            quantity=185,
+            source="live",
+            owner="Scuba Steve",
+        ),
+    ]
+    report = build_logistics(offers)
+    first = report.cheapest[0]
+    assert first["currency"] == "Spectres"
+    assert first["offers"][0]["store"] == "Lumberaholics"
+    assert first["offers"][0]["quantity"] > 0
+    # The sold-out market is still reported, after the buyable one, with null.
+    sold_out = report.cheapest[1]
+    assert sold_out["currency"] == "Barter"
+    assert sold_out["cheapest"] is None
+    assert sold_out["offers"] == []
+
+
+def test_cheapest_in_one_market_never_picks_zero_stock_even_when_cheaper() -> None:
+    offers = [
+        _offer("Empty", "LumberItem", "sell", 0.1, quantity=0, source="live"),
+        _offer("Stocked", "LumberItem", "sell", 0.9, quantity=12, source="live"),
+    ]
+    row = build_logistics(offers).cheapest[0]
+    assert row["cheapest"] == pytest.approx(0.9)
+    assert [o["store"] for o in row["offers"]] == ["Stocked"]
+    assert row["soldOutCount"] == 1
+    assert row["sellerCount"] == 1
+
+
+def test_all_zero_stock_reports_null_and_says_so() -> None:
+    offers = [
+        _offer("A", "LumberItem", "sell", 0.7, quantity=0, source="live"),
+        _offer("B", "LumberItem", "sell", 0.8, quantity=0, source="live"),
+    ]
+    report = build_logistics(offers)
+    assert len(report.cheapest) == 1
+    row = report.cheapest[0]
+    assert row["cheapest"] is None  # null, never 0
+    assert row["offers"] == []
+    assert row["sellerCount"] == 0
+    assert row["soldOutCount"] == 2
+    assert "out of stock" in row["soldOutNote"]
+    assert [o["store"] for o in row["soldOutOffers"]] == ["A", "B"]
+    summary = report.market_summaries[0]
+    assert summary["cheapestSell"] is None
+    assert summary["supplyQty"] == 0
+
+
+def test_arbitrage_never_buys_from_a_zero_stock_shelf() -> None:
+    offers = [
+        _offer("Empty", "IronIngotItem", "sell", 1.0, quantity=0, source="live"),
+        _offer("Stocked", "IronIngotItem", "sell", 2.0, quantity=50, source="live"),
+        _offer("Buyer", "IronIngotItem", "buy", 5.0, quantity=50, source="live"),
+    ]
+    report = build_logistics(offers)
+    assert [a["buyFrom"]["store"] for a in report.arbitrage] == ["Stocked"]
+
+
 def test_best_resale_ranks_buyers_descending() -> None:
     offers = [
         _offer("StoreA", "BoardItem", "buy", 0.55),

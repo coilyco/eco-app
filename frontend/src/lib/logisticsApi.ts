@@ -42,8 +42,13 @@ export interface PricedBoardRow {
   currency: string
   sellerCount?: number
   buyerCount?: number
-  cheapest?: number
+  /** null when every seller of this market is out of stock (COI-2045). */
+  cheapest?: number | null
   best?: number
+  soldOutCount?: number
+  /** Present only when every seller is out of stock; `offers` is then empty. */
+  soldOutOffers?: ShelfOffer[]
+  soldOutNote?: string
   offers: ShelfOffer[]
 }
 
