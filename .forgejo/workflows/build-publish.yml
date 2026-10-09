@@ -45,6 +45,7 @@ jobs:
       - run: just test
       - run: just lint
       - run: just smoke
+      - run: just precommit --show-diff-on-failure
 
       - name: Alert Sentry on main failure
         if: ${{ failure() && github.ref == 'refs/heads/main' }}
