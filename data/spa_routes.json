@@ -175,6 +175,15 @@
       "description": "How many of each species are alive on the Eco via Sirens world right now, and each one's population curve across this cycle."
     },
     {
+      "path": "/cycle-14",
+      "component": "Cycle14Index",
+      "crawl": "noindex",
+      "image": "/og/cycle-14.png",
+      "title": "Cycle 14 in 3D | Eco via Sirens",
+      "description": "Places on the Eco via Sirens server in cycle 14, captured as 3D scenes you can look around in.",
+      "note": "Lists every /cycle-14/* route below, derived from this table (COI-2401). Noindex until Kai says otherwise, unlike the pages it lists."
+    },
+    {
       "path": "/cycle-14/castle",
       "component": "CastleSplat",
       "crawl": "index",

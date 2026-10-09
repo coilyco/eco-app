@@ -2059,6 +2059,15 @@ html {
   color: var(--k-dim);
 }
 
+/* The /cycle-14 index: one still above each card's words. docs/frontend/cycle-14-index.md. */
+.cycle-card__still {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1200 / 630;
+  object-fit: cover;
+}
+
 .castle-stage {
   position: relative;
   width: 100%;

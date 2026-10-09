@@ -7,6 +7,7 @@ import BioDriveSplat from "./pages/BioDriveSplat"
 import CastleSplat from "./pages/CastleSplat"
 import Civics from "./pages/Civics"
 import Crafting from "./pages/Crafting"
+import Cycle14Index from "./pages/Cycle14Index"
 import Home from "./pages/Home"
 import Item from "./pages/Item"
 import Items from "./pages/Items"
@@ -61,6 +62,7 @@ const PAGES: Record<string, () => ReactElement> = {
   Map: MapPage,
   Species,
   Replay,
+  Cycle14Index,
   CastleSplat,
   BioDriveSplat,
   TerraceFarmsSplat,

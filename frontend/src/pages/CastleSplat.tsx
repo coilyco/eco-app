@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react"
+import { Link } from "react-router-dom"
 import Layout from "../components/Layout"
 import Loading from "../components/Loading"
 import hero from "../assets/castle-v2-hero.jpg"
@@ -236,6 +237,9 @@ export default function CastleSplat() {
           ))}
         </dl>
       </section>
+      <p className="k-hint">
+        <Link to="/cycle-14">All cycle 14 scenes</Link>
+      </p>
     </Layout>
   )
 }

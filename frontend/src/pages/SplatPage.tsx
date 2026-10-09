@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react"
+import { Link } from "react-router-dom"
 import Layout from "../components/Layout"
 import Loading from "../components/Loading"
 import type { SplatViewer, ViewSpec } from "../lib/splatViewer"
@@ -164,6 +165,9 @@ export default function SplatPage({ config }: { config: SplatConfig }) {
           ))}
         </dl>
       </section>
+      <p className="k-hint">
+        <Link to="/cycle-14">All cycle 14 scenes</Link>
+      </p>
     </Layout>
   )
 }
