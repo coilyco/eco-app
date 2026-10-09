@@ -130,6 +130,59 @@ function coveredByRole(roles: string[]): boolean {
   return roles.some((role) => COVERAGE_ROLES.has(role))
 }
 
+// A specialty someone has taken that fewer than two Active or Long Term players cover
+// (COI-752). Nobody covering it comes first, then one, and within each the specialty
+// more players have taken, since losing it costs more. docs/frontend/jobs-coverage.md.
+export function coverageGaps(specialties: SpecialtyStat[]): SpecialtyStat[] {
+  return specialties
+    .filter((s) => s.total > 0 && s.covered <= 1)
+    .sort((a, b) => a.covered - b.covered || b.total - a.total || a.specialty.localeCompare(b.specialty))
+}
+
+function CoverageGaps({ gaps }: { gaps: SpecialtyStat[] }) {
+  return (
+    <section data-testid="jobs-gaps" aria-labelledby="jobs-gaps-title">
+      <h2 className="section-title" id="jobs-gaps-title">
+        Coverage gaps{" "}
+        <span className="section-sub">
+          (specialties someone has taken that fewer than two Active or Long Term players cover)
+        </span>
+      </h2>
+      {gaps.length === 0 ? (
+        <p className="empty-note" data-testid="jobs-gaps-empty">
+          No gaps right now. Every specialty someone has taken has two or more Active or Long Term players.
+        </p>
+      ) : (
+        <ul className="cards">
+          {gaps.map((s) => {
+            const keeper = s.holders.find((holder) => coveredByRole(holder.roles))
+            return (
+              <li className="card card-tight" key={s.specialty} data-testid="jobs-gap">
+                <h3 className="card-title">{s.specialty}</h3>
+                <p className="kicker">{s.profession}</p>
+                <p>
+                  {s.covered === 0 ? (
+                    <>
+                      Nobody Active or Long Term. {formatCount(s.total)}{" "}
+                      {s.total === 1 ? "player has" : "players have"} it.
+                    </>
+                  ) : keeper ? (
+                    <>
+                      Only <EcoRichText text={keeper.player} /> is Active or Long Term.
+                    </>
+                  ) : (
+                    "Only one player is Active or Long Term."
+                  )}
+                </p>
+              </li>
+            )
+          })}
+        </ul>
+      )}
+    </section>
+  )
+}
+
 function RoleBadges({ roles }: { roles: string[] }) {
   const visible = roles.filter((role) => COVERAGE_ROLES.has(role))
   return visible.map((role) => (
@@ -284,6 +337,7 @@ export default function Jobs() {
     () => (data?.specialties ?? []).filter((s) => !isUniversalSkill(s.specialty)),
     [data],
   )
+  const gaps = useMemo(() => coverageGaps(specialties), [specialties])
   const rolesByPlayer = useMemo(
     () => new Map((data?.players ?? []).map((player) => [player.name, player.roles] as const)),
     [data?.players],
@@ -457,6 +511,8 @@ export default function Jobs() {
               </div>
             )}
           </section>
+
+          <CoverageGaps gaps={gaps} />
 
           <section>
             <h2 className="section-title">Professions</h2>

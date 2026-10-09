@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { MemoryRouter } from "react-router-dom"
-import Jobs from "./Jobs"
+import Jobs, { coverageGaps } from "./Jobs"
 
 const META = { mockData: true }
 const PROFESSIONS = [
@@ -370,6 +370,46 @@ afterEach(() => {
   cleanup()
   vi.restoreAllMocks()
   recipesBody = VALUE_RECIPES
+})
+
+const gap = (specialty: string, covered: number, total: number, holders: string[] = []) => ({
+  specialty,
+  profession: "Carpentry",
+  active: covered,
+  covered,
+  total,
+  holders: holders.map((player, i) => ({ player, level: 1, active: i < covered, roles: i < covered ? ["Active"] : [] })),
+})
+
+describe("coverageGaps", () => {
+  it("keeps specialties someone has taken that zero or one covering player holds, none first", () => {
+    const gaps = coverageGaps([
+      gap("Both covered", 2, 3),
+      gap("One covered", 1, 2),
+      gap("Nobody covers", 0, 1),
+      gap("Never taken", 0, 0),
+      gap("Nobody covers, more taken", 0, 4),
+    ])
+    expect(gaps.map((g) => g.specialty)).toEqual(["Nobody covers, more taken", "Nobody covers", "One covered"])
+  })
+})
+
+describe("Jobs coverage gaps", () => {
+  it("lists a gap section with who still covers each, ahead of the professions", async () => {
+    stubJobsFetch()
+    renderJobs()
+
+    const section = await screen.findByTestId("jobs-gaps")
+    expect(section).toHaveTextContent("Coverage gaps")
+    // The fixture's Basic Carpentry has one covering player, coilysiren.
+    const rows = screen.getAllByTestId("jobs-gap")
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toHaveTextContent("Basic Carpentry")
+    expect(rows[0]).toHaveTextContent("Only coilysiren is Active or Long Term.")
+    // The universal starter skill is not a gap, since it never reaches the specialty list.
+    expect(section).not.toHaveTextContent("Self Improvement")
+    expect(section.compareDocumentPosition(screen.getByText("Professions")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
 })
 
 describe("Jobs", () => {
