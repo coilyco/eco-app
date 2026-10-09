@@ -90,3 +90,83 @@ async def test_a_live_tool_call_carries_the_link() -> None:
         )
     )
     assert f"{PUBLIC_SITE_URL}/info" in result.root.content[0].text
+
+
+def _logistics_result(*item_ids: str) -> mt.CallToolResult:
+    """A find_trade result shaped like the real one: markdown, then the JSON."""
+    rows = [{"item": item_id, "itemPretty": item_id, "currency": "Credit"} for item_id in item_ids]
+    payload = {"view": "logistics", "cheapest": rows, "marketSummaries": rows}
+    return mt.CallToolResult(
+        content=[
+            mt.TextContent(type="text", text="**Trade logistics**"),
+            mt.TextContent(type="text", text=json.dumps(payload)),
+        ],
+        structuredContent=payload,
+    )
+
+
+def test_find_trade_with_an_item_links_that_items_page() -> None:
+    """COI-759: the link carries the resolved id, not the raw user string."""
+    result = _append_site_link(
+        "find_trade", _logistics_result("CharredSausageItem"), {"item": "charred sausage"}
+    )
+    assert result.content[0].text.endswith(
+        f"Full detail: {PUBLIC_SITE_URL}/item?item=CharredSausageItem"
+    )
+    assert "arbitrage" not in result.content[0].text
+
+
+def test_find_trade_without_an_item_keeps_the_arbitrage_page() -> None:
+    for arguments in (None, {}, {"item": ""}, {"item": "   "}, {"currency": "Credit"}):
+        result = _append_site_link("find_trade", _logistics_result("IronItem"), arguments)
+        assert result.content[0].text.endswith(f"Full detail: {PUBLIC_SITE_URL}/uses/arbitrage")
+
+
+def test_find_trade_item_that_matched_nothing_keeps_the_arbitrage_page() -> None:
+    result = _append_site_link("find_trade", _logistics_result(), {"item": "nonsense"})
+    assert result.content[0].text.endswith("/uses/arbitrage")
+
+
+def test_find_trade_item_spanning_several_ids_does_not_guess() -> None:
+    result = _append_site_link(
+        "find_trade", _logistics_result("IronIngotItem", "IronOreItem"), {"item": "iron"}
+    )
+    assert result.content[0].text.endswith("/uses/arbitrage")
+
+
+def test_find_trade_item_prefers_the_exact_id_among_several() -> None:
+    result = _append_site_link(
+        "find_trade", _logistics_result("IronIngotItem", "IronOreItem"), {"item": "Iron Ore"}
+    )
+    assert result.content[0].text.endswith("/item?item=IronOreItem")
+
+
+def test_another_tool_ignores_its_item_argument() -> None:
+    result = _append_site_link("get_trades", _result("body"), {"item": "Iron"})
+    assert result.content[0].text.endswith(f"{PUBLIC_SITE_URL}/trade")
+
+
+@pytest.mark.asyncio
+async def test_a_find_trade_call_with_an_item_ends_on_the_item_link() -> None:
+    """Through the real dispatcher and the dual-route registry, not just the helper."""
+
+    async def invoke(tool_name: str, arguments: dict[str, Any]) -> mt.CallToolResult:
+        return _logistics_result("CharredSausageItem")
+
+    registry = DualRouteRegistry()
+    register_wave1_routes(registry, invoke)
+    handler = build_server(registry).request_handlers[mt.CallToolRequest]
+
+    async def call(arguments: dict[str, Any]) -> str:
+        result = await handler(
+            mt.CallToolRequest(
+                method="tools/call",
+                params=mt.CallToolRequestParams(name="find_trade", arguments=arguments),
+            )
+        )
+        return result.root.content[0].text
+
+    assert (await call({"item": "charred sausage"})).endswith(
+        f"Full detail: {PUBLIC_SITE_URL}/item?item=CharredSausageItem"
+    )
+    assert (await call({})).endswith(f"Full detail: {PUBLIC_SITE_URL}/uses/arbitrage")

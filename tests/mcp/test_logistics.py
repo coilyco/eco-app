@@ -851,6 +851,33 @@ async def test_find_trade_tool_returns_blocks_and_fragment(
     assert result.root.meta is None
 
 
+@pytest.mark.asyncio
+@respx.mock
+async def test_find_trade_link_names_the_resolved_item_id(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """COI-759 over the real fetch: `iron ingot` resolves to IronIngotItem and the
+    link says so. `iron` spans two ids, so it keeps the general page."""
+    monkeypatch.setenv("ECO_ADMIN_API_KEY", "k")
+    respx.get(CURRENCY_URL).mock(return_value=httpx.Response(200, text=_CURRENCY_CSV))
+    respx.get(BARTER_URL).mock(return_value=httpx.Response(200, text=_BARTER_EMPTY))
+    respx.get(CITIZENS_URL).mock(return_value=httpx.Response(200, json=_CITIZENS_JSON))
+    respx.get(STORES_URL).mock(return_value=httpx.Response(404))
+    handler = build_server().request_handlers[mt.CallToolRequest]
+
+    async def first_block(arguments: dict[str, Any]) -> str:
+        arguments = {"server": "eco.example.com:3001", **arguments}
+        req = mt.CallToolRequest(
+            method="tools/call",
+            params=mt.CallToolRequestParams(name="find_trade", arguments=arguments),
+        )
+        return (await handler(req)).root.content[0].text
+
+    assert (await first_block({"item": "iron ingot"})).endswith("/item?item=IronIngotItem")
+    assert (await first_block({"item": "iron"})).endswith("/uses/arbitrage")
+    assert (await first_block({})).endswith("/uses/arbitrage")
+
+
 @respx.mock
 def test_preview_logistics_json_route(monkeypatch: pytest.MonkeyPatch) -> None:
     """The dedicated `/preview/logistics.json` data-plane route serves the boards."""

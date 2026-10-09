@@ -10,7 +10,7 @@ import re
 from datetime import UTC, datetime
 from importlib.resources import files
 from typing import Any
-from urllib.parse import urlparse, urlunparse
+from urllib.parse import quote, urlparse, urlunparse
 
 import httpx
 from cachetools import TTLCache
@@ -40,7 +40,7 @@ from .caveats import reorder_result
 from .civics import civics_markdown, fetch_civics
 from .crafting import CraftingAtlas, atlas_markdown, fetch_atlas
 from .dual_routes import DualRouteRegistry
-from .logistics import fetch_logistics, logistics_markdown
+from .logistics import fetch_logistics, logistics_markdown, resolved_item_id
 from .mods import read_mods
 from .progression import fetch_history, history_markdown
 from .public_routes import STORES_MAX_JSON_BYTES, STORES_NESTED_LIMIT, STORES_ROW_LIMIT
@@ -850,14 +850,44 @@ def site_url_for(tool: str) -> str | None:
     return f"{PUBLIC_SITE_URL}{path}" if path else None
 
 
-def _append_site_link(tool: str, result: CallToolResult) -> CallToolResult:
+def _item_site_url(
+    tool: str, arguments: dict[str, Any] | None, result: CallToolResult
+) -> str | None:
+    """The item's own page when `find_trade` was asked about one item (COI-759).
+
+    The id comes from the offers the call matched, not from the raw user string
+    (`charred sausage` is not an id). None sends the caller to the tool's
+    general page: no item asked, no match, or a filter spanning several items.
+    """
+    query = (arguments or {}).get("item")
+    if tool != "find_trade" or not isinstance(query, str) or not query.strip():
+        return None
+    payload = result.structuredContent
+    if not isinstance(payload, dict):
+        for block in result.content[1:]:
+            try:
+                parsed = json.loads(block.text) if isinstance(block, TextContent) else None
+            except ValueError:
+                continue
+            if isinstance(parsed, dict):
+                payload = parsed
+                break
+    if not isinstance(payload, dict):
+        return None
+    item_id = resolved_item_id(payload, query)
+    return f"{PUBLIC_SITE_URL}/item?item={quote(item_id, safe='')}" if item_id else None
+
+
+def _append_site_link(
+    tool: str, result: CallToolResult, arguments: dict[str, Any] | None = None
+) -> CallToolResult:
     """Add a "see the full version here" line to a tool's markdown block.
 
     Only the human-readable block is touched. The JSON block is a typed
     contract — several tools validate it against a pydantic output model — so
     a link is not smuggled into it.
     """
-    url = site_url_for(tool)
+    url = _item_site_url(tool, arguments, result) or site_url_for(tool)
     if url is None or not result.content:
         return result
     first = result.content[0]
@@ -2287,7 +2317,7 @@ def build_server(
             result = await _dispatch_call_tool(name, arguments)
         # One place, every tool: point the caller at the page that shows the
         # same answer in full (#241).
-        return _append_site_link(name, result)
+        return _append_site_link(name, result, arguments)
 
     return instrument_mcp_server(server)
 

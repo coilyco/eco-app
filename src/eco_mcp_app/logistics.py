@@ -140,6 +140,29 @@ def _item_matches(offer: ShelfOffer, want_item: str) -> bool:
     return bool(singular) and any(singular in c for c in candidates if c)
 
 
+def resolved_item_id(payload: dict[str, Any], query: str | None) -> str | None:
+    """The one item id a `find_trade` item filter resolved to, or None.
+
+    The filter is a substring match, so `Iron` can span `IronIngotItem` and
+    `IronOreItem`. This reads the ids the report actually matched and returns one
+    only when it is unambiguous: a single matched id, or exactly one whose
+    normalized key equals the query. Anything else is None, so a caller links the
+    general page rather than a guessed item (COI-759).
+    """
+    want = _norm_item(query) if query else ""
+    if not want:
+        return None
+    ids: set[str] = set()
+    for board in ("marketSummaries", "cheapest", "resale", "arbitrage", "supplyGaps"):
+        for row in payload.get(board) or []:
+            if isinstance(row, dict) and isinstance(row.get("item"), str) and row["item"]:
+                ids.add(row["item"])
+    if len(ids) == 1:
+        return next(iter(ids))
+    exact = [i for i in sorted(ids) if _norm_item(i) == want]
+    return exact[0] if len(exact) == 1 else None
+
+
 # ---------------------------------------------------------------------------
 # Normalized offer — the one unit both the live shelf and trade history produce.
 # ---------------------------------------------------------------------------
