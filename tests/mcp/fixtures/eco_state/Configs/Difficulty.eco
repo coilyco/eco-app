@@ -1,9 +1,0 @@
-{
-  "Config": {
-    "GameSettings": {
-      "DifficultyModifier": 1.0,
-      "Cheats": false,
-      "MeteorImpactDays": 30
-    }
-  }
-}

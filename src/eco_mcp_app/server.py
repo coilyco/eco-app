@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import json
 import os
@@ -34,12 +35,13 @@ from . import market as market_mod
 from . import norms as norms_mod
 from . import species as species_mod
 from . import vocab as vocab_mod
-from . import wave1_routes, wave2_routes, wave3_routes
+from . import wave1_routes, wave2_routes, wave3_routes, wave4_routes
 from .caveats import reorder_result
 from .civics import civics_markdown, fetch_civics
 from .crafting import atlas_markdown, fetch_atlas
 from .dual_routes import DualRouteRegistry
 from .logistics import fetch_logistics, logistics_markdown
+from .mods import read_mods
 from .progression import fetch_history, history_markdown
 from .public_routes import STORES_MAX_JSON_BYTES, STORES_NESTED_LIMIT, STORES_ROW_LIMIT
 from .reply_templates import with_reply_templates
@@ -48,6 +50,7 @@ from .stores import directory_markdown, fetch_directory
 from .telemetry import instrument_mcp_server
 from .trades import fetch_ledger, ledger_markdown
 from .world import fetch_world, world_markdown
+from .worldgen import read_world_generator
 
 DEFAULT_ECO_INFO_URL = os.environ.get("ECO_INFO_URL", "http://eco.coilysiren.me:3001/info")
 DEFAULT_ECO_PORT = int(os.environ.get("ECO_INFO_PORT", "3001"))
@@ -1732,6 +1735,16 @@ def build_server(
                 ],
             )
 
+        if name == "get_mods":
+            mods_payload = await asyncio.to_thread(read_mods)
+            _bound_rows(mods_payload, _resolve_limit(arguments or {}), "mods")
+            return CallToolResult(
+                content=[
+                    TextContent(type="text", text=wave4_routes.mods_markdown(mods_payload)),
+                    TextContent(type="text", text=json.dumps(mods_payload)),
+                ],
+            )
+
         if name == "get_world":
             server_arg = arguments.get("server") if arguments else None
             api_key = os.environ.get(ADMIN_API_KEY_ENV) or _get_admin_token()
@@ -1743,6 +1756,12 @@ def build_server(
             # keep describing every event either way (eco-app#6076).
             world_text = world_markdown(activity)
             world_payload = activity.to_dict()
+            # Seed, size and cluster centers live in one host file, not behind
+            # any HTTP route. Null plus a warning when it is not mounted (COI-763).
+            generator, generator_warning = await asyncio.to_thread(read_world_generator)
+            world_payload["worldGenerator"] = generator
+            if generator_warning:
+                world_payload.setdefault("warnings", []).append(generator_warning)
             world_limit = _resolve_limit(arguments or {})
             # timeline is a day series, so it thins rather than truncating: a
             # head slice would report the first days and call it the history.
@@ -2297,6 +2316,7 @@ def build_server(
     wave1_routes.register_wave1_routes(dual_routes, _dispatch_call_tool)
     wave2_routes.register_wave2_routes(dual_routes, _dispatch_call_tool)
     wave3_routes.register_wave3_routes(dual_routes, _dispatch_call_tool)
+    wave4_routes.register_wave4_routes(dual_routes, _dispatch_call_tool)
 
     @server.call_tool()
     async def call_tool(name: str, arguments: dict[str, Any]) -> CallToolResult:

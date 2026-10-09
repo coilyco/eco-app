@@ -1,8 +1,0 @@
-{
-  "Config": {
-    "Admins": ["SampleAdminOne", "SampleAdminTwo"],
-    "WhiteList": ["SamplePlayerOne", "SamplePlayerTwo"],
-    "BlackList": [],
-    "MaxAdmins": 8
-  }
-}

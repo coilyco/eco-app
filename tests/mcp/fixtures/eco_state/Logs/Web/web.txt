@@ -1,3 +1,0 @@
-2026-07-25T01:00:00Z server started
-2026-07-25T01:01:00Z token=not-a-real-token request accepted
-2026-07-25T01:02:00Z request completed

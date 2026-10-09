@@ -8,7 +8,7 @@ consolidation (coilysiren/inbox#101).
 `eco_mcp_app.http_app:app`, port 4000.
 
 - **MCP server** - `src/eco_mcp_app/`. Stdio for Claude Desktop,
-  Streamable-HTTP at `/mcp/`. Twenty read-only operations register once through
+  Streamable-HTTP at `/mcp/`. Twenty-one read-only operations register once through
   `DualRouteRegistry`. See [dual-route-inventory.md](dual-route-inventory.md).
 - **Reply templates** - one-line answers carried on a tool's MCP `_meta` under
   `coilyco/templates`, so a router that already picked the tool can reply
@@ -19,8 +19,12 @@ consolidation (coilysiren/inbox#101).
   `data/eco_trades_norms.json.gz`. See [price-history.md](price-history.md).
   Every web page shows it beside the price through one component, see
   [frontend/price-norms.md](frontend/price-norms.md).
-- **Privileged `/admin` MCP** - `src/eco_mcp_app/admin/`, flagged off in the
-  ordinary app. See [admin-mcp.md](admin-mcp.md).
+- **Mod inventory and world-generator metadata** - `get_mods` and a
+  `worldGenerator` block on `get_world`, read from an operator-mounted mods
+  tree and one generator file, null with a warning when unmounted. They
+  replace the retired privileged `/admin` MCP (COI-763), whose other tools were
+  deleted or handed to node-stats. See
+  [mcp/FEATURES.md](mcp/FEATURES.md#host-file-tools).
 - **React frontend** - `frontend/`, a Vite SPA the fused service serves at `/`,
   styled by the coilyco kit under an Eco green theme. See
   [frontend/kit-theme.md](frontend/kit-theme.md). The homepage is the server's

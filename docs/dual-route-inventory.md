@@ -2,7 +2,7 @@
 owns, for adoption by the shared
 [`DualRouteRegistry`](../src/eco_mcp_app/dual_routes.py). Tracking:
 eco-app#205, with Wave 1 in #207 and Wave 2 in #209. Owning sources:
-`server.py`, `admin/server.py`, `http_app.py`, `eco_spec_tracker/main.py`,
+`server.py`, `http_app.py`, `eco_spec_tracker/main.py`,
 `eco_replay/main.py`, `frontend/src/App.tsx`. The in-game C# mod and external
 Eco server endpoints are upstream dependencies, not routes this service owns.
 
@@ -18,8 +18,8 @@ Eco server endpoints are upstream dependencies, not routes this service owns.
 
 ## State
 
-The public server defines 20 tools, none of them disabled.
-**Twenty are registered** and serve both
+The public server defines 21 tools, none of them disabled.
+**Twenty-one are registered** and serve both
 surfaces, each at `GET /preview/<tool>.json` except the Wave 1 set, which keeps
 its shorter paths: `preview.json` (`get_server_status`), and `world`, `stores`,
 `market`, `logistics`, and `civics`.
@@ -40,7 +40,7 @@ needing a bounded typed operation. Single-surface REST keeps `preview-map.json`
 plane), `/api/service`, and the
 generated FastAPI docs under the Jobs mount. Excluded: `/preview/{tool}` as a
 compatibility adapter, `/healthz`, both `/page-auth` verbs, the `/mcp`,
-`/admin`, `/assets`, and livereload mounts, and the SPA fallbacks.
+`/assets`, and livereload mounts, and the SPA fallbacks.
 
 ## Reply templates
 

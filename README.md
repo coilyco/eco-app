@@ -31,14 +31,13 @@ Gameplay mods live in the sibling
 here. Main CI builds every real mod project and publishes install-ready ZIPs to
 Forgejo Packages, per [docs/mod-packages.md](docs/mod-packages.md).
 
-## The operator surface is separate and bounded
+## Host files are read, never exposed
 
-A feature-flagged privileged MCP at `/admin` is the inside-out operator view.
-Its fourteen `admin_*` tools read fixed read-only Eco state mounts and
-node-local status, plus twelve enum-only observational RCON queries. It has no
-arbitrary path, no free-form command, and no write capability. The `admin_`
-prefix is a deliberate security-boundary signal rather than namespacing. See
-[docs/admin-mcp.md](docs/admin-mcp.md).
+The privileged `/admin` MCP is gone (COI-763). Host-side file questions belong to
+the node-stats MCP, and the two things this app still reads from the host are a
+mods tree (`get_mods`) and one world-generator file (`get_world`), each behind an
+env var and each reporting an explicit unavailable state when unmounted. See
+[docs/mcp/FEATURES.md](docs/mcp/FEATURES.md#host-file-tools).
 
 ## Run it
 
@@ -57,5 +56,4 @@ consumes that exact reference through a separate read-only credential.
 
 - [AGENTS.md](AGENTS.md) - agent-facing operating rules.
 - [docs/FEATURES.md](docs/FEATURES.md) - inventory of what ships today.
-- [docs/admin-mcp.md](docs/admin-mcp.md) - the privileged surface and its disclosure contract.
 - [justfile](justfile) - dev verbs.

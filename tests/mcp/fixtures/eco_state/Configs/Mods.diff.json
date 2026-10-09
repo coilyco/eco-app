@@ -1,5 +1,0 @@
-{
-  "EnabledMods": ["Jobs", "Replay", "Telemetry"],
-  "AdminApiKey": "example-admin-api-key-not-real",
-  "AutoUpdate": true
-}

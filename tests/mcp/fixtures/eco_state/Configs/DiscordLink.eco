@@ -1,8 +1,0 @@
-{
-  "Config": {
-    "BotToken": "example-discord-bot-token-not-real",
-    "GuildId": "000000000000000000",
-    "ModeratorChannels": ["general", "mods"],
-    "LinkMessage": "Link your account with /link"
-  }
-}

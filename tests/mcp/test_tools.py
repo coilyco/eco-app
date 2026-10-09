@@ -26,6 +26,8 @@ async def test_list_tools_advertises_all_tools() -> None:
         "explain_item",
         "get_crafting_atlas",
         "get_world",
+        # The mod inventory scavenged from the retired /admin MCP (COI-763).
+        "get_mods",
         "get_trades",
         "get_market",
         "get_stores",
