@@ -18,8 +18,8 @@ Eco server endpoints are upstream dependencies, not routes this service owns.
 
 ## State
 
-The public server defines 21 tools, none of them disabled.
-**Twenty-one are registered** and serve both
+The public server defines 20 tools, none of them disabled.
+**Twenty are registered** and serve both
 surfaces, each at `GET /preview/<tool>.json` except the Wave 1 set, which keeps
 its shorter paths: `preview.json` (`get_server_status`), and `world`, `stores`,
 `market`, `logistics`, and `civics`.
@@ -79,8 +79,6 @@ against this same contract.
 - `find_trade`, `get_market`, `price_recipe`, `get_currency`,
   `price_by_stage`, and `get_server_status`.
 - `get_recipes` has no template, because an ingredient list needs a loop.
-- `get_milestones` has no template, because the next unfinished
-  achievement needs a filter, since rows sort completed ones first.
 
 Every shipped template is rendered in `tests/mcp/test_reply_templates.py`
 against a payload from the builder that produces the tool's result.

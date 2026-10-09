@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Iterator
+from pathlib import Path
 
 import httpx
 import mcp.types as mt
@@ -334,10 +335,14 @@ def test_history_template_context_summarizes() -> None:
 @pytest.mark.asyncio
 @respx.mock
 async def test_tool_call_returns_text_blocks_and_fragment(
-    monkeypatch: pytest.MonkeyPatch,
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     monkeypatch.setenv("ECO_ADMIN_API_KEY", "k")
+    monkeypatch.setenv("ECO_CACHE_DIR", str(tmp_path))
     _mock_all_actions(respx.mock)
+    # techProgression reads the crafted-upgrade board from the atlas (COI-2090).
+    for action in ("ItemCraftedAction", "HarvestOrHunt", "ChopTree", "DigOrMine"):
+        respx.get(_url(action)).mock(return_value=httpx.Response(200, text="Citizen,Time\n"))
     mcp = build_server()
     handler = mcp.request_handlers[mt.CallToolRequest]
     req = mt.CallToolRequest(

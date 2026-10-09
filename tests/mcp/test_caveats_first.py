@@ -202,6 +202,12 @@ async def test_a_tools_largest_response_leads_with_its_caveats(
         return factory()
 
     monkeypatch.setattr(holder, fetcher, _fetch)
+    if tool == "get_progression":
+        # techProgression reads the crafting atlas too (COI-2090).
+        async def _atlas(**_: Any) -> Any:
+            return _crafting()
+
+        monkeypatch.setattr(eco_server, "fetch_atlas", _atlas)
     if tool == "get_market":
         # market rows come from ItemMarket objects whose upstream 401s off the cluster
         monkeypatch.setattr(

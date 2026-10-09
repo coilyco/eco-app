@@ -93,7 +93,6 @@ class PriceByStageInput(BaseModel):
 
 
 WAVE2_PATHS = {
-    "get_milestones": "/preview/get_milestones.json",
     "get_species": "/preview/get_species.json",
     "explain_item": "/preview/explain_item.json",
     "get_crafting_atlas": "/preview/get_crafting_atlas.json",
@@ -115,19 +114,6 @@ def register_wave2_routes(registry: DualRouteRegistry, invoke: ToolInvoker) -> N
         names = ", ".join(sorted(present))
         raise ValueError(f"Wave 2 routes partially overlap existing tools: {names}")
 
-    register_json_route(
-        registry,
-        invoke,
-        name="get_milestones",
-        title="Eco - milestone tracker",
-        description=(
-            "Show the server's total culture score and how close it is to each "
-            "server-wide culture achievement, for a public Eco server. Any question about "
-            "culture points or culture goals lands here."
-        ),
-        rest_path=WAVE2_PATHS["get_milestones"],
-        input_model=ServerInput,
-    )
     register_json_route(
         registry,
         invoke,

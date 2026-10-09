@@ -198,7 +198,10 @@ def register_wave1_routes(registry: DualRouteRegistry, invoke: ToolInvoker) -> N
             "when, including whether anyone on the server holds a given "
             "specialty yet (a tailor, a mason, a cook), plus level-ups, class "
             "completions, leaderboards, and per-day trends in how fast the server "
-            "is moving through the skill tree. Pass citizen for one player's "
+            "is moving through the skill tree. Its techProgression key is the "
+            "server's tech level: the highest Basic, Advanced, or Modern upgrade "
+            "anyone has crafted, and every specialty taken with how many citizens "
+            "took it and hold it now. Pass citizen for one player's "
             "history. For which recipes a skill unlocks use get_recipes with a "
             "skill filter. Requires the server-side admin API key."
         ),

@@ -188,9 +188,25 @@ class ProgressionHistory:
     # from the uncapped event set before citizen timelines are bounded, so item
     # price-history markers never disappear behind the presentation cap.
     first_specialty_gains: list[dict[str, Any]] = field(default_factory=list)
+    # Every specialty anyone has taken, from the uncapped event set (the citizen
+    # cards are capped at MAX_CITIZENS, so they cannot answer "was it ever taken").
+    # Feeds the tech-progression view, see tech_progression.py (COI-2090).
+    specialties_taken: list[dict[str, Any]] = field(default_factory=list)
+    # GainSpecialty rows whose skill column was blank or unrecognised, so the
+    # count above cannot name them (the column-shape caveat in the module docstring).
+    unnamed_specialty_gains: int = 0
     # Best-effort discovered progression daily series: name -> [(day, value)].
     daily_series: dict[str, list[tuple[float, float]]] = field(default_factory=dict)
     warnings: list[str] = field(default_factory=list)
+
+    def cache_dict(self) -> dict[str, Any]:
+        """``to_dict`` plus the fields the tech-progression view reads. The response
+        keeps them out of the top level, techProgression is their one home."""
+        return {
+            **self.to_dict(),
+            "specialtiesTaken": list(self.specialties_taken),
+            "unnamedSpecialtyGains": self.unnamed_specialty_gains,
+        }
 
     def select_citizens(self, citizen: str | None) -> list[dict[str, Any]]:
         """The per-citizen cards matching ``citizen``, exact match preferred."""
@@ -406,6 +422,41 @@ def _citizen_dict(name: str, events: list[_ParsedEvent]) -> dict[str, Any]:
     }
 
 
+def _specialties_taken(
+    first_gains: dict[str, _ParsedEvent],
+    ever_taken: dict[str, set[str]],
+    per_citizen: dict[str, list[_ParsedEvent]],
+) -> list[dict[str, Any]]:
+    """One row per specialty anyone has gained, over every event (no citizen cap).
+
+    ``holders`` is citizens whose last gain/loss for it was a gain, so a dropped
+    specialty keeps its row (it was taken) with fewer holders.
+    """
+    holders: dict[str, int] = defaultdict(int)
+    for events in per_citizen.values():
+        held: dict[str, bool] = {}
+        for e in sorted(events, key=lambda ev: ev.time_s):
+            if e.skill and e.kind == "specialty":
+                held[e.skill] = True
+            elif e.skill and e.kind == "specialty_loss":
+                held[e.skill] = False
+        for skill, is_held in held.items():
+            if is_held:
+                holders[skill] += 1
+    rows: list[dict[str, Any]] = [
+        {
+            "name": skill,
+            "pretty": prettify_eco_name(skill),
+            "firstDay": int(first.day),
+            "takenBy": len(ever_taken.get(skill, ())),
+            "holders": holders.get(skill, 0),
+        }
+        for skill, first in first_gains.items()
+    ]
+    rows.sort(key=lambda r: (-r["takenBy"], r["name"]))
+    return rows
+
+
 def build_history(
     parsed: list[_ParsedEvent],
     history: ProgressionHistory,
@@ -421,11 +472,17 @@ def build_history(
     class_completions: dict[str, int] = defaultdict(int)
     first_specialty_gains: dict[str, _ParsedEvent] = {}
     per_citizen: dict[str, list[_ParsedEvent]] = defaultdict(list)
+    unnamed_gains = 0
+    ever_taken: dict[str, set[str]] = defaultdict(set)
 
     for e in parsed:
         trend_buckets[e.kind][int(e.day)] += 1
+        if e.kind == "specialty" and not e.skill:
+            unnamed_gains += 1
         if e.kind == "specialty" and e.skill:
             by_specialty[e.skill] += 1
+            if e.citizen_id:
+                ever_taken[e.skill].add(e.citizen_id)
             first = first_specialty_gains.get(e.skill)
             if first is None or e.time_s < first.time_s:
                 first_specialty_gains[e.skill] = e
@@ -456,6 +513,9 @@ def build_history(
         }
         for event in sorted(first_specialty_gains.values(), key=lambda event: event.time_s)
     ]
+
+    history.unnamed_specialty_gains = unnamed_gains
+    history.specialties_taken = _specialties_taken(first_specialty_gains, ever_taken, per_citizen)
 
     # Per-citizen trajectory cards, busiest first, capped.
     citizen_cards = [
@@ -587,7 +647,7 @@ async def fetch_history(
             await http.aclose()
 
     if cache_ttl_s > 0:
-        _progression_cache[key] = history.to_dict()
+        _progression_cache[key] = history.cache_dict()
     return history
 
 
@@ -608,6 +668,8 @@ def _history_from_dict(data: dict[str, Any]) -> ProgressionHistory:
         class_completions=[(n, int(c)) for n, c in data.get("classCompletions", [])],
         top_levelers=[(n, int(c)) for n, c in data.get("topLevelers", [])],
         first_specialty_gains=list(data.get("firstSpecialtyGains", [])),
+        specialties_taken=list(data.get("specialtiesTaken", [])),
+        unnamed_specialty_gains=int(data.get("unnamedSpecialtyGains", 0)),
         daily_series={
             name: [(float(d), float(v)) for d, v in points]
             for name, points in data.get("dailySeries", {}).items()

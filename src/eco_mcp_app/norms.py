@@ -626,7 +626,6 @@ NO_PRICE_TOOLS = frozenset(
         "get_progression",
         "get_world",
         "get_mods",
-        "get_milestones",
         "get_species",
         "explain_item",
         "get_crafting_atlas",

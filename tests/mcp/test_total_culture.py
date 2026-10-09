@@ -11,12 +11,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from eco_mcp_app.server import (
-    _format_milestones_markdown,
-    build_milestones_payload,
-    resolve_total_culture,
-    to_payload,
-)
+from eco_mcp_app.server import resolve_total_culture, to_payload
 
 # Trimmed to the shape parse_achievement reads: target on line one, current
 # progress on line two.
@@ -59,25 +54,6 @@ def test_status_payload_publishes_the_reconciled_value_and_its_source() -> None:
     world = to_payload(_SIRENS_INFO)["world"]
     assert world["totalCulture"] == 910.32
     assert world["totalCultureSource"] == "milestones"
-
-
-def test_milestones_payload_flags_the_substitution() -> None:
-    payload = build_milestones_payload(_SIRENS_INFO)
-    assert payload["totalCulture"] == 910.32
-    assert payload["totalCultureSource"] == "milestones"
-    assert payload["totalCultureNote"]
-    markdown = _format_milestones_markdown(payload)
-    # The headline must not read as the server's own counter.
-    assert "910.3+" in markdown
-    assert "from milestones" in markdown
-
-
-def test_milestones_markdown_stays_plain_when_the_counter_works() -> None:
-    payload = build_milestones_payload(dict(_SIRENS_INFO, TotalCulture=1291.86))
-    assert payload["totalCultureNote"] is None
-    markdown = _format_milestones_markdown(payload)
-    assert "1291.9" in markdown
-    assert "from milestones" not in markdown
 
 
 def test_meteor_countdown_is_null_when_no_meteor_is_coming() -> None:

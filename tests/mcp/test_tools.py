@@ -21,7 +21,6 @@ async def test_list_tools_advertises_all_tools() -> None:
     names = {tool.name for tool in result.root.tools}
     assert names == {
         "get_server_status",
-        "get_milestones",
         "get_species",
         "explain_item",
         "get_crafting_atlas",

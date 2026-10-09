@@ -38,7 +38,7 @@ from . import vocab as vocab_mod
 from . import wave1_routes, wave2_routes, wave3_routes, wave4_routes
 from .caveats import reorder_result
 from .civics import civics_markdown, fetch_civics
-from .crafting import atlas_markdown, fetch_atlas
+from .crafting import CraftingAtlas, atlas_markdown, fetch_atlas
 from .dual_routes import DualRouteRegistry
 from .logistics import fetch_logistics, logistics_markdown
 from .mods import read_mods
@@ -47,6 +47,7 @@ from .public_routes import STORES_MAX_JSON_BYTES, STORES_NESTED_LIMIT, STORES_RO
 from .reply_templates import with_reply_templates
 from .social import fetch_social, social_markdown
 from .stores import directory_markdown, fetch_directory
+from .tech_progression import build_tech_progression, tech_progression_markdown
 from .telemetry import instrument_mcp_server
 from .trades import fetch_ledger, ledger_markdown
 from .world import fetch_world, world_markdown
@@ -658,56 +659,6 @@ def resolve_total_culture(info: dict[str, Any]) -> tuple[float | None, str]:
     return reported, "info"
 
 
-# Shown wherever a milestone-derived culture figure is published, so a reader
-# knows the number did not come from the server's own counter.
-CULTURE_FROM_MILESTONES_NOTE = (
-    "The server reported 0 total culture, which contradicts its own milestone "
-    "progress. Showing the largest milestone figure as a floor instead."
-)
-
-
-def build_milestones_payload(info: dict[str, Any]) -> dict[str, Any]:
-    """Shape the payload consumed by the milestone card template.
-
-    Sorted by completion % descending (closest to target at top), matching the
-    acceptance criterion in #13.
-    """
-    raw_dict = info.get("ServerAchievementsDict") or {}
-    rows = [parse_achievement(name, value) for name, value in raw_dict.items()]
-    rows.sort(key=lambda r: r["pct"], reverse=True)
-    total_culture, culture_source = resolve_total_culture(info)
-    return {
-        "view": "eco_milestones",
-        "fetchedAtISO": info.get("_fetchedAtISO"),
-        "sourceUrl": info.get("_sourceUrl"),
-        "totalCulture": total_culture,
-        "totalCultureSource": culture_source,
-        "totalCultureNote": (
-            CULTURE_FROM_MILESTONES_NOTE if culture_source == "milestones" else None
-        ),
-        "milestones": rows,
-    }
-
-
-def _format_milestones_markdown(payload: dict[str, Any]) -> str:
-    total = payload["totalCulture"]
-    headline = _UNREPORTED if total is None else f"{total:.1f}"
-    if payload.get("totalCultureSource") == "milestones":
-        headline = f"{headline}+ (from milestones — the server reported 0)"
-    lines = [
-        f"**Eco milestones** — TotalCulture: **{headline}**",
-        "",
-    ]
-    if not payload["milestones"]:
-        lines.append("_No achievements recorded yet — it may be very early in the cycle._")
-        return "\n".join(lines)
-    for row in payload["milestones"]:
-        current = "—" if row["current"] is None else f"{row['current']:g}"
-        target = "?" if row["target"] is None else str(row["target"])
-        lines.append(f"- **{row['name']}**: {current} / {target} Culture ({row['pct']:.0f}%)")
-    return "\n".join(lines)
-
-
 def _resolve_species_id(name: str) -> str:
     """Turn user input into a CamelCase species id.
 
@@ -875,7 +826,6 @@ PUBLIC_SITE_URL = os.environ.get("ECO_PUBLIC_SITE_URL", "https://eco-app.coilysi
 
 TOOL_SITE_PATHS: dict[str, str] = {
     "get_server_status": "/info",
-    "get_milestones": "/info",
     "get_currency": "/trade",
     "get_market": "/trade",
     "get_stores": "/trade",
@@ -1865,9 +1815,24 @@ def build_server(
                 include_citizens=bool(progression_args.get("include_timelines", False)),
                 citizen=progression_args.get("citizen") or None,
             )
+            # Tech progression (COI-2090): the crafted-upgrade half comes from the
+            # crafting atlas, so an unreachable exporter leaves that half null with
+            # a warning and never fails the history.
+            craft_atlas: CraftingAtlas | None = None
+            atlas_error: str | None = None
+            try:
+                craft_atlas = await fetch_atlas(base_url=server_arg, api_key=api_key)
+            except httpx.HTTPError as e:
+                atlas_error = f"{type(e).__name__}: {e}"
+            tech, tech_warnings = build_tech_progression(history, craft_atlas, atlas_error)
+            progression_payload["techProgression"] = tech
+            progression_payload["warnings"].extend(tech_warnings)
             return CallToolResult(
                 content=[
-                    TextContent(type="text", text=history_markdown(history)),
+                    TextContent(
+                        type="text",
+                        text=history_markdown(history) + "\n" + tech_progression_markdown(tech),
+                    ),
                     TextContent(type="text", text=json.dumps(progression_payload)),
                 ],
             )
@@ -2261,7 +2226,7 @@ def build_server(
                 ],
             )
 
-        if name not in ("get_server_status", "get_milestones"):
+        if name != "get_server_status":
             raise ValueError(f"Unknown tool: {name}")
 
         server_arg = arguments.get("server") if arguments else None
@@ -2271,15 +2236,6 @@ def build_server(
             return _unreachable_result("Eco server", e)
 
         raw["_fetchedAtISO"] = datetime.now(UTC).isoformat()
-
-        if name == "get_milestones":
-            milestones_payload = build_milestones_payload(raw)
-            return CallToolResult(
-                content=[
-                    TextContent(type="text", text=_format_milestones_markdown(milestones_payload)),
-                    TextContent(type="text", text=json.dumps(milestones_payload)),
-                ],
-            )
 
         payload = to_payload(raw)
         return CallToolResult(
