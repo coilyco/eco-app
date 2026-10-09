@@ -34,7 +34,8 @@ takes its camera from `view`, in blocks (`frontend/src/lib/splatViewer.ts`).
   eco-ops, and the PSNR is the run's 30,000-step figure, measured before the trim
   box removed a haze sheet.
 * **`crawl: index`,** matching the castle, on Kai's say.
-* **Budget 18700K** in `frontend/scripts/kit-check.mjs`, estimated before deploy
-  from the castle's measured parts: 15187K splat, 2388K engine, 437K shell, 161K
-  still. Run `just frontend-kit-check --only /cycle-14/biodrive` once it is live and
-  set the budget just above what it reports.
+* **Budget 15700K** in `frontend/scripts/kit-check.mjs`. It was estimated at 18700K
+  before deploy from the castle's measured parts, then set just above the 15374K
+  that `just frontend-kit-check --only /cycle-14/biodrive` reported live on
+  2026-10-09. The terrace farms page went from 15300K to 12400K the same way, over
+  its measured 12020K.
