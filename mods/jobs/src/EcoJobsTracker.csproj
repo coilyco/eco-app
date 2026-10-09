@@ -12,7 +12,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Eco.ReferenceAssemblies" Version="0.13.0.4-beta-release-1024" />
+    <PackageReference Include="Eco.ReferenceAssemblies" Version="0.14.2-beta-release-1099" />
     <!-- Eco's web pipeline serializes with Newtonsoft.Json, so the DTOs need
          Newtonsoft attributes. The package is a compile-time dep only; the
          runtime copy comes from Eco's own bundled Newtonsoft.Json. -->

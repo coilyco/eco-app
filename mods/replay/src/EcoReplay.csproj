@@ -13,7 +13,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Eco.ReferenceAssemblies" Version="0.13.0.4-beta-release-1024">
+    <PackageReference Include="Eco.ReferenceAssemblies" Version="0.14.2-beta-release-1099">
       <PrivateAssets>all</PrivateAssets>
       <ExcludeAssets>runtime</ExcludeAssets>
     </PackageReference>

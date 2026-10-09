@@ -65,7 +65,7 @@ No separate config to set on the mod side.
 
 ## Compatibility
 
-- Eco `0.13.0.4-beta-release-1024` and newer (built against `Eco.ReferenceAssemblies 0.13.0.4-beta-release-1024`).
+- Eco `0.14.2` and newer (built against `Eco.ReferenceAssemblies 0.14.2-beta-release-1099`).
 - Linux and Windows dedicated servers both work.
 
 ## Source and license
