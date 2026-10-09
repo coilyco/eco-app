@@ -6,12 +6,17 @@ MU0 on an item first traded at Modern 1 has nothing to show."""
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
+import mcp.types as mt
 import pytest
+from pydantic import AnyUrl
 
 from eco_mcp_app import norms, upgrade_words
-from eco_mcp_app.server import _recipe_items
+from eco_mcp_app.reply_templates import MAX_REPLY_CHARS, REPLY_TEMPLATES, render_reply
+from eco_mcp_app.server import _recipe_items, build_server
+from eco_mcp_app.vocab import ARGS_META_KEY, STAGES_URI
 
 LIVE = norms.LiveContext(stage="Modern 4", cycle=14)
 
@@ -179,3 +184,96 @@ def test_the_stage_vocabulary_maps_each_token_to_its_stage() -> None:
     by_alias = {a: e["name"] for e in upgrade_words.stage_vocabulary() for a in e["aliases"]}
     assert by_alias["mu0"] == "Advanced 4" and by_alias["au 5"] == "Advanced 4"
     assert by_alias["bu0"] == "none" and "sbu5" not in by_alias
+
+
+async def _tool_reply(arguments: dict[str, Any]) -> dict[str, Any]:
+    """The JSON block `price_by_stage` returns over MCP, the path a deployed caller takes."""
+    handler = build_server().request_handlers[mt.CallToolRequest]
+    result = await handler(
+        mt.CallToolRequest(
+            method="tools/call",
+            params=mt.CallToolRequestParams(name="price_by_stage", arguments=arguments),
+        )
+    )
+    assert isinstance(result.root, mt.CallToolResult) and not result.root.isError
+    blob = result.root.content[1]
+    assert isinstance(blob, mt.TextContent)
+    return json.loads(blob.text)
+
+
+async def test_the_tool_takes_stage_as_its_own_argument() -> None:
+    by_arg = await _tool_reply({"item": "iron", "stage": "au3"})
+    in_phrase = await _tool_reply({"item": "iron at au3"})
+    assert (by_arg["resolved"], by_arg["stage"]) == ("Iron Bar", "Advanced 3")
+    assert by_arg["reply"] == in_phrase["reply"]
+    ladder = await _tool_reply({"item": "iron", "stage": "Advanced 3"})
+    assert ladder["reply"].startswith("Iron Bar at Advanced 3: ")
+
+
+async def test_the_tool_schema_and_meta_advertise_stage() -> None:
+    handler = build_server().request_handlers[mt.ListToolsRequest]
+    listed = (await handler(mt.ListToolsRequest(method="tools/list"))).root.tools
+    tool = next(t for t in listed if t.name == "price_by_stage")
+    assert {"item", "stage"} <= set(tool.inputSchema["properties"])
+    assert tool.inputSchema["required"] == ["item"]
+    assert tool.meta is not None
+    # Echo's matchVocab fills `stage` from the stage vocabulary, `ignore` keeping the word "none".
+    assert tool.meta[ARGS_META_KEY]["stage"] == {
+        "vocabulary": STAGES_URI,
+        "field": "name",
+        "ignore": ["none"],
+    }
+
+
+async def test_the_stage_vocabulary_is_served_and_holds_no_item_word() -> None:
+    handler = build_server().request_handlers[mt.ReadResourceRequest]
+    request = mt.ReadResourceRequest(
+        method="resources/read", params=mt.ReadResourceRequestParams(uri=AnyUrl(STAGES_URI))
+    )
+    contents = (await handler(request)).root.contents
+    assert isinstance(contents[0], mt.TextResourceContents)
+    entries = json.loads(contents[0].text)["entries"]
+    by_alias = {a: e["name"] for e in entries for a in e["aliases"]}
+    assert by_alias["au3"] == "Advanced 3" and by_alias["sbu4"] == "Basic 4"
+    # A stage is never an item: no stage entry is named like one of the 24 upgrade items.
+    assert not {e["name"] for e in entries} & {"Advanced Upgrade 3", "Basic Upgrade 4"}
+
+
+def test_the_template_fills_item_and_stage_and_fits_the_cap(real: norms.Norms) -> None:
+    templates = REPLY_TEMPLATES["price_by_stage"]
+    # What matchVocab hands the template for "iron at au3": item and stage, never `au3` as item.
+    payload = _ask(real, "iron", stage="au3")
+    both = render_reply(templates, payload, {"item": "Iron Bar", "stage": "Advanced 3"})
+    assert both is not None
+    assert both == payload["reply"] and both.startswith("Iron Bar at Advanced 3 (AU3): 0.97")
+    assert len(both) <= MAX_REPLY_CHARS
+    # With only the item the same payload still renders: the stage template needs both args.
+    assert render_reply(templates, payload, {"item": "Iron Bar"}) == payload["reply"]
+
+
+def test_the_item_vocabulary_carries_shorthand_but_not_a_ladder_stage(real: norms.Norms) -> None:
+    entries = real.vocabulary(_recipe_items())
+    by_alias = {a: e["name"] for e in entries for a in e["aliases"]}
+    # A bare token is the item (S01-S03), so "au3" fills item. "iron at au3" is split before this.
+    assert by_alias["au3"] == "Advanced Upgrade 3"
+    assert by_alias["sbu 4"] == "Scholars Basic Upgrade 4"
+    assert by_alias["mining bu5"] == "Mining Basic Upgrade"
+    assert "Advanced 3" not in {e["name"] for e in entries}
+
+
+@pytest.mark.parametrize("word", ["mu5", "au5", "bu5"])
+def test_a_bare_5_lists_every_module_of_its_tier_beyond_the_five_name_cap(
+    real: norms.Norms, word: str
+) -> None:
+    out = _ask(real, word)
+    tier = upgrade_words.TIERS[word[0]]
+    modules = {f"{m} Upgrade" for m in upgrade_words.SPECIALISTS[tier]}
+    assert out["resolved"] is None and len(out["candidates"]) > 5
+    assert set(out["candidates"]) <= modules and len(out["reply"]) <= MAX_REPLY_CHARS
+
+
+@pytest.mark.parametrize("word", ["sbu5", "smu5", "sau5", "SMU0", "sau 0"])
+def test_a_scholars_5_or_0_is_a_miss_with_its_meaning(real: norms.Norms, word: str) -> None:
+    out = _ask(real, word)
+    assert out["resolved"] is None and out["candidates"] == [] and out["reply"].endswith(".")
+    assert out["reply"] == upgrade_words.meaning(word)

@@ -92,7 +92,7 @@ join that map or `NO_PRICE_TOOLS`, or `tests/mcp/test_norms.py` fails.
 
 ## Median price per stage
 
-`price_by_stage(item)` answers "how much should I sell or buy X for" with one
+`price_by_stage(item, stage?)` answers "how much should I sell or buy X for" with one
 median per upgrade stage and nothing else priced (teable:coilyco/eco-app#8423).
 It sits in `NO_PRICE_TOOLS`: its stages already are the norm, and an attached
 `norm` would add this cycle's own median beside them on the other basis.
