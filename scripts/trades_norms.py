@@ -43,8 +43,8 @@ def _turnover(before: Counter[str], after: Counter[str]) -> float | None:
 
 
 def segment(obs: list[dict], latest_cycle: int) -> list[dict]:
-    """Split the history into cycles at idle gaps and currency turnover. Method and
-    thresholds: docs/price-history.md."""
+    """Split the history into cycles at idle gaps and currency turnover. The
+    thresholds are the module constants above, the summary is docs/price-history.md."""
     by_day: dict[date, Counter[str]] = defaultdict(Counter)
     active_set: set[date] = set()
     for o in obs:

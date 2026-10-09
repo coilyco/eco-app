@@ -96,14 +96,13 @@ venv = ".venv"
 [tool.agentic-os.documentation-layout]
 band = "small"
 # investigation/ is a preserved chronological post-mortem (see AGENTS.md).
-# docs/ holds long-form per-component FEATURES docs migrated from the four
-# source repos, predating the size caps. mods/ subtrees carry their own
-# README + mod.io listing copy as part of their distributed shape.
+# mods/ subtrees carry their own README + mod.io listing copy as part of their
+# distributed shape. docs/ is placement-excluded only and sits under the size caps.
 excludes = ["investigation/", "docs/", "mods/"]
 # `excludes` is placement-only since agentic-os#1108. These trees are ours, so
 # `vendored` would be a false provenance claim; `size_excludes` is the honest
 # key for a monorepo whose components carry their own README + docs/.
-size_excludes = ["investigation/", "docs/", "mods/"]
+size_excludes = ["investigation/", "mods/"]
 
 [tool.agentic-os.code-comments]
 # Generated build output (.NET obj/bin) is not hand-written source.

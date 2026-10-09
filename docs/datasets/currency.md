@@ -1,57 +1,31 @@
 # Currency & money-supply datasets - probe findings
 
-Probe capture: Eco via Sirens, **cycle 14 day 1** (2026-07-05), server
-`eco.coilysiren.me:3001`, Eco `0.13.0.4 beta release-1024`. Drives the
-`get_currency` tool ([#53](https://forgejo.coilysiren.me/coilyco-gaming/eco-app/issues/53),
-under the DiscordLink-replacement epic [#37](https://forgejo.coilysiren.me/coilyco-gaming/eco-app/issues/37)).
-Recipe is the shared one in [README.md](README.md); this page records the
-**reachable-vs-deferred** line for currency data so the tool's scope is
-documented before it was finalized.
+Probe: Eco via Sirens, **cycle 14 day 1** (2026-07-05), Eco `0.13.0.4 beta release-1024`. Drives `get_currency` ([#53](https://forgejo.coilysiren.me/coilyco-gaming/eco-app/issues/53), under epic [#37](https://forgejo.coilysiren.me/coilyco-gaming/eco-app/issues/37)). Recipe: [README.md](README.md). This page records the reachable-vs-deferred line for currency data.
 
-## Where the currency data actually is
+## Where the data is
 
-The issue's no-reset spine assumed `/info` carries a currency listing. **It
-does not** on 0.13.0.4 - `/info` exposes only `EconomyDesc` (`"417 trades, 0
-contracts"`, a headline count) and no per-currency structure. The real surface
-is the admin dataset catalog. `GET /datasets/flatlist` is **public** (no
-`X-API-Key`) and names nine currency-relevant datasets:
+`/info` carries no currency listing on 0.13.0.4, only `EconomyDesc` (`"417 trades, 0 contracts"`). The real surface is the dataset catalog. `GET /datasets/flatlist` and `/info` are public. Series (`/datasets/get`) and actions (`/api/v1/exporter/actions`, CSV) need the admin `X-API-Key`. Nine currency datasets:
 
-* `ActiveCurrencies` - series (Count) - number of live currencies. Circulation signal.
-* `TradesInLast7Days` - series (CurrencyAmount) - rolling **currency value** traded in the trailing 7 days (cycle-13 peak was ~1.8M). Despite the name it is a value, not a count.
-* `PersonalWealthInDefaultCurrency` - series (CurrencyAmount) - aggregate player-held money supply.
-* `GovernmentHoldingsInDefaultCurrency` - series (CurrencyAmount) - aggregate government-held money supply.
-* `CurrencyTrade` - action (EventValue) - per-trade rows: buyer/seller/shop-owner ids, `BoughtOrSold` enum (32/33, [#6](https://forgejo.coilysiren.me/coilyco-gaming/eco-app/issues/6)), amount, and the currency traded.
-* `MintCurrency` - action - minting events. A currency that mints is **backed/minted**; the summed amount is its issuance.
-* `CreateCurrency` - action - currency-creation events. The full roster of currencies plus their founder.
-* `TransferMoney` - action - money transfers.
-* `BarterTrade` - action - itemless barter (no currency leg).
+* `ActiveCurrencies` - series - number of live currencies.
+* `TradesInLast7Days` - series - rolling currency **value** traded over 7 days, not a count.
+* `PersonalWealthInDefaultCurrency` - series - player-held money supply.
+* `GovernmentHoldingsInDefaultCurrency` - series - government-held money supply.
+* `CurrencyTrade` - action - buyer, seller, shop-owner ids, `BoughtOrSold` (32/33, [#6](https://forgejo.coilysiren.me/coilyco-gaming/eco-app/issues/6)), amount, currency.
+* `MintCurrency` - action - minting events. A currency that mints is **backed/minted**, and the summed amount is its issuance.
+* `CreateCurrency` - action - the full roster plus founder.
+* `TransferMoney` - action - transfers.
+* `BarterTrade` - action - itemless barter, no currency leg.
 
-The four series come from `GET /datasets/get?dataset=<Name>&dayStart=0&dayEnd=<day>`
-and the actions from `GET /api/v1/exporter/actions?actionName=<Name>` (CSV).
-Both require the admin `X-API-Key`; only `/datasets/flatlist` and `/info` are
-public. This probe ran without a token in the build container, so the exporter
-returned `401` - column shapes are parsed defensively by candidate name (same
-approach `crafting.py` and `climate.py` already use), and the tool degrades to
-the public headline when the token is absent, exactly like the sibling
-climate tool.
+The probe ran without a token (exporter `401`), so columns parse defensively by candidate name, as in `crafting.py` and `climate.py`. Without a token the tool degrades to the public headline.
 
-## Reachable now (built into `get_currency`)
+## Built into `get_currency`
 
-* **Currency roster + type** - union of `CreateCurrency` (all currencies) and `MintCurrency` (the minted ones). A currency present in `MintCurrency` is classed **minted/backed**; otherwise **personal/credit**, matching the split `Currencies` shows.
-* **Per-currency issuance** - summed `MintCurrency` amount per currency (the backing/minted-supply signal).
-* **Per-currency trade count + volume** - aggregated from `CurrencyTrade` rows, when the exporter carries the currency column.
-* **Money supply** - `PersonalWealthInDefaultCurrency` + `GovernmentHoldingsInDefaultCurrency` latest values, plus `ActiveCurrencies` and `TradesInLast7Days` as circulation signals.
-* **Top holders / per-account balances** - the DiscordLink `Currency <name>` top-holders list. No *export* surface carries per-account balances (see below), so this is served by the stores/economy exporter mod's `GET /api/v1/currency-holdings` ([#58](https://forgejo.coilysiren.me/coilyco-gaming/eco-app/issues/58)), which reads them live from the in-process `CurrencyManager` and joins account owners to names via `UserManager` - sidestepping the [#5](https://forgejo.coilysiren.me/coilyco-gaming/eco-app/issues/5) id-to-name join blocker at the source. The per-currency report folds it in best-effort: reachable when the mod DLL is deployed, and a `holders unavailable` note otherwise (the DLL lands at the next server restart, out of band).
+* **Roster and type** - `CreateCurrency` union `MintCurrency`. In `MintCurrency` is minted/backed, otherwise personal/credit.
+* **Issuance** - summed `MintCurrency` amount per currency.
+* **Trade count and volume** - from `CurrencyTrade`, when the currency column exists.
+* **Money supply** - latest personal wealth plus government holdings, with `ActiveCurrencies` and `TradesInLast7Days` as circulation signals.
+* **Top holders** - served by the stores mod's `GET /api/v1/currency-holdings` ([#58](https://forgejo.coilysiren.me/coilyco-gaming/eco-app/issues/58)), folded in best-effort. Without the DLL the report says `holders unavailable`.
 
-## Why the mod, not the export surface
+## Why the mod, not an export
 
-The top-holders list was originally filed as deferred here because **no export
-surface carries per-account currency balances**. `PersonalWealthInDefaultCurrency`
-is a single aggregate series (default currency only), and `CurrencyTrade` rows
-give flows, not balances - and the buyer/seller ids still hit the
-[#5](https://forgejo.coilysiren.me/coilyco-gaming/eco-app/issues/5) id-to-name
-join blocker. The reachable path is therefore an **in-process mod**
-([#58](https://forgejo.coilysiren.me/coilyco-gaming/eco-app/issues/58), built in
-`mods/stores`), not a dataset - the only place per-account, per-currency
-holdings exist is the live `CurrencyManager`. Contract:
-[mods/stores/docs/currency-holdings.md](../../mods/stores/docs/currency-holdings.md).
+No export carries per-account balances. `PersonalWealthInDefaultCurrency` is one aggregate for the default currency, `CurrencyTrade` gives flows, and its ids hit the [#5](https://forgejo.coilysiren.me/coilyco-gaming/eco-app/issues/5) id-to-name blocker. Only the live `CurrencyManager` holds per-account, per-currency balances, so the mod reads it in process and joins owners to names via `UserManager`. Contract: [mods/stores/docs/currency-holdings.md](../../mods/stores/docs/currency-holdings.md).

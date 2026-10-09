@@ -1,58 +1,33 @@
 # Features
 
-Headline-feature inventory for `eco-jobs-tracker`. "What does this repo do," not file-level detail.
+Headline inventory for `eco-jobs-tracker`.
 
 ## Shape
 
-Three pieces: a C# Eco mod exposing a read-only HTTP endpoint of every player's learned specialties, a FastAPI JSON API doing the row-shaping, and the SPA's `/jobs` page rendering the "who can make what" board. The Jinja2 + HTMX dashboard this package used to serve was retired when the site went fully SPA.
+A C# Eco mod exposing a read-only HTTP endpoint of every player's learned specialties, a FastAPI JSON API doing the row-shaping, and the SPA `/jobs` page rendering the "who can make what" board.
 
 ## JSON API (FastAPI)
 
-- **Mounted at `/jobs/api` of the fused service** - public paths `/jobs/api/v1/professions`, `/v1/players`, `/v1/specialties` (unchanged from the Jinja era), plus `/v1/meta` reporting the mock-data flag the SPA's banner reads.
-- **Browser UI** - the SPA route `/jobs` (`frontend/src/pages/Jobs.tsx`) carries server-wide progression, stacked Professions and Specialties, and the recipe-driven "Most valuable to craft" board. The standalone Players section is intentionally absent. Profession and specialty rows default to holders in the literal Eco demographics **Active** or **Long Term**, show covered/total counts, and warn when nobody in that union covers a populated role. A page-level control reveals holders outside both demographics. The bundled recipe graph also supplies expandable skill trees from profession root to specialty to level-gated talents ([eco-app#195](https://forgejo.coilysiren.me/coilyco-gaming/eco-app/issues/195)). Opportunity rows link into `/uses/price` with observed demand, supply reason, estimated margin when available, and confidence preserved as coordination context. Old drill-down URLs (`/jobs/professions` etc.) land on the same page via the SPA catch-all.
-- **Iframe embedding** - CSP `frame-ancestors` allows `coilysiren.me` to embed; the header now ships site-wide from `eco_mcp_app.http_app` (`FrameAncestorsCSP`).
-- **Mock-data fallback** - `UPSTREAM_URL` unset = canned data from `mock_data.py`, flagged via `/v1/meta`.
-- **Upstream mod fetch** - `UPSTREAM_URL` set = `upstream.py` calls `/api/v1/skills` with `UPSTREAM_API_KEY` as `X-API-Key`, 5s timeout, no fallback on a dead endpoint.
-- **OpenTelemetry exception tracing** - the fused ASGI process records uncaught request exceptions for SigNoz.
+- **Mount** - `/jobs/api` of the fused service: `/v1/professions`, `/v1/players`, `/v1/specialties`, plus `/v1/meta` reporting the mock-data flag.
+- **Browser UI** - `/jobs` (`frontend/src/pages/Jobs.tsx`): server-wide progression, Professions and Specialties, the recipe-driven "Most valuable to craft" board, and skill trees from the bundled recipe graph ([eco-app#195](https://forgejo.coilysiren.me/coilyco-gaming/eco-app/issues/195)). Rows default to holders in the Eco demographics **Active** or **Long Term**, show covered/total counts, and warn when nobody in that union covers a populated role. A page control reveals other holders. Opportunity rows link into `/uses/price`.
+- **Iframe embedding** - CSP `frame-ancestors` allows `coilysiren.me`, shipped site-wide by `FrameAncestorsCSP` in `eco_mcp_app.http_app`.
+- **Mock fallback** - `UPSTREAM_URL` unset serves `mock_data.py`, flagged via `/v1/meta`.
+- **Upstream fetch** - `UPSTREAM_URL` set makes `upstream.py` call `/api/v1/skills` with `UPSTREAM_API_KEY` as `X-API-Key`, 5s timeout, no fallback on a dead endpoint.
 
 ## C# Eco mod (`EcoJobsTracker.dll`)
 
-- **`GET /api/v1/skills` endpoint** - ModKit UserCode mod, `[ApiController]` picked up by Eco's ASP.NET host.
-- **Every player's learned specialties and role membership** - Iterates `UserManager.Users`, filters `Level > 0 && IsSpecialty`, and returns name, level, max-level, online state, plus membership in `DemographicManager.Active` and `DemographicManager.LongTerm`. The emitted strings `Active` and `Long Term` are literal Eco demographic names, not last-seen windows.
-- **`GET /api/v1/citizens` endpoint** - Iterates `UserManager.Users` returning `{id, name}`. Exposes the numeric in-game user id the action exporter keys `Citizen` by (the admin `/api/v1/users` surface omits it), so the crafting atlas can join exporter ids to display names ([eco-app#5](https://forgejo.coilysiren.me/coilyco-gaming/eco-app/issues/5)).
-- **Auth via Eco's admin-token middleware** - Same `X-API-Key` gate as the rest of `/api/v1/*`. No bespoke auth.
-- **Dual-attribute DTOs** - Records carry `System.Text.Json` and `Newtonsoft.Json` camelCase attributes, serializing identically under either pipeline.
-- **mod.io distribution** - Listing copy + zip-shape in `mod/modio.md`.
+- **`GET /api/v1/skills`** - ModKit UserCode `[ApiController]`. Iterates `UserManager.Users` with `Level > 0 && IsSpecialty`, returning name, level, max-level, online state, and membership in `DemographicManager.Active` and `LongTerm`. `Active` and `Long Term` are literal Eco demographic names, not last-seen windows.
+- **`GET /api/v1/citizens`** - `{id, name}` per user: the numeric id the action exporter keys `Citizen` by, which admin `/api/v1/users` omits ([eco-app#5](https://forgejo.coilysiren.me/coilyco-gaming/eco-app/issues/5)).
+- **Auth** - Eco's admin-token `X-API-Key` gate, nothing bespoke.
+- **DTOs** - carry `System.Text.Json` and `Newtonsoft.Json` camelCase attributes.
+- **Distribution** - mod.io listing copy and zip shape in `mod/modio.md`.
+- **Shell harness** - `mod/shell/`, an ASP.NET mock on `:5100` with the same routes, DTOs, and canned data (`just run-shell-jobs`).
 
-## Shell harness (`mod/shell/`)
+## Deploy and dev
 
-- **Standalone ASP.NET mock on `:5100`** - Same routes (`/api/v1/skills`, `/api/v1/citizens`), same DTOs (`<Compile Include>`-linked), canned data. Iterate without booting Eco.
+- **Deploy** - manifests and rollout live in `coilyco-bridge/deploy/services/eco-app`. This repo owns the application image.
+- **Mod packages** - `just package-mods`, `just publish-mod-packages`.
+- **Dev loop** - `just sync`, `just http` (`:4000`), `just build-mod-jobs`.
+- **Naming debt** - public name is `eco-jobs-tracker`, internals still say `eco-spec-tracker`.
 
-## Deploy and ops
-
-- **Canonical deploy reference for the homelab** - `coilyco-bridge/deploy/services/eco-app` owns manifests and rollout. This repo owns the application image and Ward development surface.
-- **k3s + ExternalSecrets** - Pulls `UPSTREAM_API_KEY` from AWS SSM via ClusterSecretStore. OTLP exports over the private network to SigNoz.
-- **Image publish** - Builds + pushes to `ghcr.io/coilysiren/eco-spec-tracker/...`, git-SHA tagged.
-- **Tailscale + Traefik + cert-manager** - Inherited from `backend` template.
-- **Mod package path** - `just package-mods` builds deterministic install-ready ZIPs with the `Mods/EcoJobsTracker/` prefix. `just publish-mod-packages` publishes the immutable package.
-
-## Dev-loop tooling
-
-- **`just sync` / `just http`** - `uv sync --group dev`, then uvicorn with reload on `:4000`.
-- **`just run-shell-jobs`** - C# shell harness on `:5100`.
-- **`just build-mod-jobs`** - Production mod DLL.
-- **`just build-docker`** - Local application image build. Deployment stays in `coilyco-bridge/deploy`.
-- **Pre-commit** - ruff + mypy on Python, `dotnet format` on C#.
-- **Smoke suite** - `tests/test_smoke.py`: every page, every JSON, parser fixture.
-
-## Naming-debt note
-
-Public name is `eco-jobs-tracker`. Internals still use `eco-spec-tracker` in package and route names. Rename deferred. See README.
-
-## See also
-
-- [README.md](../../README.md) - human-facing intro.
-- [AGENTS.md](../../AGENTS.md) - agent-facing operating rules.
-- [justfile](../../justfile) - dev verbs.
-
-Cross-reference convention from [coilysiren/agentic-os#59](https://github.com/coilyco-flight-deck/agentic-os/issues/59).
+See also: [README.md](../../README.md), [AGENTS.md](../../AGENTS.md), [justfile](../../justfile).
