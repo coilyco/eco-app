@@ -12,7 +12,6 @@ export default function StatGrid({ status }: { status: EcoStatus }) {
     {
       label: "Online now",
       value: formatCount(status.players.online),
-      detail: `${formatCount(status.players.activeAndOnline)} active this week`,
     },
     {
       label: "Settlers",
@@ -37,8 +36,9 @@ export default function StatGrid({ status }: { status: EcoStatus }) {
       value: status.economy.description.split(",")[0] ?? status.economy.description,
       detail: status.economy.description.split(",").slice(1).join(",").trim() || undefined,
     },
-    { label: "World", value: status.world.size, detail: status.cycle.gameSpeed.toLowerCase() + " game speed" },
-    { label: "Server", value: status.server.version.split(" ")[0] ?? "", detail: status.server.category },
+    // The facts row above already carries world size, game speed and Eco version, so
+    // the category is the one thing the old Server tile held that nothing else shows.
+    { label: "Server type", value: status.server.category },
   ]
 
   return (

@@ -26,6 +26,14 @@ describe("ItemPrice", () => {
     expect(el.querySelector("[data-norm-state]")).toHaveClass("item-price__norm--far")
   })
 
+  it("weighs 46% over and 50% over by the percent it shows", () => {
+    const { rerender } = render(<ItemPrice price={1.168} norm={NORM} currency="Spectres" data-testid="p" />)
+    expect(screen.getByTestId("p")).toHaveTextContent("46% over")
+    expect(screen.getByTestId("p").querySelector("[data-norm-state]")).not.toHaveClass("item-price__norm--far")
+    rerender(<ItemPrice price={1.2} norm={NORM} currency="Spectres" data-testid="p" />)
+    expect(screen.getByTestId("p").querySelector("[data-norm-state]")).toHaveClass("item-price__norm--far")
+  })
+
   it("keeps a sentence intact inline", () => {
     render(<ItemPrice price={0.8} norm={NORM} currency="Spectres" prefix="@ " layout="inline" data-testid="p" />)
     expect(screen.getByTestId("p")).toHaveTextContent("@ 0.8, about the usual Modern 4 price (134 sales)")

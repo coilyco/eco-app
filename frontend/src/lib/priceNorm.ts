@@ -98,6 +98,14 @@ export function compareToUsual(m: number, usual: string): string {
   return `${m > 0 ? Math.min(pct, 99) : pct}% ${m > 1 ? "over" : "under"} ${usual}`
 }
 
+// Far means the percent the words show is 50 or more over, or 30 or more under, so
+// "46% over" and "44% over" read the same weight and "50% over" does not.
+export function isFarFromUsual(m: number): boolean {
+  if (m >= 2) return true
+  const pct = Math.round(Math.abs(m - 1) * 100)
+  return m > 1 ? pct >= 50 : pct >= 30
+}
+
 function stageName(norm: PriceNorm): string {
   return norm.basis === "stage" && norm.stage ? `${norm.stage} ` : ""
 }

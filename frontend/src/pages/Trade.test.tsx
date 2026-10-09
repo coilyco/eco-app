@@ -489,7 +489,9 @@ describe("Trade", () => {
     renderTrade()
 
     await waitFor(() => {
-      expect(screen.getByTestId("trade-error")).toBeInTheDocument()
+      expect(screen.getByTestId("trade-error")).toHaveTextContent(
+        "Trade data is not available right now. Check back once players have traded on the server.",
+      )
     })
     // No panels, but the shell and cross-links survive — no hard crash.
     expect(screen.queryByTestId("drill")).not.toBeInTheDocument()

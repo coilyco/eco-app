@@ -64,7 +64,7 @@ export default function PagePassword({ children }: { children: ReactNode }) {
         setError("That password didn't match. Try again.")
       }
     } catch {
-      setError("Couldn't verify right now — check your connection and retry.")
+      setError("Couldn't verify right now. Check your connection and retry.")
     } finally {
       setSubmitting(false)
     }

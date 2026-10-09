@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { compareToUsual, describeNorm, formatMultiple, type PriceNorm } from "./priceNorm"
+import { compareToUsual, describeNorm, formatMultiple, isFarFromUsual, type PriceNorm } from "./priceNorm"
 
 const base: PriceNorm = {
   stage: "Basic 4",
@@ -114,5 +114,25 @@ describe("formatMultiple", () => {
     expect(formatMultiple(1.34)).toBe("1.3x")
     expect(formatMultiple(12.6)).toBe("13x")
     expect(formatMultiple(0.04)).toBe("<0.1x")
+  })
+})
+
+describe("isFarFromUsual", () => {
+  it("follows the percent the words show, so 46% over and 44% over weigh the same", () => {
+    expect(compareToUsual(1.46, "the usual price")).toBe("46% over the usual price")
+    expect(isFarFromUsual(1.46)).toBe(false)
+    expect(isFarFromUsual(1.44)).toBe(false)
+    expect(isFarFromUsual(1.5)).toBe(true)
+  })
+
+  it("marks 30% under and below as far, and 26% under as not", () => {
+    expect(isFarFromUsual(0.74)).toBe(false)
+    expect(isFarFromUsual(0.7)).toBe(true)
+    expect(isFarFromUsual(0.5)).toBe(true)
+  })
+
+  it("marks 2 times and over as far", () => {
+    expect(isFarFromUsual(2)).toBe(true)
+    expect(isFarFromUsual(1.99)).toBe(true)
   })
 })

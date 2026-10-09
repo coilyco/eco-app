@@ -53,8 +53,8 @@ function OfferTable({
           <th>Store</th>
           <th>Owner</th>
           <th className="num">Price</th>
-          <th className="num">Qty</th>
-          <th>Source</th>
+          <th className="num">How many</th>
+          <th>How we know</th>
         </tr>
       </thead>
       <tbody>

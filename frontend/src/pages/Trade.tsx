@@ -32,7 +32,7 @@ const TREND: Record<MarketTrend, { glyph: string; label: string; color: string }
   rising: { glyph: "▲", label: "rising", color: "var(--leaf)" },
   falling: { glyph: "▼", label: "falling", color: "var(--meteor)" },
   flat: { glyph: "▬", label: "flat", color: "var(--ink-faint)" },
-  insufficient: { glyph: "·", label: "thin", color: "var(--ink-faint)" },
+  insufficient: { glyph: "·", label: "few sales", color: "var(--ink-faint)" },
 }
 
 function TrendTag({ trend, delta }: { trend: MarketTrend; delta: number | null }) {
@@ -306,11 +306,11 @@ export default function Trade() {
         </h1>
         <p className="hero-tagline">
           The whole market on one always-on page: movers, price history, every store, and the
-          logistics of what to do next. The website answer to Discord's ephemeral DM embeds.
+          logistics of what to do next.
         </p>
         {nothing && (
           <p className="hero-pill hero-pill-muted" data-testid="trade-error">
-            trade data unavailable right now (check back once the game server has traded)
+            Trade data is not available right now. Check back once players have traded on the server.
           </p>
         )}
         <FreshnessNote
@@ -354,7 +354,7 @@ export default function Trade() {
       {market && markets.length === 0 && (
         <section>
           <p className="empty-note" data-testid="market-empty">
-            No priced markets yet. Early in a cycle this is normal, so check back after a few days of
+            Nothing has a price yet. That is normal early in a cycle, so check back after a few days of
             trading.
           </p>
         </section>

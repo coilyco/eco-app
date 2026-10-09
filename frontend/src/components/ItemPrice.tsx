@@ -1,5 +1,5 @@
 import { formatPrice, UNREPORTED } from "../lib/format"
-import { describeNorm, multipleFor, type PriceNorm } from "../lib/priceNorm"
+import { describeNorm, isFarFromUsual, multipleFor, type PriceNorm } from "../lib/priceNorm"
 
 interface Props {
   price: number | null | undefined
@@ -38,10 +38,7 @@ export default function ItemPrice({
   if (price == null || !Number.isFinite(price)) return <span data-testid={testId}>{`${UNREPORTED}${suffix}`}</span>
   const text = describeNorm(norm, currency, price)
   const m = norm ? multipleFor(norm, price, currency) : null
-  // Judged on the multiple rounded to one decimal, so 1.5x (50% over) or 0.7x
-  // (30% under) always reads as far.
-  const shown = m === null ? null : Math.round(m * 10) / 10
-  const far = shown !== null && (shown >= 1.5 || shown <= 0.7)
+  const far = m !== null && isFarFromUsual(m)
   const value = `${prefix}${formatPrice(price)}${showCurrency && currency ? ` ${currency}` : ""}${suffix}`
   // A missing norm is a wiring gap for the check to catch, not news for a player.
   const note =

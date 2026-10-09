@@ -43,10 +43,11 @@ thresholds were picked by Jev (jev-1.13.0), within 5% at p=.53 and times from
 The sale count is always there. Compact mode, the default, shows the short
 form, and puts the full sentence ("This is 30% over the usual Modern 4 price,
 based on 134 sales over 11 cycles.") in a screen-reader span and the hover
-title. A multiple of 1.5x or more, or 0.7x or less, rounded to one decimal,
-reads in full-weight text instead of dim. In words that is about 50% over or
-30% under, give or take the rounding. Colour is not used, because a far price
-is good for one side of a trade and bad for the other.
+title. A price the words call 50% over or more, or 30% under or more, reads in
+full-weight text instead of dim, judged on the same rounded percent the words
+show (`isFarFromUsual`), so "46% over" is dim and "50% over" is not. Colour is
+not used, because a far price is good for one side of a trade and bad for the
+other.
 
 ## Where the multiple comes from
 

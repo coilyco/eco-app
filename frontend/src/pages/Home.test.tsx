@@ -66,6 +66,21 @@ describe("Home", () => {
     )
   })
 
+  it("keeps each fact once: the totals repeat nothing the facts row holds, and make no claim about a week", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify(SAMPLE_STATUS), { status: 200, headers: { "Content-Type": "application/json" } }),
+      ),
+    )
+    renderHome()
+    const totals = (await screen.findByTestId("world-facts")).textContent ?? ""
+    expect(totals).not.toMatch(/game speed/i)
+    expect(totals).not.toMatch(/active this week/i)
+    expect(totals).toContain("Server type")
+    expect(totals).toContain(SAMPLE_STATUS.server.category)
+  })
+
   it("names every region differently, so a screen reader can tell them apart", async () => {
     vi.stubGlobal(
       "fetch",
