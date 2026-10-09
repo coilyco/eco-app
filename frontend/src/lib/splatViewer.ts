@@ -21,16 +21,25 @@ export interface ViewSpec {
   fov: number
   distanceRange: [number, number]
   farClip: number
+  /**
+   * A capture arrives a few degrees off true up, since the reconstruction picks its own
+   * frame. This turns it about a horizontal `axis` through the origin by `degrees`, so a
+   * vertical build reads vertical. Measured per capture, by triangulating a tower's axis.
+   */
+  level?: { axis: [number, number, number]; degrees: number }
 }
 
-// The castle is about 150 blocks across.
+// The castle is about 150 blocks across. It opens on its tallest tower (COI-2248), the
+// clock tower, centred and 62 blocks away at a 3 degree rise, from the south-south-east.
+// The tower leaned 4.8 degrees in the capture, so `level` stands it up.
 export const CASTLE_VIEW: ViewSpec = {
   name: "castle",
-  target: [0, 10, 0],
-  reference: [90, 70, -90],
+  target: [-21.9, 27, -32.5],
+  reference: [9.1, 30.2, -86.1],
   fov: 50,
   distanceRange: [15, 400],
   farClip: 2000,
+  level: { axis: [0.7, 0, -0.71], degrees: 4.84 },
 }
 
 const ORBIT_SPEED = 0.15 // radians per second
@@ -93,6 +102,11 @@ export async function startViewer(
     const splat = new pc.Entity(view.name)
     // 3DGS is y-down, so a capture arrives upside down without this turn. v2 is y-down too.
     splat.setLocalEulerAngles(0, 0, 180)
+    if (view.level) {
+      const [x, y, z] = view.level.axis
+      // The tilt is about a world axis, so it goes on after the flip.
+      splat.setLocalRotation(new pc.Quat().setFromAxisAngle(new pc.Vec3(x, y, z).normalize(), view.level.degrees).mul(splat.getLocalRotation()))
+    }
     splat.addComponent("gsplat", { asset })
     app.root.addChild(splat)
   } catch (error) {

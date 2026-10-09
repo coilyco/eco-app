@@ -20,8 +20,9 @@ Not in this repo, which caps files at 2 MB. They are on the files host, under
 * `eco-cycle-14-castle-flythrough-1.mp4` (55 s, 27 MB) and `-2.mp4` (30 s, 25 MB),
   each with a `-poster.jpg` beside it (`teable:coilyco/infrastructure#8605`).
 
-The still on the stage, `frontend/src/assets/castle-v2-hero.jpg` (1920x1080, 177 KB),
-is in the repo. So is the link-preview card art, `og-art/castle.jpg`.
+The still on the stage, `frontend/src/assets/castle-v2-hero.jpg` (1920x1080, 154 KB),
+is in the repo, rendered from the page's own start view, so the handoff to the live
+view does not jump. So is the link-preview card art, `og-art/castle.jpg`.
 
 ## What a person sees
 
@@ -46,8 +47,19 @@ is in the repo. So is the link-preview card art, `og-art/castle.jpg`.
 * **The splat is turned 180 degrees about Z.** 3DGS is y-down, so a capture arrives
   upside down without it. v2 is y-down too, and was checked in a browser.
 * **The camera is in blocks.** v2 is about 150 Eco blocks across (v1 was about 10
-  arbitrary units), so the start camera, zoom range and clip planes are in blocks:
-  start at `[90, 70, -90]` looking at `[0, 10, 0]`, fov 50, the reference viewer's.
+  arbitrary units), so the start camera, zoom range and clip planes are in blocks.
+* **It opens on the clock tower, upright** (COI-2248). The tallest tower is the
+  rust-brick one with the pagoda roof, about 36 blocks from base to spire. The view
+  looks at its middle, `[-21.9, 27, -32.5]`, from 62 blocks away at a 3 degree rise,
+  with fov 50, so it shows spire to base. The orbit and zoom pivot on it too, and
+  Reset view returns to it. The reference viewer's old start was `[90, 70, -90]`
+  looking at `[0, 10, 0]`.
+* **The capture is levelled.** The reconstruction left the tower 4.8 degrees off
+  vertical, which no camera can undo, because a vertical line leans by the same
+  angle from every side. `level` in the view spec turns the splat that much about a
+  horizontal axis (`[0.7, 0, -0.71]`), measured by triangulating the spire and the
+  tower's belt from two views, which then agree to 0.01 degrees. The windmills and
+  walls stand straight with it. A new capture needs its own measurement.
 * **`RESOLUTION_AUTO`, no resize observer.** The engine resizes its pixel buffer
   only in that mode, and then follows the canvas's CSS size every frame.
 * **Start of the engine is deferred a tick.** React's dev double-mount otherwise
