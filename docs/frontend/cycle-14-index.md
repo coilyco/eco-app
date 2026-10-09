@@ -18,8 +18,10 @@ Each splat page links back with "All cycle 14 scenes".
 * **The words are placeholders.** The heading, the one line under it and the empty
   state are not Kai's or dev-advocate's yet. The card text is each route's own
   description.
-* **`crawl: noindex`,** unlike the pages it lists, until Kai says otherwise. The
-  pages are indexed on her say, and an index page was not part of that.
+* **`crawl: index`,** with the pages it lists, on Kai's say (2026-10-09). It was noindex
+  until then, because the pages were indexed on her say and an index page was not
+  part of that. Her rule for the site is that only the per-item and per-recipe pages
+  stay out of the index.
 * **The empty state** reads "No 3D scenes are published yet." It cannot show while the
   manifest holds a splat route, and the test renders it with an empty list.
 * **No budget entry** in `frontend/scripts/kit-check.mjs`: three stills and the shell

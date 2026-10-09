@@ -177,11 +177,11 @@
     {
       "path": "/cycle-14",
       "component": "Cycle14Index",
-      "crawl": "noindex",
+      "crawl": "index",
       "image": "/og/cycle-14.png",
       "title": "Cycle 14 in 3D | Eco via Sirens",
       "description": "Places on the Eco via Sirens server in cycle 14, captured as 3D scenes you can look around in.",
-      "note": "Lists every /cycle-14/* route below, derived from this table (COI-2401). Noindex until Kai says otherwise, unlike the pages it lists."
+      "note": "Lists every /cycle-14/* route below, derived from this table (COI-2401). Indexed on Kai's say, 2026-10-09, with the pages it lists."
     },
     {
       "path": "/cycle-14/castle",
@@ -212,6 +212,15 @@
       "title": "Terrace farms",
       "description": "Ice Dragon's terrace farms and bridge in Phantom Springs, cycle 14, captured from 315 frames as a Gaussian splat of 616,523 points.",
       "note": "A Gaussian splat of Ice Dragon's cycle 14 terrace farms, with a still (COI-2541). Indexed on Kai's say, matching the castle."
+    },
+    {
+      "path": "/build-for-splats",
+      "component": "BuildForSplats",
+      "crawl": "index",
+      "image": "/og/build-for-splats.png",
+      "title": "Build for a splat | Eco via Sirens",
+      "description": "How to design an Eco build so it comes out sharp as a 3D splat, from three cycle 14 captures. For cycle 15 builders.",
+      "note": "Player guide to building for a good Gaussian splat, written for cycle 15 builders (COI-2618). Indexed on Kai's say, 2026-10-09. Not under /cycle-14/ because that index lists every route there as a scene."
     },
     {
       "path": "/replay",

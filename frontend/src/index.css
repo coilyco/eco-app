@@ -2069,6 +2069,44 @@ html {
   object-fit: cover;
 }
 
+/* The build-for-splats guide. docs/frontend/build-for-splats.md. */
+.guide-quote {
+  margin: 0;
+  padding-left: var(--k-s-4);
+  border-left: 2px solid var(--k-line);
+  color: var(--k-dim);
+  max-width: 60ch;
+}
+
+.guide-body {
+  max-width: 60ch;
+}
+
+.guide-figure {
+  margin: 0;
+  max-width: 40rem;
+}
+
+.guide-figure figcaption {
+  max-width: 60ch;
+}
+
+.guide-figure img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1200 / 630;
+  object-fit: cover;
+  border: 1px solid var(--k-line);
+}
+
+.guide-splats {
+  display: grid;
+  gap: var(--k-s-3);
+  padding: 0;
+  list-style: none;
+}
+
 .castle-stage {
   position: relative;
   width: 100%;

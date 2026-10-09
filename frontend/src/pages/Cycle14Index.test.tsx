@@ -58,4 +58,9 @@ describe("Cycle 14 index", () => {
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1)
     expect(screen.getAllByRole("heading", { level: 2 }).length).toBe(splatSpecs().length)
   })
+
+  it("points to the build-for-splats guide", () => {
+    renderIndex()
+    expect(screen.getByRole("link", { name: "Build for a splat" })).toHaveAttribute("href", "/build-for-splats")
+  })
 })

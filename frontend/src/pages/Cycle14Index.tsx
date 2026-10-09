@@ -21,7 +21,7 @@ export function splatSpecs(specs: SplatSpec[] = manifest.routes as SplatSpec[]):
   return specs.filter((s) => s.path.startsWith(PREFIX) && !s.path.includes("*") && s.title)
 }
 
-const stillFor = (spec: SplatSpec) => (spec.art ? STILLS[`../assets/og-art/${spec.art}`] : undefined)
+export const stillFor = (spec: SplatSpec) => (spec.art ? STILLS[`../assets/og-art/${spec.art}`] : undefined)
 
 // Placeholder words: Kai's or dev-advocate's to replace (COI-2401).
 export default function Cycle14Index({ specs = splatSpecs() }: { specs?: SplatSpec[] } = {}) {
@@ -30,6 +30,9 @@ export default function Cycle14Index({ specs = splatSpecs() }: { specs?: SplatSp
       <section className="k-stack k-stack--4">
         <h1 className="k-display">Cycle 14 in 3D</h1>
         <p className="castle-sub">Places on the server captured as 3D scenes. Open one and look around.</p>
+        <p className="k-hint">
+          Building in cycle 15? <Link to="/build-for-splats">Build for a splat</Link>
+        </p>
       </section>
 
       {specs.length === 0 ? (

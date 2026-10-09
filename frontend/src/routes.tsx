@@ -4,6 +4,7 @@ import manifest from "../../data/spa_routes.json"
 import PageMeta from "./components/PageMeta"
 import PagePassword from "./components/PagePassword"
 import BioDriveSplat from "./pages/BioDriveSplat"
+import BuildForSplats from "./pages/BuildForSplats"
 import CastleSplat from "./pages/CastleSplat"
 import Civics from "./pages/Civics"
 import Crafting from "./pages/Crafting"
@@ -66,6 +67,7 @@ const PAGES: Record<string, () => ReactElement> = {
   CastleSplat,
   BioDriveSplat,
   TerraceFarmsSplat,
+  BuildForSplats,
 }
 
 export interface RouteSpec {
