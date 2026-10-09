@@ -2,7 +2,8 @@
 
 The coilyco kit ships with CI that holds a page to its rules: axe, a 16px
 type floor, the layering rule, transfer budgets. eco-app runs the same checks,
-in two halves, because its CI job has no browser.
+in two halves: a jsdom half in the `frontend` job and a browser half in the
+`kit-check` job.
 
 ## In CI, on every push: `just frontend-test`
 
@@ -29,7 +30,7 @@ Each test asserts it found enough to check, so an empty read cannot pass. That
 guard caught vitest stubbing CSS imports to `""`, which is why the CSS is read
 from disk.
 
-## In a browser, on demand: `just frontend-kit-check`
+## In a browser: `just frontend-kit-check`
 
 `frontend/scripts/kit-check.mjs` drives an installed Chrome
 (`playwright-core`, no download) over every public route at the kit's two
@@ -56,8 +57,24 @@ Budgets are eco-app's, not the kit's 150K. eco-app is a data app, and a route's
 weight is its API payloads. They sit just above what each route moved on
 2026-09-27, so a regression fails while today's pages pass.
 
-Wiring this half into CI needs a browser in the runner image, which is
-eng-platform's to add.
+## In CI, on every push and pull request: the `kit-check` job
+
+`just frontend-kit-check-ci` (`scripts/frontend-kit-check-ci.sh`) is the CI
+half. The job builds the SPA, installs Playwright's Chromium inside the job
+(apt for the system libraries, since the job container runs as root), serves
+`frontend/dist` from the fused service and runs `kit-check` on every public
+route at both widths. Text under 16px, a layering hit, an axe violation, a
+phone overflow, a page that does not draw, or a route over its transfer budget
+fails the job. The runner image is untouched, and the browser install is the
+one network-dependent step.
+
+The service is the real one because `/info` is a server route, which vite's dev
+proxy does not stand in for. Every upstream points at a port nothing listens
+on, so each page draws the outage state `a11y.test.tsx` already checks, and
+the job needs no game server. Transfer budgets are therefore met by the shell
+and outage payloads. A live data state, and the castle splat the CI egress may
+not reach, are checked by running `just frontend-kit-check` against production
+by hand.
 
 ## Layering, the rule most pages broke
 

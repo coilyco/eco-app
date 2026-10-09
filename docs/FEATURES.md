@@ -28,6 +28,10 @@ consolidation (coilysiren/inbox#101).
   Each item has one page holding its market, recipes, and uses, and old
   `/recipe` links redirect to the recipe's card there, see
   [frontend/item-pages.md](frontend/item-pages.md).
+- **Kit browser checks in CI** - the `kit-check` job in `build-publish.yml`
+  drives a Chromium installed in the job over every public route at 1000px and
+  320px, and fails a pull request on axe, text under 16px, layering, phone
+  overflow, or transfer weight. See [frontend/kit-checks.md](frontend/kit-checks.md).
 - **Jobs API** at `/jobs/api` and **Replay API** at `/replay/api`. See
   [progression.md](progression.md).
 - **Discord worker** - `src/eco_discord/`, a separate Pycord gateway process.

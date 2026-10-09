@@ -127,6 +127,31 @@ jobs:
         env:
           SENTRY_DSN: ${{ secrets.SENTRY_CI_DSN }}
         run: python3 scripts/alert_sentry.py
+  kit-check:
+    runs-on: docker
+    container: forgejo.coilysiren.me/coilyco-flight-deck/agentic-os:release
+    timeout-minutes: 20
+    # The kit's browser checks (axe with colour contrast, the rendered 16px
+    # floor, layering, phone overflow, transfer weight). The job container has
+    # no Chrome, so the script installs Playwright's Chromium inside the job
+    # and the runner image stays as it is. COI-2057, docs/frontend/kit-checks.md.
+    steps:
+      - uses: actions/checkout@v4
+      - name: Enable pnpm via corepack
+        run: COREPACK_ENABLE_DOWNLOAD_PROMPT=0 corepack enable
+      - run: pnpm install --frozen-lockfile
+        working-directory: frontend
+      - run: pnpm build
+        working-directory: frontend
+      - name: Serve the built SPA from the fused service and run kit-check
+        run: bash scripts/frontend-kit-check-ci.sh
+
+      - name: Alert Sentry on main failure
+        if: ${{ failure() && github.ref == 'refs/heads/main' }}
+        continue-on-error: true
+        env:
+          SENTRY_DSN: ${{ secrets.SENTRY_CI_DSN }}
+        run: python3 scripts/alert_sentry.py
   build-image:
     if: >-
       (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&

@@ -78,6 +78,10 @@ frontend-og *ARGS:
 frontend-kit-check *ARGS:
     @pnpm --dir frontend kit-check "$@"
 
+# The CI half of kit-check - serve frontend/dist from the fused service with no upstream, install Chromium on Linux, run every route.
+frontend-kit-check-ci:
+    @bash scripts/frontend-kit-check-ci.sh
+
 # ESLint over frontend/src.
 frontend-lint *ARGS:
     @pnpm --dir frontend lint "$@"
