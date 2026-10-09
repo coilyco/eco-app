@@ -27,10 +27,9 @@ Defined in [src/eco_mcp_app/server.py](../../src/eco_mcp_app/server.py) and the 
 - **get_progression** - Server-wide profession and specialty progression history. MCP only, no dedicated REST route (COI-2095).
 - **get_social** - Community activity from the `Play`, `FirstLogin`, and `ReputationTransfer` action exporters: play volume, recent arrivals, and a who-reps-whom reputation graph. `ChatSent` is deliberately not fetched or returned ([#185](https://forgejo.coilysiren.me/coilyco-gaming/eco-app/issues/185)). Player names are hashed to stable handles by default. Names in the clear remain operator-gated (`ECO_SOCIAL_ALLOW_NAMES` + `reveal_names`) and never reach the public JSON path. MCP only, no dedicated REST route (COI-2095).
 - **get_world** - World / industry activity from the action-log exporter. Construction, terraforming, roads, moved objects, explosions, garbage, and air pollution folded into a per-day mutation timeline by category, a top-world-shapers + top-polluters leaderboard, `byCitizenByCategory` (events per player within each category, keyed like `categories`, so `roads` names the top road builder, `players` is `null` when every action behind a category failed to fetch, each list bounded by `limit`, COI-2048), most-touched objects, and coarse-binned activity hotspots. No new mod, no restart - reuses the crafting atlas's streamed-CSV plumbing. Probe: [docs/world.md](../world.md).
-- **get_market** - Per-item and per-currency price history, volume, and trend intelligence.
+- **get_market** - Per-item and per-currency price history, volume, and trend intelligence. With an `item` filter it also carries one optional `commodityBenchmark` field: the real-world FRED commodity series for copper, wheat, lumber, iron ore or crude, with its latest value and cadence-aware percent changes. The field is `null` for an item with no FRED mapping and `null` with a warning when the key, the fetch or the series fails, never zero, and is absent without an `item` filter. It replaced the retired `fair_price` tool (COI-2087).
 - **find_trade** - Resale, arbitrage, and supply-gap decisions from history and live shelves. Only shelves with stock above 0 rank as `cheapest` or feed an arbitrage buy side. A market whose every seller is empty reports `cheapest: null` with a `soldOutNote`, never a 0 price or a zero-stock store as the pick (COI-2045).
 - **price_by_stage** - One item word to one Eco item and its median trade price per upgrade stage, or a plain miss. No fuzzy match. Upgrade shorthand (`au3`, `sbu4`, `bu5`, `MU0`) is an item on its own and a stage qualifier beside another item, through the optional `stage` input or inside the phrase (`iron at au3`): the reply leads with that stage's row, says it is the market median and not the crafting cost, and says the item was never traded that early below its floor. A bare `bu5` lists the tier's specialist modules as `candidates`. `eco://vocab/stages` fills `stage` ([price-history.md](../price-history.md#upgrade-shorthand), COI-2107, teable:coilyco/eco-app#8423, #8425).
-- **fair_price** (disabled, teable:coilyco/eco-app#8346) - Real-world commodity prices via FRED (copper, wheat, lumber, iron, crude). 7d/30d/90d.
 - **get_region** - WWF ecoregion classification. Donut, top-3 matches, boom/bust lists.
 - **get_government** - Civic org chart. Elected titles, active elections, active laws (current-state snapshot from the live civic endpoints).
 - **get_civics** - Civics & governance history + trend from the civic action exporters (`Vote`/`DidntVote`/`StartElection`/`WonElection`/`BecomeCitizen`/`SettlementFounded`/…) plus civics/people daily series: elections started + outcomes, voter turnout (cast vs abstained, participation rate, most-active-voter leaderboard), demographic movement (citizens gained/lost, residency moves), settlements founded + homesteads. Acting citizens resolved to names via the citizens surface (`Citizen #<id>` fallback). The website-and-MCP answer to DiscordLink's elections/votes/demographics displays, exceeding them with turnout + demographic trend over time; complements `get_government` (laws-in-effect aren't derivable from the action stream). Probe: [docs/civics.md](../civics.md).
@@ -57,7 +56,7 @@ The React SPA (`frontend/`) is the product UI. The MCP service renders no HTML a
 - **Eco admin `/datasets/get`** - Economic time-series. `ECO_ADMIN_API_KEY`.
 - **Eco admin `/exporter/*`** - Action logs (crafting, harvesting, mining), species, deeds. CSV stream-parsed.
 - **Wikidata + Wikipedia** - Item taxonomy + images. 7-day TTL.
-- **FRED** - Commodity prices. `FRED_API_KEY`.
+- **FRED** - Commodity benchmark on `get_market`. `FRED_API_KEY`, else SSM `/eco-mcp-app/fred-api-key`.
 - **iNaturalist** - Species taxonomy + images. Wikipedia fallback.
 
 ## Bundled data assets
@@ -68,7 +67,7 @@ The React SPA (`frontend/`) is the product UI. The MCP service renders no HTML a
 
 - **server.py** - Core MCP server and tool handlers.
 - **http_app.py** - Starlette ASGI + NormalizeMcpPath middleware.
-- **crafting.py** / **map.py** / **ecoregion.py** / **species.py** / **fair_price.py** / **wikidata.py** / **telemetry.py** / **livereload.py**.
+- **crafting.py** / **map.py** / **ecoregion.py** / **species.py** / **commodity_benchmark.py** / **wikidata.py** / **telemetry.py** / **livereload.py**.
 
 ## Deployment
 

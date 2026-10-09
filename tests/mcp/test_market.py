@@ -9,33 +9,29 @@ Covers:
     `IronIngotItem`).
   - `fetch_market` folding the trades ledger over respx-mocked exporter CSVs
     (consuming eco-app#6, not re-parsing).
-  - `in_game_reference` picking the busiest matching market for the fair-value
-    bridge.
-  - The fair-value merge in `fair_price.fetch_fair_price` (respx-mocked FRED):
-    trend-divergence verdict and the calibration-anchored verdict.
   - Thin-data / zero-trade render paths (markdown + card context).
   - Tool wiring: `get_market` registered, returns text blocks and no widget
-    (just-data per eco-app#87); the `fair_price` tool merges the in-game read
-    when an admin key is set.
+    (just-data per eco-app#87); the optional `commodityBenchmark` field
+    (respx-mocked FRED) leaves every existing payload key intact.
 """
 
 from __future__ import annotations
 
 from collections.abc import Iterator
+from typing import Any
 
 import httpx
 import mcp.types as mt
 import pytest
 import respx
 
-from eco_mcp_app import fair_price as fp
+from eco_mcp_app import commodity_benchmark as cb
 from eco_mcp_app import market as market_mod
 from eco_mcp_app import trades as trades_mod
 from eco_mcp_app.market import (
     MarketIntelligence,
     build_market,
     fetch_market,
-    in_game_reference,
     market_markdown,
     market_template_context,
 )
@@ -208,47 +204,6 @@ def test_build_market_top_markets_cap() -> None:
 
 
 # ---------------------------------------------------------------------------
-# in_game_reference
-# ---------------------------------------------------------------------------
-
-
-def test_in_game_reference_matches_normalized_item() -> None:
-    intel = MarketIntelligence(fetched_at_iso="t", source_base_url="b")
-    intel.markets = build_market(
-        [
-            _row("IronIngotItem", "Credit", 1, 20.0),
-            _row("IronIngotItem", "Credit", 2, 30.0),
-            _row("IronIngotItem", "Gold", 1, 2.0),
-        ]
-    )
-    ref = in_game_reference(intel, "IronIngot")
-    assert ref is not None
-    assert ref.item == "IronIngotItem"
-    # Credit market has more trades than Gold, so it wins.
-    assert ref.currency == "Credit"
-    assert ref.median == pytest.approx(25.0)
-
-
-def test_in_game_reference_currency_filter() -> None:
-    intel = MarketIntelligence(fetched_at_iso="t", source_base_url="b")
-    intel.markets = build_market(
-        [
-            _row("IronIngotItem", "Credit", 1, 20.0),
-            _row("IronIngotItem", "Gold", 1, 2.0),
-        ]
-    )
-    ref = in_game_reference(intel, "IronIngot", currency="Gold")
-    assert ref is not None
-    assert ref.currency == "Gold"
-
-
-def test_in_game_reference_none_when_absent() -> None:
-    intel = MarketIntelligence(fetched_at_iso="t", source_base_url="b")
-    intel.markets = build_market([_row("WheatItem", "Credit", 1, 3.0)])
-    assert in_game_reference(intel, "CopperIngot") is None
-
-
-# ---------------------------------------------------------------------------
 # Rendering / empty states
 # ---------------------------------------------------------------------------
 
@@ -335,94 +290,6 @@ async def test_fetch_market_empty_is_clean() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Fair-value merge in fair_price
-# ---------------------------------------------------------------------------
-
-
-def _meta_response(freq: str = "M") -> httpx.Response:
-    return httpx.Response(
-        200, json={"seriess": [{"id": "X", "frequency_short": freq, "units_short": "USD"}]}
-    )
-
-
-def _monthly_obs_response(values: list[tuple[str, str]]) -> httpx.Response:
-    return httpx.Response(
-        200, json={"observations": [{"date": d, "value": v} for d, v in reversed(values)]}
-    )
-
-
-@pytest.fixture()
-def _fred_env(monkeypatch: pytest.MonkeyPatch, tmp_path: object) -> Iterator[None]:
-    monkeypatch.setenv("ECO_MCP_CACHE_DIR", str(tmp_path))
-    monkeypatch.setenv("FRED_API_KEY", "k")
-    fp._reset_api_key_cache()
-    yield
-    fp._reset_api_key_cache()
-
-
-def test_eco_item_for_resolution() -> None:
-    assert fp.eco_item_for("Iron") == "IronIngot"
-    assert fp.eco_item_for("copper") == "CopperIngot"
-    assert fp.eco_item_for("nope") is None
-
-
-@pytest.mark.asyncio
-@respx.mock
-async def test_fair_price_merge_trend_divergence(_fred_env: None) -> None:
-    # Real-world iron rising month-over-month.
-    values = [("2026-02-01", "100"), ("2026-03-01", "110"), ("2026-04-01", "120")]
-    respx.get(f"{fp.FRED_BASE_URL}/series").mock(return_value=_meta_response("M"))
-    respx.get(f"{fp.FRED_BASE_URL}/series/observations").mock(
-        return_value=_monthly_obs_response(values)
-    )
-    # In-game price falling while real-world rises → underpriced.
-    result = await fp.fetch_fair_price(
-        "Iron", in_game_median=25.0, in_game_currency="Credit", in_game_trend="falling"
-    )
-    assert result.error is None
-    assert result.in_game_median == pytest.approx(25.0)
-    assert result.in_game_verdict == "underpriced"
-    assert "In-game median" in result.narrative
-    assert "underpriced" in result.narrative
-
-
-@pytest.mark.asyncio
-@respx.mock
-async def test_fair_price_merge_calibration_overpriced(_fred_env: None) -> None:
-    values = [("2026-03-01", "100"), ("2026-04-01", "200")]
-    respx.get(f"{fp.FRED_BASE_URL}/series").mock(return_value=_meta_response("M"))
-    respx.get(f"{fp.FRED_BASE_URL}/series/observations").mock(
-        return_value=_monthly_obs_response(values)
-    )
-    # Calibration: 0.5 currency per real unit → expected 0.5 * 200 = 100/unit.
-    fp.save_calibration("cycle-13", {"Copper": 0.5})
-    # Actual in-game median 150 >> 100 * 1.1 → overpriced.
-    result = await fp.fetch_fair_price(
-        "Copper",
-        cycle_id="cycle-13",
-        in_game_median=150.0,
-        in_game_currency="Credit",
-        in_game_trend="rising",
-    )
-    assert result.in_game_verdict == "overpriced"
-    assert "calibrated" in result.narrative
-
-
-@pytest.mark.asyncio
-@respx.mock
-async def test_fair_price_no_in_game_stays_fred_only(_fred_env: None) -> None:
-    values = [("2026-03-01", "100"), ("2026-04-01", "110")]
-    respx.get(f"{fp.FRED_BASE_URL}/series").mock(return_value=_meta_response("M"))
-    respx.get(f"{fp.FRED_BASE_URL}/series/observations").mock(
-        return_value=_monthly_obs_response(values)
-    )
-    result = await fp.fetch_fair_price("Wheat")
-    assert result.in_game_median is None
-    assert result.in_game_verdict is None
-    assert "In-game median" not in result.narrative
-
-
-# ---------------------------------------------------------------------------
 # Tool wiring
 # ---------------------------------------------------------------------------
 
@@ -488,46 +355,111 @@ def test_preview_market_json_route(monkeypatch: pytest.MonkeyPatch) -> None:
     assert payload["markets"][0]["item"] == "IronIngotItem"
 
 
-@pytest.mark.asyncio
-@respx.mock
-async def test_fair_price_tool_merges_in_game(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: object
-) -> None:
-    monkeypatch.setenv("ECO_MCP_CACHE_DIR", str(tmp_path))
-    monkeypatch.setenv("FRED_API_KEY", "k")
-    monkeypatch.setenv("ECO_ADMIN_API_KEY", "k")
-    fp._reset_api_key_cache()
+def _fred_meta(freq: str = "M") -> httpx.Response:
+    return httpx.Response(200, json={"seriess": [{"id": "X", "frequency_short": freq}]})
 
-    # FRED for iron (PIORECRUSDM).
-    respx.get(f"{fp.FRED_BASE_URL}/series").mock(return_value=_meta_response("M"))
-    respx.get(f"{fp.FRED_BASE_URL}/series/observations").mock(
-        return_value=_monthly_obs_response([("2026-03-01", "100"), ("2026-04-01", "120")])
-    )
-    # Exporter on the default admin base (server arg omitted).
-    default_base = "http://eco.coilysiren.me:3001"
-    respx.get(f"{default_base}/api/v1/exporter/actions?actionName=CurrencyTrade").mock(
-        return_value=httpx.Response(200, text=_CURRENCY_CSV)
-    )
-    respx.get(f"{default_base}/api/v1/exporter/actions?actionName=BarterTrade").mock(
-        return_value=httpx.Response(200, text=_BARTER_EMPTY)
-    )
-    respx.get(f"{default_base}/api/v1/citizens").mock(
-        return_value=httpx.Response(200, json=_CITIZENS_JSON)
+
+def _fred_obs(values: list[tuple[str, str]]) -> httpx.Response:
+    return httpx.Response(
+        200, json={"observations": [{"date": d, "value": v} for d, v in reversed(values)]}
     )
 
-    mcp = build_server(disabled_tools=frozenset())
-    handler = mcp.request_handlers[mt.CallToolRequest]
-    req = mt.CallToolRequest(
-        method="tools/call",
-        params=mt.CallToolRequestParams(name="fair_price", arguments={"item": "Iron"}),
-    )
-    result = await handler(req)
+
+async def _call_get_market(arguments: dict[str, str]) -> tuple[str, dict[str, Any]]:
     import json as _json
 
-    payload = _json.loads(result.root.content[1].text)
-    assert payload["inGameMedian"] is not None
-    assert payload["inGameVerdict"] is not None
-    fp._reset_api_key_cache()
+    mcp = build_server()
+    handler = mcp.request_handlers[mt.CallToolRequest]
+    result = await handler(
+        mt.CallToolRequest(
+            method="tools/call",
+            params=mt.CallToolRequestParams(name="get_market", arguments=arguments),
+        )
+    )
+    blocks = result.root.content
+    return blocks[0].text, _json.loads(blocks[1].text)
+
+
+def _mock_exporter() -> None:
+    respx.get(CURRENCY_URL).mock(return_value=httpx.Response(200, text=_CURRENCY_CSV))
+    respx.get(BARTER_URL).mock(return_value=httpx.Response(200, text=_BARTER_EMPTY))
+    respx.get(CITIZENS_URL).mock(return_value=httpx.Response(200, json=_CITIZENS_JSON))
+
+
+@pytest.fixture()
+def _fred_env(monkeypatch: pytest.MonkeyPatch, tmp_path: object) -> Iterator[None]:
+    monkeypatch.setenv("ECO_MCP_CACHE_DIR", str(tmp_path))
+    monkeypatch.setenv("ECO_ADMIN_API_KEY", "k")
+    monkeypatch.setenv("FRED_API_KEY", "k")
+    trades_mod._trades_cache.clear()
+    cb._reset_api_key_cache()
+    yield
+    cb._reset_api_key_cache()
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_get_market_without_item_has_no_benchmark_field(_fred_env: None) -> None:
+    """The field is optional: no item filter, no key, and no FRED call."""
+    _mock_exporter()
+    fred = respx.get(f"{cb.FRED_BASE_URL}/series")
+    _, payload = await _call_get_market({"server": "eco.example.com:3001"})
+    assert "commodityBenchmark" not in payload
+    assert not fred.called
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_get_market_benchmark_leaves_existing_keys_intact(_fred_env: None) -> None:
+    _mock_exporter()
+    respx.get(f"{cb.FRED_BASE_URL}/series").mock(return_value=_fred_meta("M"))
+    respx.get(f"{cb.FRED_BASE_URL}/series/observations").mock(
+        return_value=_fred_obs([("2026-03-01", "100"), ("2026-04-01", "120")])
+    )
+    text, payload = await _call_get_market({"server": "eco.example.com:3001", "item": "Iron"})
+    # The ledger is cached by the call above, so this is the same data the tool folded.
+    intel = await fetch_market(base_url="eco.example.com:3001", api_key="k", item="Iron")
+    for key, value in intel.to_dict().items():
+        got = payload[key]
+        if key == "markets":
+            # The dispatch layer adds a price `norm` to each row, which is not ours to compare.
+            got = [{k: v for k, v in row.items() if k != "norm"} for row in got]
+        assert got == value, key
+    benchmark = payload["commodityBenchmark"]
+    assert isinstance(benchmark, dict)
+    assert benchmark["seriesId"] == "PIORECRUSDM"
+    assert benchmark["latestValue"] == 120.0
+    assert benchmark["changes"]["1m"] == pytest.approx(20.0)
+    assert benchmark["note"]
+    assert "Real-world benchmark: iron ore" in text
+    # Caveat keys still lead the payload, ahead of the bulk and the new field.
+    assert list(payload)[:2] == ["view", "warnings"]
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_get_market_benchmark_is_null_for_an_unmapped_item(_fred_env: None) -> None:
+    _mock_exporter()
+    fred = respx.get(f"{cb.FRED_BASE_URL}/series")
+    _, payload = await _call_get_market({"server": "eco.example.com:3001", "item": "Cement"})
+    assert payload["commodityBenchmark"] is None
+    assert not any("benchmark" in w.lower() for w in payload["warnings"])
+    assert not fred.called
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_get_market_benchmark_is_null_with_a_warning_when_fred_fails(
+    _fred_env: None,
+) -> None:
+    _mock_exporter()
+    respx.get(f"{cb.FRED_BASE_URL}/series").mock(return_value=httpx.Response(500))
+    text, payload = await _call_get_market({"server": "eco.example.com:3001", "item": "Iron"})
+    assert payload["commodityBenchmark"] is None
+    assert any("Commodity benchmark for Iron unavailable" in w for w in payload["warnings"])
+    assert "Commodity benchmark for Iron unavailable" in text
+    # The market rows still arrive.
+    assert payload["markets"][0]["item"] == "IronIngotItem"
 
 
 # ---------------------------------------------------------------------------

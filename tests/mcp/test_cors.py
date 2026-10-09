@@ -72,14 +72,14 @@ def test_mcp_post_carries_the_allow_and_expose_headers(client: TestClient) -> No
 
 
 def test_preview_get_carries_the_allow_header(client: TestClient) -> None:
-    # fair_price without `item` fails validation before any network call.
-    r = client.get("/preview/fair_price.json", headers={"Origin": DASH})
+    # price_by_stage without `item` fails validation before any network call.
+    r = client.get("/preview/price_by_stage.json", headers={"Origin": DASH})
     assert r.status_code == 422
     assert r.headers["access-control-allow-origin"] == DASH
 
 
 def test_other_origin_on_a_scoped_route_still_varies(client: TestClient) -> None:
-    r = client.get("/preview/fair_price.json", headers={"Origin": "https://example.com"})
+    r = client.get("/preview/price_by_stage.json", headers={"Origin": "https://example.com"})
     assert "access-control-allow-origin" not in r.headers
     assert "Origin" in r.headers["vary"]
 

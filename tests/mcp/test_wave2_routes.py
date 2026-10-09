@@ -28,11 +28,6 @@ WAVE2_ARGUMENTS: dict[str, dict[str, Any]] = {
     # an MCP caller stays under its response cap (eco-app#256).
     "get_crafting_atlas": {"server": "eco.test:3001", "limit": 50},
     "get_trades": {"server": "eco.test:3001", "limit": 50},
-    "fair_price": {
-        "item": "Copper",
-        "cycle_id": "cycle-test",
-        "server": "eco.test:3001",
-    },
     "price_by_stage": {"item": "iron", "server": "eco.test:3001"},
     "get_region": {"server": "eco.test:3001"},
     "get_climate": {"server": "eco.test:3001", "limit": 50},

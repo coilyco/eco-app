@@ -27,9 +27,9 @@ from mcp.types import (
 from pydantic import AnyUrl
 
 from . import climate as climate_mod
+from . import commodity_benchmark as benchmark_mod
 from . import currency as currency_mod
 from . import ecoregion as ecoregion_mod
-from . import fair_price as fair_price_mod
 from . import market as market_mod
 from . import norms as norms_mod
 from . import species as species_mod
@@ -797,36 +797,6 @@ def _format_species_markdown(payload: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-async def _in_game_reference_for(
-    item: str | None, server_arg: str | None
-) -> tuple[market_mod.InGameReference | None, str]:
-    """Best-effort in-game price read for the fair-price cross-reference.
-
-    Gated on an admin key (the trades exporter needs one) so a keyless host —
-    and the FRED-only unit tests — never touch the exporter. Any failure
-    (unreachable server, no matching in-game market) falls back to the pure
-    FRED narrative.
-
-    Returns the reference and a status string. Four silent nulls made a
-    degraded answer indistinguishable from a complete one, so every failure
-    path names itself (#234).
-    """
-    api_key = os.environ.get(ADMIN_API_KEY_ENV) or _get_admin_token()
-    if not api_key:
-        return None, "no_admin_key"
-    eco_item = fair_price_mod.eco_item_for(item)
-    if not eco_item:
-        return None, "item_not_mapped_to_an_in_game_item"
-    try:
-        intel = await market_mod.fetch_market(base_url=server_arg, api_key=api_key)
-    except Exception:  # the FRED path must survive any exporter fault
-        return None, "exporter_unreachable"
-    ref = market_mod.in_game_reference(intel, eco_item)
-    if ref is None:
-        return None, f"no_in_game_market_for_{eco_item}"
-    return ref, "ok"
-
-
 def _format_ecoregion_markdown(payload: dict[str, Any]) -> str:
     """Summarize an ecoregion payload for an MCP text result."""
     lines = ["**Biome composition**"]
@@ -941,7 +911,6 @@ TOOL_SITE_PATHS: dict[str, str] = {
     "get_stores": "/trade",
     "get_trades": "/trade",
     "find_trade": "/uses/arbitrage",
-    "fair_price": "/uses/price",
     "get_crafting_atlas": "/crafting",
     "get_progression": "/jobs",
     "get_civics": "/civics",
@@ -2119,8 +2088,8 @@ SERVER_INSTRUCTIONS = (
 
 
 # Tools that never served their purpose, hidden from tools/list and refused by
-# name until fixed. Delete a name to re-enable it. teable:coilyco/eco-app#8345, #8346.
-DISABLED_TOOLS: frozenset[str] = frozenset({"get_economy", "fair_price"})
+# name until fixed. Delete a name to re-enable it. teable:coilyco/eco-app#8345.
+DISABLED_TOOLS: frozenset[str] = frozenset({"get_economy"})
 
 
 def build_server(
@@ -2804,31 +2773,6 @@ def build_server(
                 ],
             )
 
-        if name == "fair_price":
-            item = arguments.get("item") if arguments else None
-            cycle_id = arguments.get("cycle_id") if arguments else None
-            server_arg = arguments.get("server") if arguments else None
-            ref, in_game_status = await _in_game_reference_for(item, server_arg)
-            result = await fair_price_mod.fetch_fair_price(
-                item,
-                cycle_id=cycle_id,
-                in_game_median=ref.median if ref else None,
-                in_game_currency=ref.currency if ref else None,
-                in_game_trend=ref.trend if ref else None,
-                in_game_status=in_game_status,
-            )
-            payload = fair_price_mod.to_payload(result)
-            return CallToolResult(
-                content=[
-                    TextContent(type="text", text=result.narrative),
-                    TextContent(type="text", text=json.dumps(payload)),
-                ],
-                # Fair-price failures are handled empty states carried in the
-                # typed payload. They must remain successful at the transport
-                # layer so both REST pages and MCP clients can render them.
-                isError=False,
-            )
-
         if name == "get_market":
             server_arg = arguments.get("server") if arguments else None
             item_arg = (arguments.get("item") if arguments else None) or None
@@ -2847,6 +2791,17 @@ def build_server(
             # rows are what a client truncates blind.
             market_payload = intel.to_dict()
             market_markdown = market_mod.market_markdown(intel)
+            # One optional field, present only when an item filter was passed. Null
+            # with no warning when the item has no FRED mapping (the common case),
+            # null with one when the lookup itself failed.
+            if item_arg:
+                benchmark, benchmark_warning = await benchmark_mod.fetch_benchmark(item_arg)
+                market_payload["commodityBenchmark"] = benchmark
+                if benchmark:
+                    market_markdown += "\n" + benchmark_mod.benchmark_markdown(benchmark)
+                if benchmark_warning:
+                    market_payload["warnings"].append(benchmark_warning)
+                    market_markdown += f"\n- ⚠ {benchmark_warning}"
             _bound_rows(market_payload, _resolve_limit(arguments or {}), "markets")
             return CallToolResult(
                 content=[

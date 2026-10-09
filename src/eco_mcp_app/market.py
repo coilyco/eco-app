@@ -5,8 +5,8 @@ and derives a light per-item price-over-time series (mean unit price per day).
 This module goes a layer deeper for the price axis the DiscordLink-replacement
 epic asks for (eco-app#37): a **per-item, per-currency** price series with
 median / min / max / volume per daily bucket, a short-vs-long-window trend
-verdict, and the in-game median that finally lets `fair_price.py` cross-
-reference the real-world FRED benchmark it maps to.
+verdict. The real-world FRED benchmark rides beside it as `commodityBenchmark`, attached by
+the tool handler from `commodity_benchmark.py`.
 
 Design notes:
 
@@ -27,10 +27,6 @@ Design notes:
   (`FLAT_BAND_PCT`) it reads flat; with fewer than two daily buckets it reads
   "insufficient" rather than inventing a direction. Early-cycle reality: many
   items have a handful of trades, so "insufficient" is the common, honest case.
-* **Fair-value bridge.** `in_game_reference` matches a FRED-mapped Eco item
-  (e.g. `IronIngot`) to its busiest in-game market and hands
-  `fair_price.fetch_fair_price` the median + trend. `fair_price` stays FRED-
-  only and self-contained; the merge is injection, not a back-dependency.
 """
 
 from __future__ import annotations
@@ -147,9 +143,8 @@ class MarketIntelligence:
 def _normalize_item(name: str) -> str:
     """Fold an item id to a comparison key: lowercase, drop a trailing `item`.
 
-    The exporter ships `IronIngotItem`; `fair_price`'s map keys on `IronIngot`.
-    Normalizing both ends (`ironingot`) lets a FRED mapping find its in-game
-    market without a hand-maintained alias table.
+    The exporter ships `IronIngotItem` where a caller says `IronIngot`, so
+    comparing the folded keys (`ironingot`) needs no hand-maintained alias table.
     """
     stem = (name or "").strip().lower()
     if stem.endswith("item") and len(stem) > len("item"):
@@ -407,48 +402,6 @@ async def fetch_price_map(
     ledger = await fetch_ledger(base_url=base_url, api_key=api_key, client=client)
     markets = build_market(ledger.trades, top_markets=0)
     return price_map(markets)
-
-
-@dataclass
-class InGameReference:
-    """The in-game price read `fair_price` cross-references against FRED."""
-
-    item: str
-    currency: str
-    median: float
-    trend: str
-    trades: int
-
-
-def in_game_reference(
-    market: MarketIntelligence, eco_item: str, *, currency: str | None = None
-) -> InGameReference | None:
-    """Pick the busiest in-game market matching `eco_item` for the fair-value merge.
-
-    `eco_item` is a `fair_price.ITEM_MAP` in-game name (e.g. `IronIngot`); it's
-    matched against each market's item id via the normalized key, so
-    `IronIngotItem` resolves. Returns None when the item has no in-game trades
-    (or none in the requested currency) — the FRED path then runs unchanged.
-    """
-    want = _normalize_item(eco_item)
-    want_currency = currency.strip().lower() if currency else None
-    best: ItemMarket | None = None
-    for m in market.markets:
-        if _normalize_item(m.item) != want:
-            continue
-        if want_currency is not None and m.currency.lower() != want_currency:
-            continue
-        if best is None or m.total_trades > best.total_trades:
-            best = m
-    if best is None:
-        return None
-    return InGameReference(
-        item=best.item,
-        currency=best.currency,
-        median=best.median_price,
-        trend=best.trend,
-        trades=best.total_trades,
-    )
 
 
 # ---------------------------------------------------------------------------

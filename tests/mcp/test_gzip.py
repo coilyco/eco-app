@@ -77,7 +77,7 @@ def test_mcp_sse_stream_still_streams_and_is_not_gzipped(client: TestClient) -> 
 def test_small_preview_response_skips_gzip(client: TestClient) -> None:
     # A tiny error body sits under GZIP_MIN_SIZE, so it ships uncompressed even
     # when the client asks for gzip — the minimum-size guard, not a failure.
-    r = client.get("/preview/fair_price.json", headers={"Accept-Encoding": "gzip"})
+    r = client.get("/preview/price_by_stage.json", headers={"Accept-Encoding": "gzip"})
     assert r.status_code == 422
     assert "content-encoding" not in r.headers
     assert len(r.content) < GZIP_MIN_SIZE

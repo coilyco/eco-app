@@ -66,21 +66,6 @@ class ExplainItemInput(BaseModel):
     )
 
 
-class FairPriceInput(ServerInput):
-    """Select an Eco item and optional calibration context."""
-
-    item: str = Field(
-        description=(
-            "Eco item name, including Copper, CopperIngot, Wheat, Board, Lumber, "
-            "Iron, IronIngot, Oil, or Crude."
-        )
-    )
-    cycle_id: str | None = Field(
-        default=None,
-        description="Optional cycle identifier used for stored in-game price calibration.",
-    )
-
-
 class PriceByStageInput(BaseModel):
     """Name one item to price across upgrade stages."""
 
@@ -114,7 +99,6 @@ WAVE2_PATHS = {
     "explain_item": "/preview/explain_item.json",
     "get_crafting_atlas": "/preview/get_crafting_atlas.json",
     "get_trades": "/preview/get_trades.json",
-    "fair_price": "/preview/fair_price.json",
     "price_by_stage": "/preview/price_by_stage.json",
     "get_region": "/preview/get_region.json",
     "get_climate": "/preview/get_climate.json",
@@ -226,22 +210,6 @@ def register_wave2_routes(registry: DualRouteRegistry, invoke: ToolInvoker) -> N
         ),
         rest_path=WAVE2_PATHS["get_trades"],
         input_model=TradesInput,
-    )
-    register_json_route(
-        registry,
-        invoke,
-        name="fair_price",
-        title="Eco - fair-price advisor",
-        description=(
-            "Judge what a fair price for an Eco item is: what it has actually sold for on "
-            "this server beside an advisory real-world commodity benchmark, with optional "
-            "cycle calibration. Answers 'am I overcharging for X' and 'what should I "
-            "charge for X'. It judges one price rather than listing prices: for what an item "
-            "is selling for right now use find_trade, and for how its price has moved over "
-            "time use get_market."
-        ),
-        rest_path=WAVE2_PATHS["fair_price"],
-        input_model=FairPriceInput,
     )
     register_json_route(
         registry,

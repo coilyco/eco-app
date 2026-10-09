@@ -612,7 +612,6 @@ PRICE_FIELDS: dict[str, tuple[PriceSpec, ...]] = {
         ("recipes[].cost", "perUnitCost"),
         ("recipes[].cost.ingredients[]", "unitCost"),
     ),
-    "fair_price": (("", "inGameMedian"),),
     # SPA data routes, not MCP tools. Their pages show the same prices.
     "/preview/item.json": (("", ""),),
     "/preview/price-history.json": (("", "distribution.median"),),
@@ -642,7 +641,7 @@ NO_PRICE_TOOLS = frozenset(
 )
 
 _ITEM_KEYS = ("item", "product")
-_CURRENCY_KEYS = ("currency", "inGameCurrency")
+_CURRENCY_KEYS = ("currency",)
 
 
 def _get(obj: dict[str, Any], dotted: str) -> Any:
@@ -703,7 +702,6 @@ PRICE_KEYS = frozenset(
         "cheapestSell",
         "perUnitCost",
         "unitCost",
-        "inGameMedian",
         "bestUnitPrice",
     }
 )
