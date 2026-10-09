@@ -39,7 +39,7 @@ class _RegisteredRoute:
     name: str
     title: str
     description: str
-    rest_path: str
+    rest_path: str | None
     rest_method: RestMethod
     input_model: type[BaseModel]
     output_model: type[BaseModel]
@@ -60,7 +60,7 @@ class DualRouteRegistry:
         name: str,
         title: str,
         description: str,
-        rest_path: str,
+        rest_path: str | None,
         rest_method: RestMethod,
         input_model: type[InputModel],
         output_model: type[OutputModel],
@@ -69,13 +69,16 @@ class DualRouteRegistry:
         [DualRouteHandler[InputModel, OutputModel]],
         DualRouteHandler[InputModel, OutputModel],
     ]:
-        """Wrap one handler with its shared REST and MCP contract."""
-        if not rest_path.startswith("/"):
+        """Wrap one handler with its shared REST and MCP contract.
+
+        `rest_path=None` registers an MCP-only tool: no dedicated REST route is built,
+        and the generic `/preview/<tool>.json` adapter still reaches it by name.
+        """
+        if rest_path is not None and not rest_path.startswith("/"):
             raise ValueError("REST paths must start with '/'")
         if name in self._routes:
             raise ValueError(f"duplicate MCP tool name: {name}")
-        rest_key = (rest_path, rest_method)
-        if rest_key in self._rest_keys:
+        if rest_path is not None and (rest_path, rest_method) in self._rest_keys:
             raise ValueError(f"duplicate REST route: {rest_method} {rest_path}")
 
         def decorator(
@@ -96,7 +99,8 @@ class DualRouteRegistry:
                 annotations=annotations,
             )
             self._routes[name] = registered
-            self._rest_keys.add(rest_key)
+            if rest_path is not None:
+                self._rest_keys.add((rest_path, rest_method))
             return handler
 
         return decorator
@@ -159,6 +163,7 @@ class DualRouteRegistry:
                 name=f"dual:{route.name}",
             )
             for route in self._routes.values()
+            if route.rest_path is not None
         ]
 
     def _rest_endpoint(

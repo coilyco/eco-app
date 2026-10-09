@@ -3,7 +3,7 @@
 A deliberately lightweight gate (eco-app#73): the SPA prompts for a password
 before it shows /replay and /social, and posts the answer to `POST /page-auth`
 here. This is **not** a security boundary — the underlying JSON APIs
-(/replay/api, /preview/social.json) stay public — just a "don't wander in,
+(/replay/api) stay public — just a "don't wander in,
 don't index" speed bump for two surfaces that are otherwise URL-only.
 
 The password is a throwaway random string. Prefer the `ECO_PAGE_PASSWORD` env

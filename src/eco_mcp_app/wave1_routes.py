@@ -193,7 +193,7 @@ def register_wave1_routes(registry: DualRouteRegistry, invoke: ToolInvoker) -> N
             "history. For which recipes a skill unlocks use get_recipes with a "
             "skill filter. Requires the server-side admin API key."
         ),
-        rest_path="/preview/progression.json",
+        rest_path=None,
         input_model=ProgressionInput,
     )
     register_json_route(

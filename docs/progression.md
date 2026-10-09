@@ -6,8 +6,8 @@ Who learned what, when, across the cycle.
 
 - **`get_progression`** - `src/eco_mcp_app/progression.py` plus `server.py`
   wiring. Returns markdown plus structured JSON.
-- **The progression layer of `/jobs`** - `frontend/src/pages/Jobs.tsx`,
-  consuming `/preview/progression.json`.
+- **MCP only.** The `/preview/progression.json` plane was deleted when the SPA
+  stopped reading it (COI-2095). The tool keeps its MCP registration.
 
 ## What it computes
 

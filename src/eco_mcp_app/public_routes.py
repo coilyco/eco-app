@@ -132,10 +132,13 @@ def register_json_route(
     name: str,
     title: str,
     description: str,
-    rest_path: str,
+    rest_path: str | None,
     input_model: type[BaseModel],
 ) -> None:
-    """Register a read-only operation whose established output is a JSON object."""
+    """Register a read-only operation whose established output is a JSON object.
+
+    `rest_path=None` keeps the MCP tool and builds no dedicated REST route.
+    """
     decorator = registry.register(
         name=name,
         title=title,

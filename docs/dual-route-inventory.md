@@ -22,10 +22,14 @@ The public server defines 22 tools, two of them disabled (`get_economy`,
 `fair_price`). **Twenty are registered** and serve both
 surfaces, each at `GET /preview/<tool>.json` except the Wave 1 set, which keeps
 its shorter paths: `preview.json` (`get_server_status`), and `world`, `stores`,
-`progression`, `market`, `logistics`, `currency`, and `civics`.
+`market`, `logistics`, `currency`, and `civics`.
 
-**One awaits a prerequisite.** `get_social`, because the REST path always
-suppresses `reveal_names` while MCP may accept it behind `ECO_SOCIAL_ALLOW_NAMES`.
+**Two are MCP-only** since the SPA stopped reading their planes (COI-2095):
+`get_progression` is registered with `rest_path=None`, and `get_social` never had
+a registry route. `/preview/progression.json` and `/preview/social.json` are
+deleted. The generic `/preview/<tool>.json` adapter still dispatches any listed
+tool by name. Names in `get_social` stay operator-gated inside the tool
+(`ECO_SOCIAL_ALLOW_NAMES` plus `reveal_names`).
 
 Also awaiting prerequisites: `items`, `food`, `item`, and `price-history`, each
 needing a bounded typed operation. Single-surface REST keeps `preview-map.json`

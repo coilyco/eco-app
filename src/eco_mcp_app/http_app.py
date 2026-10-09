@@ -635,31 +635,6 @@ def create_app(route_registry: DualRouteRegistry | None = None) -> Starlette:
             return JSONResponse({"error": str(e)}, status_code=502)
         return JSONResponse(build_map_payload(bundle))
 
-    async def preview_social_json(request: Request) -> JSONResponse:
-        """`/preview/social.json` — the SPA's `/social` route data plane.
-
-        Dispatches `get_social` and returns its JSON block. This is a
-        **public** path, so it never forwards `reveal_names`: the surface is
-        always redacted to stable handles, regardless of any server-side names
-        gate. A dedicated route (not the generic
-        `/preview/<tool>.json`) so `?server=` passes straight through and the
-        redaction posture is pinned here rather than left to a query param
-        (eco-app#63).
-        """
-        args = {k: v for k, v in request.query_params.items() if k in ("server",)}
-        req = mt.CallToolRequest(
-            method="tools/call",
-            params=mt.CallToolRequestParams(name="get_social", arguments=args),
-        )
-        try:
-            result = await call_tool_handler(req)
-        except Exception as e:
-            return JSONResponse({"error": str(e)}, status_code=500)
-        payload = _extract_json_block(cast(mt.CallToolResult, result.root))
-        if payload is None:
-            return JSONResponse({"error": "no JSON block from get_social"}, status_code=502)
-        return JSONResponse(payload)
-
     def _resolve_admin_key() -> str | None:
         # Same precedence the MCP tool handlers use (env override, then SSM).
         return os.environ.get(ADMIN_API_KEY_ENV) or _get_admin_token()
@@ -819,7 +794,6 @@ def create_app(route_registry: DualRouteRegistry | None = None) -> Starlette:
         Route("/page-auth", page_auth_verify, methods=["POST"]),
         *dual_routes.starlette_routes(),
         Route("/preview-map.json", preview_map_json, methods=["GET"]),
-        Route("/preview/social.json", preview_social_json, methods=["GET"]),
         Route("/preview/user.json", preview_user_json, methods=["GET"]),
         Route("/preview/items.json", preview_items_json, methods=["GET"]),
         Route("/preview/food.json", preview_food_json, methods=["GET"]),

@@ -168,7 +168,6 @@ WAVE1_PATHS = {
     "get_stores": "/preview/stores.json",
     "find_trade": "/preview/logistics.json",
     "get_civics": "/preview/civics.json",
-    "get_progression": "/preview/progression.json",
     "get_world": "/preview/world.json",
 }
 
@@ -200,11 +199,8 @@ async def test_wave1_routes_share_success_payloads(name: str, path: str) -> None
     # has an optional field the request omits.
     arguments: dict[str, Any]
     resolved: dict[str, Any]
-    if name == "get_progression":
-        # Per-citizen timelines are opt-in so the summary layer fits inside an
-        # MCP response (eco-app#232).
-        # `citizen` is left unset, and both transports drop unset optionals.
-        arguments = resolved = {"server": "eco.test:3001", "include_timelines": False}
+    if name == "get_server_status":
+        arguments = resolved = {"server": "eco.test:3001"}
     elif name in (
         "get_civics",
         "get_stores",
@@ -234,6 +230,69 @@ async def test_wave1_routes_share_success_payloads(name: str, path: str) -> None
     )
     assert called.root.isError is False
     assert called.root.structuredContent == expected
+
+
+@pytest.mark.asyncio
+async def test_get_progression_is_mcp_only() -> None:
+    """COI-2095: the SPA stopped reading `/preview/progression.json`, so the tool kept
+    its MCP registration and lost the dedicated REST route."""
+
+    async def invoke(tool_name: str, arguments: dict[str, Any]) -> mt.CallToolResult:
+        payload: dict[str, Any] = {"tool": tool_name, "arguments": arguments}
+        return mt.CallToolResult(
+            content=[
+                mt.TextContent(type="text", text=f"Called {tool_name}."),
+                mt.TextContent(type="text", text=json.dumps(payload)),
+            ],
+            structuredContent=payload,
+        )
+
+    registry = _wave1_registry(invoke)
+    assert registry.has_tool("get_progression")
+    assert registry.rest_path("get_progression") is None
+    assert all(route.path != "/preview/progression.json" for route in registry.starlette_routes())
+
+    mcp = build_server(registry)
+    call_handler = mcp.request_handlers[mt.CallToolRequest]
+    called = await call_handler(
+        mt.CallToolRequest(
+            method="tools/call",
+            params=mt.CallToolRequestParams(
+                name="get_progression", arguments={"server": "eco.test:3001"}
+            ),
+        )
+    )
+    assert called.root.isError is False
+    assert called.root.structuredContent == {
+        "tool": "get_progression",
+        "arguments": {"server": "eco.test:3001", "include_timelines": False},
+    }
+
+    rest = TestClient(create_app(registry)).get("/preview/progression.json")
+    assert rest.status_code != 200
+
+
+def test_an_mcp_only_registration_builds_no_rest_route() -> None:
+    registry = DualRouteRegistry()
+
+    @registry.register(
+        name="mcp_only",
+        title="MCP only",
+        description="No dedicated REST route.",
+        rest_path=None,
+        rest_method="GET",
+        input_model=EchoRequest,
+        output_model=EchoResponse,
+    )
+    async def handler(request: EchoRequest) -> DualRouteResult[EchoResponse]:
+        return DualRouteResult(
+            text="ok", payload=EchoResponse(echoed=request.message, repeat=request.repeat)
+        )
+
+    assert registry.has_tool("mcp_only")
+    assert registry.rest_path("mcp_only") is None
+    assert registry.starlette_routes() == []
+    assert [tool.name for tool in registry.mcp_tools()] == ["mcp_only"]
 
 
 @pytest.mark.asyncio
@@ -327,4 +386,5 @@ async def test_wave1_unexpected_failure_stays_public_safe() -> None:
 
 
 def test_wave1_inventory_matches_registered_names() -> None:
-    assert set(WAVE1_PATHS) == WAVE1_TOOL_NAMES
+    # get_progression is registered MCP-only (COI-2095), so it has no REST path to list.
+    assert set(WAVE1_PATHS) | {"get_progression"} == WAVE1_TOOL_NAMES

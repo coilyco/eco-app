@@ -260,23 +260,12 @@ async def test_list_tools_includes_get_social() -> None:
     assert "get_social" in names
 
 
-@respx.mock
-def test_preview_social_json_is_redacted(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("ECO_ADMIN_API_KEY", "k")
-    monkeypatch.setenv(social_mod.NAMES_ALLOW_ENV, "1")
-    respx.get(PLAY_URL).mock(return_value=httpx.Response(200, text=_PLAY_CSV))
-    respx.get(LOGIN_URL).mock(return_value=httpx.Response(200, text=_LOGIN_CSV))
-    respx.get(REP_URL).mock(return_value=httpx.Response(200, text=_REP_CSV))
-    respx.get(CITIZENS_URL).mock(return_value=httpx.Response(200, json=_CITIZENS_JSON))
-
-    client = TestClient(create_app())
-    response = client.get("/preview/social.json?server=eco.example.com:3001")
-    assert response.status_code == 200
-    payload = response.json()
-    assert payload["redacted"] is True
-    assert "totalChat" not in payload
-    for real_name in ("coilysiren", "ekans", "redwood"):
-        assert real_name not in json.dumps(payload)
+def test_preview_social_json_is_no_longer_a_dedicated_route() -> None:
+    """COI-2095: the SPA stopped reading `/preview/social.json`. `get_social` stays an
+    MCP tool, and its names stay operator-gated inside the tool handler."""
+    response = TestClient(create_app()).get("/preview/social.json?server=eco.example.com:3001")
+    assert response.status_code != 200
+    assert "redacted" not in response.text
 
 
 def test_unrecognised_giver_column_names_what_the_export_carries() -> None:
