@@ -35,7 +35,7 @@ const MINUTE = 60 * SECOND
 
 // Server-side caches bound how fresh a poll can possibly be, so polling faster
 // than the cache TTL only burns requests. These mirror the backend TTLs:
-// trades/civics/progression 60s, currency 45s, climate/world per-fetch.
+// trades/civics 60s, currency 45s, climate/world per-fetch.
 export const LIVE_POLL_MS = 2 * MINUTE
 export const SLOW_POLL_MS = 5 * MINUTE
 
@@ -81,11 +81,6 @@ export const REFRESH_CONTRACTS = {
     mode: "manual",
     staleAfterMs: 15 * MINUTE,
     rationale: "Crafting totals accumulate steadily, and a stale read misleads nobody in minutes.",
-  },
-  progression: {
-    mode: "manual",
-    staleAfterMs: 15 * MINUTE,
-    rationale: "Skill level-ups are infrequent per player.",
   },
   jobs: {
     mode: "manual",
@@ -169,10 +164,6 @@ export const REFRESH_CONTRACTS = {
     rationale:
       "Biome rasters change when the terrain does, which is a reload-worthy event " +
       "rather than a per-minute one.",
-  },
-  fairPrice: {
-    mode: "static",
-    rationale: "FRED commodity series are monthly or daily, so a session never outlives one.",
   },
   priceHistory: {
     mode: "static",
