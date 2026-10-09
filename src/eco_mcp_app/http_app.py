@@ -16,14 +16,11 @@ lives in the SPA (`frontend/`); MCP results are data-only.
 
 from __future__ import annotations
 
-import asyncio
 import hashlib
 import json
-import math
 import os
 from collections.abc import AsyncIterator
 from contextlib import AsyncExitStack, asynccontextmanager
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
@@ -47,7 +44,6 @@ from starlette.routing import BaseRoute, Mount, Route
 from starlette.staticfiles import StaticFiles
 
 from . import norms, page_auth, seo, shell_head
-from . import users as users_mod
 from .admin import build_admin_server
 from .cost import CostParams
 from .dual_routes import DualRouteRegistry
@@ -58,10 +54,8 @@ from .map import build_map_payload, fetch_map_bundle
 from .price_history import fetch_item_price_history
 from .server import (
     ADMIN_API_KEY_ENV,
-    DEFAULT_ECO_INFO_URL,
     _get_admin_token,
     build_server,
-    fetch_eco_info,
 )
 from .telemetry import init_telemetry, instrument_asgi
 
@@ -248,92 +242,6 @@ def _cost_params(params: Any) -> CostParams:
 ADMIN_ENABLED_ENV = "ECO_ADMIN_ENABLED"
 
 
-async def _gather_user_sources(server_arg: str | None) -> dict[str, Any]:
-    """Fan out concurrently to every per-user surface for one server.
-
-    Returns a ``{source_key: payload_or_None}`` dict shaped for
-    ``users.build_user_dossier``: each exporter's
-    ``to_dict()`` payload, the jobs surface pre-shaped to
-    ``{name, active, lastSeenISO, specialties}`` rows, and the currency
-    snapshot's raw dict (which carries every currency's top-holders, unlike the
-    currency *card* payload). A surface that raises degrades to ``None`` — the
-    dossier renders panel-by-panel, so one dead exporter never sinks the page.
-    Fetch functions are imported lazily so the stdio entrypoint stays lean, the
-    same pattern the jobs/replay mounts use.
-    """
-    api_key = os.environ.get(ADMIN_API_KEY_ENV) or _get_admin_token()
-
-    from eco_spec_tracker import mock_data, upstream
-
-    from .civics import fetch_civics
-    from .crafting import fetch_atlas
-    from .currency import fetch_currency
-    from .progression import fetch_history
-    from .trades import fetch_ledger
-    from .world import fetch_world
-
-    async def _jobs() -> list[dict[str, Any]]:
-        rows = await upstream.fetch_rows()
-        out: list[dict[str, Any]] = []
-        for player in mock_data.players(rows):
-            seen = [s.last_seen for s in player.specialties if s.last_seen is not None]
-            out.append(
-                {
-                    "name": player.name,
-                    "active": player.active,
-                    "lastSeenISO": max(seen).isoformat() if seen else None,
-                    "specialties": [
-                        {"specialty": s.specialty, "level": s.level, "active": s.active}
-                        for s in player.specialties
-                    ],
-                }
-            )
-        return out
-
-    async def _currency() -> dict[str, Any]:
-        # Currency is the odd fetcher out: it needs /info (cycle day) and the
-        # admin token, mirroring the get_currency tool dispatch in server.py.
-        info = await fetch_eco_info(server_arg)
-        days_elapsed = int(info.get("DaysRunning") or 0)
-        if days_elapsed <= 0:
-            tss: Any = info.get("TimeSinceStart")
-            try:
-                days_elapsed = max(1, int(float(tss) / 3600.0))
-            except (TypeError, ValueError):
-                days_elapsed = 1
-        admin_token = os.environ.get("ECO_ADMIN_TOKEN") or _get_admin_token()
-        default_admin_base = DEFAULT_ECO_INFO_URL.rsplit("/info", 1)[0]
-        snapshot = await fetch_currency(
-            server_arg,
-            info=info,
-            days_elapsed=days_elapsed,
-            admin_token=admin_token,
-            default_admin_base=default_admin_base,
-        )
-        return snapshot.to_dict()
-
-    tasks: dict[str, Any] = {
-        "jobs": _jobs(),
-        "trades": fetch_ledger(base_url=server_arg, api_key=api_key),
-        "crafting": fetch_atlas(base_url=server_arg, api_key=api_key),
-        "civics": fetch_civics(base_url=server_arg, api_key=api_key),
-        "progression": fetch_history(base_url=server_arg, api_key=api_key),
-        "world": fetch_world(base_url=server_arg, api_key=api_key),
-        "currency": _currency(),
-    }
-    results = await asyncio.gather(*tasks.values(), return_exceptions=True)
-
-    sources: dict[str, Any] = {}
-    for key, result in zip(tasks.keys(), results, strict=True):
-        if isinstance(result, BaseException):
-            sources[key] = None
-        elif key in ("jobs", "currency"):
-            sources[key] = result  # already a plain list / dict
-        else:
-            sources[key] = result.to_dict()
-    return sources
-
-
 # Server-side script extensions. A request for one of these is never a client
 # route on a Python service — it is a scanner looking for a PHP host.
 # `.json` is here because every real JSON endpoint is a registered route above
@@ -373,47 +281,6 @@ def _is_never_a_spa_route(path: str) -> bool:
     if any(seg.startswith(".") for seg in segments) and not lowered.startswith(_ALLOWED_DOT_PREFIX):
         return True
     return lowered.endswith(_NEVER_SPA_SUFFIXES)
-
-
-def _sanitize_nonfinite(value: Any) -> Any:
-    """Recursively replace non-finite floats (``inf``/``-inf``/``nan``) with
-    ``None`` so Starlette's ``JSONResponse`` (which renders with
-    ``allow_nan=False``) can serialize the payload.
-
-    An upstream exporter can emit a unit-price / rate like ``total/qty`` with
-    ``qty == 0`` as ``inf``, which otherwise makes the whole endpoint 500
-    (eco-app#83). We drop the offending leaf to ``null`` rather than fail the
-    entire dossier.
-    """
-    if isinstance(value, float):
-        return value if math.isfinite(value) else None
-    if isinstance(value, dict):
-        return {key: _sanitize_nonfinite(item) for key, item in value.items()}
-    if isinstance(value, (list, tuple)):
-        return [_sanitize_nonfinite(item) for item in value]
-    return value
-
-
-async def preview_user_json(request: Request) -> JSONResponse:
-    """`/preview/user.json?name=<username>` — the hidden `/users/<hex>` page's
-    data plane (eco-app#80).
-
-    The SPA base16-decodes the `/users/<hex>` path segment to the username and
-    passes it here as `?name=`. Fans out to every per-user surface and pivots
-    them into a single dossier — every field the exporters carry about that one
-    player.
-    """
-    username = request.query_params.get("name")
-    if not username:
-        return JSONResponse(
-            {"error": "missing ?name= (base16-decode the /users/<hex> segment first)"},
-            status_code=400,
-        )
-    server_arg = request.query_params.get("server")
-    sources = await _gather_user_sources(server_arg)
-    dossier = users_mod.build_user_dossier(username, sources)
-    dossier["fetchedAtISO"] = datetime.now(UTC).isoformat()
-    return JSONResponse(_sanitize_nonfinite(dossier))
 
 
 # The shell names the hashed bundle, so a stale shell after a deploy points at
@@ -794,7 +661,6 @@ def create_app(route_registry: DualRouteRegistry | None = None) -> Starlette:
         Route("/page-auth", page_auth_verify, methods=["POST"]),
         *dual_routes.starlette_routes(),
         Route("/preview-map.json", preview_map_json, methods=["GET"]),
-        Route("/preview/user.json", preview_user_json, methods=["GET"]),
         Route("/preview/items.json", preview_items_json, methods=["GET"]),
         Route("/preview/food.json", preview_food_json, methods=["GET"]),
         Route("/preview/item.json", preview_item_json, methods=["GET"]),

@@ -22,19 +22,22 @@ The public server defines 21 tools, one of them disabled (`get_economy`).
 **Twenty are registered** and serve both
 surfaces, each at `GET /preview/<tool>.json` except the Wave 1 set, which keeps
 its shorter paths: `preview.json` (`get_server_status`), and `world`, `stores`,
-`market`, `logistics`, `currency`, and `civics`.
+`market`, `logistics`, and `civics`.
 
-**Two are MCP-only** since the SPA stopped reading their planes (COI-2095):
-`get_progression` is registered with `rest_path=None`, and `get_social` never had
-a registry route. `/preview/progression.json` and `/preview/social.json` are
-deleted. The generic `/preview/<tool>.json` adapter still dispatches any listed
+**Three are MCP-only** since the SPA stopped reading their planes (COI-2095):
+`get_progression` and `get_currency` are registered with `rest_path=None`, and
+`get_social` never had a registry route. `/preview/progression.json`,
+`/preview/currency.json`, and `/preview/social.json` are deleted. The generic
+`/preview/<tool>.json` adapter still dispatches any listed
 tool by name. Names in `get_social` stay operator-gated inside the tool
-(`ECO_SOCIAL_ALLOW_NAMES` plus `reveal_names`).
+(`ECO_SOCIAL_ALLOW_NAMES` plus `reveal_names`). `/preview/user.json` and its
+dossier builder `users.py` are deleted too (COI-2095). It was REST-only with no
+MCP tool, and its `/users/<hex>` page was already gone.
 
 Also awaiting prerequisites: `items`, `food`, `item`, and `price-history`, each
 needing a bounded typed operation. Single-surface REST keeps `preview-map.json`
-(browser-only biome rasters), `user.json` (an identity-bearing dossier),
-`recipes.json` (a 1,453-recipe browser data plane), `/api/service`, and the
+(browser-only biome rasters), `recipes.json` (a 1,453-recipe browser data
+plane), `/api/service`, and the
 generated FastAPI docs under the Jobs mount. Excluded: `/preview/{tool}` as a
 compatibility adapter, `/healthz`, both `/page-auth` verbs, the `/mcp`,
 `/admin`, `/assets`, and livereload mounts, and the SPA fallbacks.

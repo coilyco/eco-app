@@ -43,7 +43,7 @@ Defined in [src/eco_mcp_app/server.py](../../src/eco_mcp_app/server.py) and the 
 - **Stdio** - `python -m eco_mcp_app.__main__` for Claude Desktop.
 - **HTTP** - MCP over Streamable-HTTP at `POST /mcp/`. Stateless.
 - **Health probe** - `GET /healthz`.
-- **Data plane** - `GET /preview.json`, `/preview-map.json`, `/preview/currency.json`, `/preview/<tool>.json` return tool payloads as JSON for the SPA to consume. `/preview/currency.json` is a dedicated short path (passing `?server=` / `?currency=` through) for the `/trade` SPA route; the rest dispatch any tool by name. No HTML variant - the dev `/preview` card pages were removed.
+- **Data plane** - `GET /preview.json`, `/preview-map.json`, `/preview/<tool>.json` return tool payloads as JSON for the SPA to consume. `get_currency` has no dedicated short path (COI-2095), and the generic adapter dispatches any tool by name. No HTML variant - the dev `/preview` card pages were removed.
 - **Livereload WS** - Debug-mode hot reload.
 
 ## UI rendering

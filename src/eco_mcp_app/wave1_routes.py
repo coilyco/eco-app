@@ -100,7 +100,7 @@ def register_wave1_routes(registry: DualRouteRegistry, invoke: ToolInvoker) -> N
             "Admin-backed data degrades to the public server headline when the "
             "server-side key is absent."
         ),
-        rest_path="/preview/currency.json",
+        rest_path=None,
         input_model=CurrencyInput,
     )
     register_json_route(

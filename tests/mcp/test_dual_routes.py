@@ -163,7 +163,6 @@ def test_registration_rejects_duplicate_surface_keys() -> None:
 
 WAVE1_PATHS = {
     "get_server_status": "/preview.json",
-    "get_currency": "/preview/currency.json",
     "get_market": "/preview/market.json",
     "get_stores": "/preview/stores.json",
     "find_trade": "/preview/logistics.json",
@@ -204,7 +203,6 @@ async def test_wave1_routes_share_success_payloads(name: str, path: str) -> None
     elif name in (
         "get_civics",
         "get_stores",
-        "get_currency",
         "get_world",
         "get_market",
         "find_trade",
@@ -232,10 +230,21 @@ async def test_wave1_routes_share_success_payloads(name: str, path: str) -> None
     assert called.root.structuredContent == expected
 
 
+@pytest.mark.parametrize(
+    ("name", "plane", "resolved"),
+    [
+        (
+            "get_progression",
+            "/preview/progression.json",
+            {"server": "eco.test:3001", "include_timelines": False},
+        ),
+        ("get_currency", "/preview/currency.json", {"server": "eco.test:3001", "limit": 50}),
+    ],
+)
 @pytest.mark.asyncio
-async def test_get_progression_is_mcp_only() -> None:
-    """COI-2095: the SPA stopped reading `/preview/progression.json`, so the tool kept
-    its MCP registration and lost the dedicated REST route."""
+async def test_tool_is_mcp_only(name: str, plane: str, resolved: dict[str, Any]) -> None:
+    """COI-2095: the SPA stopped reading these planes, so each tool kept its MCP
+    registration and lost the dedicated REST route."""
 
     async def invoke(tool_name: str, arguments: dict[str, Any]) -> mt.CallToolResult:
         payload: dict[str, Any] = {"tool": tool_name, "arguments": arguments}
@@ -248,27 +257,22 @@ async def test_get_progression_is_mcp_only() -> None:
         )
 
     registry = _wave1_registry(invoke)
-    assert registry.has_tool("get_progression")
-    assert registry.rest_path("get_progression") is None
-    assert all(route.path != "/preview/progression.json" for route in registry.starlette_routes())
+    assert registry.has_tool(name)
+    assert registry.rest_path(name) is None
+    assert all(route.path != plane for route in registry.starlette_routes())
 
     mcp = build_server(registry)
     call_handler = mcp.request_handlers[mt.CallToolRequest]
     called = await call_handler(
         mt.CallToolRequest(
             method="tools/call",
-            params=mt.CallToolRequestParams(
-                name="get_progression", arguments={"server": "eco.test:3001"}
-            ),
+            params=mt.CallToolRequestParams(name=name, arguments={"server": "eco.test:3001"}),
         )
     )
     assert called.root.isError is False
-    assert called.root.structuredContent == {
-        "tool": "get_progression",
-        "arguments": {"server": "eco.test:3001", "include_timelines": False},
-    }
+    assert called.root.structuredContent == {"tool": name, "arguments": resolved}
 
-    rest = TestClient(create_app(registry)).get("/preview/progression.json")
+    rest = TestClient(create_app(registry)).get(plane)
     assert rest.status_code != 200
 
 
@@ -386,5 +390,6 @@ async def test_wave1_unexpected_failure_stays_public_safe() -> None:
 
 
 def test_wave1_inventory_matches_registered_names() -> None:
-    # get_progression is registered MCP-only (COI-2095), so it has no REST path to list.
-    assert set(WAVE1_PATHS) | {"get_progression"} == WAVE1_TOOL_NAMES
+    # get_progression and get_currency are registered MCP-only (COI-2095), so they
+    # have no REST path to list.
+    assert set(WAVE1_PATHS) | {"get_progression", "get_currency"} == WAVE1_TOOL_NAMES
