@@ -13,7 +13,7 @@ grep and every diff in this repository. Read it with:
   gzcat data/eco_autogen_data.json.gz | jq .counts
 
   Source        : Eco Dedicated Server, Steam app 739590
-  Build id      : 24618181 (Eco 0.13.0)
+  Build id      : 25802357 (Eco 0.14.2.0 release-1099)
   Obtained by   : steamcmd +login anonymous +app_update 739590
                   The dedicated server is published as an anonymous-login depot;
                   no Steam account and no game licence are involved. Confirmed by

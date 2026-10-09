@@ -278,10 +278,12 @@ def test_load_recipe_index_serves_the_autogen_graph() -> None:
     by `just autogen-refresh`, and this is what says the regeneration ran.
     """
     index = load_recipe_index()
-    # Parsed from Steam build 24618181 (Eco 0.13.0).
+    # Parsed from Steam build 25802357 (Eco 0.14.2.0), which dropped TailorSkill
+    # and its specialty tag. The build id is what proves the regeneration ran.
+    assert "build 25802357" in index.source
     assert index.counts()["recipes"] == 1487
-    assert index.counts()["skills"] == 44
-    assert index.counts()["tags"] == 112
+    assert index.counts()["skills"] == 43
+    assert index.counts()["tags"] == 111
     assert index.source.startswith("Eco dedicated server AutoGen")
     assert not index.warnings
     # Every recipe has a product and a station; the graph is well-formed.
