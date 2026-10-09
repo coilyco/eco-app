@@ -20,8 +20,10 @@ on:
 permissions:
   contents: read
 
+# Keyed on ref: main pushes still share one never-cancelled publish group, and a
+# PR, which publishes nothing, stops queueing behind every other PR and push.
 concurrency:
-  group: build-publish
+  group: build-publish-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
