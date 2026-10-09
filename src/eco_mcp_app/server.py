@@ -2814,6 +2814,7 @@ def build_server(
             server_arg = arguments.get("server") if arguments else None
             item_arg = (arguments.get("item") if arguments else None) or None
             currency_arg = (arguments.get("currency") if arguments else None) or None
+            store_arg = (arguments.get("store") if arguments else None) or None
             api_key = os.environ.get(ADMIN_API_KEY_ENV) or _get_admin_token()
             try:
                 report = await fetch_logistics(
@@ -2821,6 +2822,7 @@ def build_server(
                     api_key=api_key,
                     item=item_arg,
                     currency=currency_arg,
+                    store=store_arg,
                 )
             except httpx.HTTPError as e:
                 return _unreachable_result("Eco exporter", e)
@@ -2834,6 +2836,7 @@ def build_server(
                 "arbitrage",
                 "supplyGaps",
                 "marketSummaries",
+                "stores",
             )
             return CallToolResult(
                 content=[

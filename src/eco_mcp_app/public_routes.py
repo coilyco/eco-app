@@ -121,6 +121,20 @@ class TradeInput(BoundedServerInput):
     )
 
 
+class FindTradeInput(TradeInput):
+    """`find_trade`'s filters: TradeInput plus the named-store query (COI-758)."""
+
+    store: str | None = Field(
+        default=None,
+        description=(
+            "Optional case-insensitive part of a store's name or its owner's handle, such "
+            "as a shop name or a player. Returns that store's whole shelf: the items it "
+            "sells and buys, stock quantity and price per line, owner, and currency. A "
+            "name that matches no store returns an explicit no-match, not an empty shelf."
+        ),
+    )
+
+
 class JsonObjectOutput(RootModel[dict[str, Any]]):
     """A JSON object produced by an established Eco domain report."""
 

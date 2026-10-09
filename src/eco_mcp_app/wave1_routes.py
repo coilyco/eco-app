@@ -8,6 +8,7 @@ from .dual_routes import DualRouteRegistry
 from .public_routes import (
     BoundedServerInput,
     CurrencyInput,
+    FindTradeInput,
     ServerInput,
     StoresInput,
     ToolInvoker,
@@ -135,8 +136,10 @@ def register_wave1_routes(registry: DualRouteRegistry, invoke: ToolInvoker) -> N
             "plus what each player buys and sells as a trader. Answers 'who runs "
             "the biggest store', 'what does this shop trade', and 'which player "
             "moves the most goods'. By default it returns the top rows with their "
-            "lists shortened. Pass store or item for whole matching rows. For where "
-            "to buy or sell an item at the best price use find_trade. Requires the "
+            "lists shortened. Pass store or item for whole matching rows. It reads trade "
+            "history only, so it cannot say what a store has on its shelves now: for a named "
+            "store's current items, quantities and prices use find_trade with store, and for "
+            "where to buy or sell an item at the best price use find_trade. Requires the "
             "server-side admin API key."
         ),
         rest_path="/preview/stores.json",
@@ -157,13 +160,17 @@ def register_wave1_routes(registry: DualRouteRegistry, invoke: ToolInvoker) -> N
             "what a store should carry to earn money. Reads live store shelves, falling back to "
             "recent "
             "trade prices. Pass item for one item, or currency for offers priced "
-            "in that currency. For what an item is worth or what to pay or charge for it "
+            "in that currency. Pass store, a store's name or its owner's handle, for that "
+            "store's whole shelf: every item it sells or buys with stock quantity, price and "
+            "owner, as in 'what does this shop have'. A store name that matches nothing "
+            "returns an explicit no-match, which is not an empty store. For what an item "
+            "is worth or what to pay or charge for it "
             "use price_by_stage, for price trends use get_market, for individual "
             "past trades get_trades, and for who owns which store get_stores. "
             "Requires the server-side admin API key."
         ),
         rest_path="/preview/logistics.json",
-        input_model=TradeInput,
+        input_model=FindTradeInput,
     )
     register_json_route(
         registry,

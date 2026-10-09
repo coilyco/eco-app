@@ -599,6 +599,213 @@ def test_logistics_markdown_populated() -> None:
 
 
 # ---------------------------------------------------------------------------
+# Named-store shelf (COI-758)
+# ---------------------------------------------------------------------------
+
+_SHELF_STORES: list[dict[str, Any]] = [
+    {
+        "name": "Charred Corns & More",
+        "owner": "Elizabeth1337",
+        "currency": "Spectres",
+        "location": {"x": 4, "y": 5, "z": 6},
+        "offers": [
+            {
+                "item": "Corn",
+                "itemTypeName": "CornItem",
+                "buying": False,
+                "price": 0.7,
+                "quantity": 185,
+            },
+            {
+                "item": "Charred Corn",
+                "itemTypeName": "CharredCornItem",
+                "buying": False,
+                "price": 1.5,
+                "quantity": 0,
+            },
+            {
+                "item": "Wheat",
+                "itemTypeName": "WheatItem",
+                "buying": True,
+                "price": 0.4,
+                "quantity": 30,
+            },
+        ],
+    },
+    {
+        "name": "Lumberaholics",
+        "owner": "Scuba Steve",
+        "currency": "Spectres",
+        "location": None,
+        "offers": [
+            {
+                "item": "Lumber",
+                "itemTypeName": "LumberItem",
+                "buying": False,
+                "price": 0.7,
+                "quantity": 195,
+            },
+            {
+                "item": "Corn",
+                "itemTypeName": "CornItem",
+                "buying": False,
+                "price": 0.9,
+                "quantity": 5,
+            },
+        ],
+    },
+]
+
+
+def _live_offers() -> list[ShelfOffer]:
+    return parse_live_stores(_SHELF_STORES)
+
+
+@pytest.mark.parametrize(
+    "query", ["charred corns", "CHARRED CORNS & MORE", "elizabeth1337", "@Elizabeth1337"]
+)
+def test_store_filter_matches_name_or_owner_case_insensitively(query: str) -> None:
+    report = build_logistics(_live_offers(), store=query)
+    assert report.stores_matched == 1
+    (shelf,) = report.stores
+    assert shelf["owner"] == "Elizabeth1337"
+    assert shelf["name"] == "Charred Corns & More"
+    assert shelf["live"] is True
+    assert shelf["currencies"] == ["Spectres"]
+    assert shelf["location"] == {"x": 4, "y": 5, "z": 6}
+
+
+def test_store_shelf_lists_every_line_with_stock_and_price() -> None:
+    report = build_logistics(_live_offers(), store="elizabeth1337")
+    (shelf,) = report.stores
+    lines = {(o["item"], o["side"]): o for o in shelf["shelf"]}
+    assert shelf["shelfLines"] == 3
+    assert lines[("CornItem", "sell")]["quantity"] == 185
+    assert lines[("CornItem", "sell")]["price"] == pytest.approx(0.7)
+    assert lines[("WheatItem", "buy")]["quantity"] == 30
+    # A named store with 0 of something is an answer, so the line stays.
+    assert lines[("CharredCornItem", "sell")]["quantity"] == 0
+    # Sell lines lead the buy lines.
+    assert [o["side"] for o in shelf["shelf"]] == ["sell", "sell", "buy"]
+    assert report.total_offers == 3
+
+
+def test_store_filter_no_match_is_an_explicit_miss_not_an_empty_store() -> None:
+    report = build_logistics(_live_offers(), store="nobody home")
+    assert report.stores == []
+    assert report.stores_matched == 0  # 0 is a miss, None is "no store asked"
+    assert report.store_query == "nobody home"
+    assert any("no store matched" in w and "lookup miss" in w for w in report.warnings)
+    # The miss names real stores so the caller can retry.
+    assert any("Lumberaholics" in w for w in report.warnings)
+    md = logistics_markdown(report)
+    assert "no offers for store 'nobody home'" in md
+    assert "no shelf offers or priced trade history yet" not in md
+
+
+def test_store_filter_no_match_with_no_market_at_all_still_reports_a_miss() -> None:
+    report = build_logistics([], store="anything")
+    assert report.stores_matched == 0
+    assert any("no store matched" in w for w in report.warnings)
+
+
+def test_no_store_asked_reports_null_not_zero() -> None:
+    payload = build_logistics(_live_offers()).to_dict()
+    assert payload["storesMatched"] is None
+    assert payload["storeQuery"] is None
+    assert payload["stores"] == []
+
+
+def test_store_with_item_filter_that_excludes_it_says_which_filter() -> None:
+    report = build_logistics(_live_offers(), store="lumberaholics", item="wheat")
+    assert report.stores_matched == 1
+    assert report.stores[0]["shelf"] == []
+    assert "no line matches the item or currency filter" in report.stores[0]["note"]
+    assert any("matched store=" in w and "none has an offer" in w for w in report.warnings)
+
+
+def test_store_filter_narrows_the_other_boards_and_drops_market_wide_ones() -> None:
+    offers = [
+        *_live_offers(),
+        _offer("Far", "CornItem", "buy", 3.0, currency="Spectres", source="live"),
+    ]
+    report = build_logistics(offers, store="lumberaholics")
+    assert {r["item"] for r in report.cheapest} == {"LumberItem", "CornItem"}
+    assert report.arbitrage == [] and report.supply_gaps == []
+    assert any("arbitrage and supply gaps" in w for w in report.warnings)
+    assert not any("market depth" in w for w in report.warnings)
+
+
+def test_history_only_store_is_flagged_and_loses_to_a_live_row_of_the_same_owner() -> None:
+    history = _offer("hist-1", "CornItem", "sell", 0.8, owner="Scuba Steve", source="history")
+    history.store_label = "Scuba Steve's Store"
+    only_history = _offer("hist-2", "AppleItem", "sell", 2.0, owner="Ada", source="history")
+    only_history.store_label = "Ada's Store"
+
+    report = build_logistics([*_live_offers(), history, only_history], store="scuba")
+    assert [s["storeKey"] for s in report.stores] == ["live:Lumberaholics|Scuba Steve"]
+    assert any("history-only store(s) left out" in w for w in report.warnings)
+
+    report = build_logistics([only_history], store="ada")
+    (shelf,) = report.stores
+    assert shelf["live"] is False
+    assert "quantity is units traded, not stock" in shelf["note"]
+
+
+def test_store_shelf_is_capped_and_says_so(monkeypatch: pytest.MonkeyPatch) -> None:
+    from eco_mcp_app import logistics as logistics_mod
+
+    monkeypatch.setattr(logistics_mod, "STORE_SHELF_LINES", 2)
+    report = build_logistics(_live_offers(), store="elizabeth1337")
+    (shelf,) = report.stores
+    assert shelf["shelfLines"] == 3
+    assert len(shelf["shelf"]) == 2
+    assert "shelf shows 2 of 3 lines" in shelf["note"]
+
+
+def test_store_shelf_markdown_reads_as_a_shelf() -> None:
+    md = logistics_markdown(build_logistics(_live_offers(), store="elizabeth1337"))
+    assert "**Store shelf for 'elizabeth1337'**" in md
+    assert "sells Corn: 185 in stock at 0.70 Spectres" in md
+    assert "sells Charred Corn: 0 in stock at 1.50 Spectres" in md
+    assert "buys Wheat: 30 wanted at 0.40 Spectres" in md
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_find_trade_store_over_the_live_exporter(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Through the real tool: a live `/api/v1/stores` shelf, asked for by name."""
+    monkeypatch.setenv("ECO_ADMIN_API_KEY", "k")
+    respx.get(CURRENCY_URL).mock(return_value=httpx.Response(200, text=_CURRENCY_CSV))
+    respx.get(BARTER_URL).mock(return_value=httpx.Response(200, text=_BARTER_EMPTY))
+    respx.get(CITIZENS_URL).mock(return_value=httpx.Response(200, json=_CITIZENS_JSON))
+    respx.get(STORES_URL).mock(return_value=httpx.Response(200, json=_SHELF_STORES))
+    handler = build_server().request_handlers[mt.CallToolRequest]
+
+    async def call(store: str) -> tuple[str, dict[str, Any]]:
+        import json as _json
+
+        req = mt.CallToolRequest(
+            method="tools/call",
+            params=mt.CallToolRequestParams(
+                name="find_trade", arguments={"server": "eco.example.com:3001", "store": store}
+            ),
+        )
+        blocks = (await handler(req)).root.content
+        return blocks[0].text, _json.loads(blocks[1].text)
+
+    text, payload = await call("charred corns")
+    assert payload["storesMatched"] == 1
+    by_item = {o["item"]: o for o in payload["stores"][0]["shelf"]}
+    assert by_item["CornItem"]["quantity"] == 185
+    assert "sells Corn: 185 in stock" in text
+
+    text, payload = await call("no such shop")
+    assert payload["storesMatched"] == 0 and payload["stores"] == []
+    assert "no offers for store 'no such shop'" in text
+
+
+# ---------------------------------------------------------------------------
 # Tool wiring
 # ---------------------------------------------------------------------------
 

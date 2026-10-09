@@ -300,6 +300,49 @@ def test_an_mcp_only_registration_builds_no_rest_route() -> None:
 
 
 @pytest.mark.asyncio
+async def test_find_trade_store_filter_reaches_the_tool_on_both_transports() -> None:
+    """COI-758: `store` is advertised on find_trade and nowhere it would be inert."""
+    seen: list[dict[str, Any]] = []
+
+    async def invoke(tool_name: str, arguments: dict[str, Any]) -> mt.CallToolResult:
+        seen.append(arguments)
+        payload: dict[str, Any] = {"tool": tool_name, "arguments": arguments}
+        return mt.CallToolResult(
+            content=[
+                mt.TextContent(type="text", text="ok"),
+                mt.TextContent(type="text", text=json.dumps(payload)),
+            ],
+            structuredContent=payload,
+        )
+
+    registry = _wave1_registry(invoke)
+    params = {"server": "eco.test:3001", "limit": 50, "store": "Charred Corns"}
+
+    rest = TestClient(create_app(registry)).get("/preview/logistics.json", params=params)
+    assert rest.status_code == 200
+    assert rest.json()["arguments"]["store"] == "Charred Corns"
+
+    mcp = build_server(registry)
+    called = await mcp.request_handlers[mt.CallToolRequest](
+        mt.CallToolRequest(
+            method="tools/call",
+            params=mt.CallToolRequestParams(name="find_trade", arguments=params),
+        )
+    )
+    assert called.root.isError is False
+    assert called.root.structuredContent == rest.json()
+    assert seen[0] == seen[1]
+
+    listed = await mcp.request_handlers[mt.ListToolsRequest](
+        mt.ListToolsRequest(method="tools/list")
+    )
+    tools = {t.name: t for t in listed.root.tools}
+    assert "store" in tools["find_trade"].inputSchema["properties"]
+    assert "find_trade with store" in (tools["get_stores"].description or "")
+    assert "store" not in tools["get_market"].inputSchema["properties"]
+
+
+@pytest.mark.asyncio
 async def test_wave1_validation_failure_has_transport_parity() -> None:
     calls: list[str] = []
 
