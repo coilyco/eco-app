@@ -59,11 +59,11 @@ async def _advertised_tools() -> list[mt.Tool]:
 
 
 @pytest.mark.asyncio
-async def test_the_surface_is_still_twenty_four_tools() -> None:
+async def test_the_surface_is_still_twenty_three_tools() -> None:
     """#6076 audited "all 25 MCP tools". trade_watchers left in #8404, price_by_stage
-    joined in #8423 (its stages array is bounded by the 13 upgrade stages), and
-    get_map left in COI-2092."""
-    assert len(await _advertised_tools()) == 24
+    joined in #8423 (its stages array is bounded by the 13 upgrade stages), get_map
+    left in COI-2092, and list_public_servers left in COI-2091."""
+    assert len(await _advertised_tools()) == 23
 
 
 @pytest.mark.asyncio

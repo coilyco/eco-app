@@ -2,21 +2,16 @@
 
 from __future__ import annotations
 
-from typing import Any
+from pydantic import Field
 
-from pydantic import BaseModel, ConfigDict, Field
-
-from .dual_routes import DualRouteRegistry, DualRouteResult
+from .dual_routes import DualRouteRegistry
 from .public_routes import (
-    CURATED_SERVERS_ANNOTATIONS,
     BoundedServerInput,
     CurrencyInput,
-    EmptyInput,
     ServerInput,
     StoresInput,
     ToolInvoker,
     TradeInput,
-    extract_result,
     register_json_route,
 )
 
@@ -41,29 +36,8 @@ class ProgressionInput(ServerInput):
     )
 
 
-class PublicEcoServer(BaseModel):
-    """One curated public Eco server."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    label: str
-    host: str
-    notes: str
-
-
-class PublicServersOutput(BaseModel):
-    """The curated public Eco server directory."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    servers: list[PublicEcoServer]
-
-
-PUBLIC_SERVERS_OUTPUT_SCHEMA: dict[str, Any] = PublicServersOutput.model_json_schema()
-
 WAVE1_TOOL_NAMES = frozenset(
     {
-        "list_public_servers",
         "get_server_status",
         "get_currency",
         "get_market",
@@ -85,7 +59,6 @@ def register_wave1_routes(registry: DualRouteRegistry, invoke: ToolInvoker) -> N
         names = ", ".join(sorted(present))
         raise ValueError(f"Wave 1 routes partially overlap existing tools: {names}")
 
-    _register_public_servers(registry, invoke)
     register_json_route(
         registry,
         invoke,
@@ -238,28 +211,3 @@ def register_wave1_routes(registry: DualRouteRegistry, invoke: ToolInvoker) -> N
         rest_path="/preview/world.json",
         input_model=BoundedServerInput,
     )
-
-
-def _register_public_servers(registry: DualRouteRegistry, invoke: ToolInvoker) -> None:
-    @registry.register(
-        name="list_public_servers",
-        title="Eco - list public servers",
-        description=(
-            "List the curated public Eco servers known to this service. Feed a "
-            "returned host into get_server_status to fetch live status."
-        ),
-        rest_path="/preview/list_public_eco_servers.json",
-        rest_method="GET",
-        input_model=EmptyInput,
-        output_model=PublicServersOutput,
-        annotations=CURATED_SERVERS_ANNOTATIONS,
-    )
-    async def public_servers(request: EmptyInput) -> DualRouteResult[PublicServersOutput]:
-        result = await invoke("list_public_servers", request.model_dump())
-        text, payload, is_error = extract_result(result)
-        return DualRouteResult(
-            text=text,
-            payload=PublicServersOutput.model_validate(payload),
-            is_error=is_error,
-            rest_status=502 if is_error else 200,
-        )

@@ -39,7 +39,6 @@ Defined in [src/eco_mcp_app/server.py](../../src/eco_mcp_app/server.py) and the 
 - **get_recipes** - Recipe graph slice. Filters accept ids or display names on product / skill / station, and a value matching no known key warns with near misses instead of returning a silent empty result. A filtered or truncated payload restricts its lookup maps to the recipes it returns ([#254](https://forgejo.coilysiren.me/coilyco-gaming/eco-app/issues/254), [#255](https://forgejo.coilysiren.me/coilyco-gaming/eco-app/issues/255)).
 - **price_recipe** - Cost one product against live market prices. Returns costed recipes only, not the recipe-graph index ([#254](https://forgejo.coilysiren.me/coilyco-gaming/eco-app/issues/254)).
 - **get_skills** - The profession axis with per-skill recipe coverage. States when the graph is not the running server's, and an optional `server` cross-checks which specialties in use the graph omits ([#263](https://forgejo.coilysiren.me/coilyco-gaming/eco-app/issues/263)).
-- **list_public_servers** - 6 known public servers with labels + notes.
 
 ## Runtime surfaces
 

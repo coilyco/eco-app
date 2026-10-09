@@ -162,7 +162,6 @@ def test_registration_rejects_duplicate_surface_keys() -> None:
 
 
 WAVE1_PATHS = {
-    "list_public_servers": "/preview/list_public_eco_servers.json",
     "get_server_status": "/preview.json",
     "get_currency": "/preview/currency.json",
     "get_market": "/preview/market.json",
@@ -186,12 +185,7 @@ def _wave1_registry(
 @pytest.mark.asyncio
 async def test_wave1_routes_share_success_payloads(name: str, path: str) -> None:
     async def invoke(tool_name: str, arguments: dict[str, Any]) -> mt.CallToolResult:
-        if tool_name == "list_public_servers":
-            payload: dict[str, Any] = {
-                "servers": [{"label": "Test", "host": "eco.test:3001", "notes": "Fixture"}]
-            }
-        else:
-            payload = {"tool": tool_name, "arguments": arguments}
+        payload: dict[str, Any] = {"tool": tool_name, "arguments": arguments}
         return mt.CallToolResult(
             content=[
                 mt.TextContent(type="text", text=f"Called {tool_name}."),
@@ -206,9 +200,7 @@ async def test_wave1_routes_share_success_payloads(name: str, path: str) -> None
     # has an optional field the request omits.
     arguments: dict[str, Any]
     resolved: dict[str, Any]
-    if name == "list_public_servers":
-        arguments = resolved = {}
-    elif name == "get_progression":
+    if name == "get_progression":
         # Per-citizen timelines are opt-in so the summary layer fits inside an
         # MCP response (eco-app#232).
         # `citizen` is left unset, and both transports drop unset optionals.
@@ -226,11 +218,7 @@ async def test_wave1_routes_share_success_payloads(name: str, path: str) -> None
         arguments = resolved = {"server": "eco.test:3001", "limit": 50}
     else:
         arguments = resolved = {"server": "eco.test:3001"}
-    expected = (
-        {"servers": [{"label": "Test", "host": "eco.test:3001", "notes": "Fixture"}]}
-        if name == "list_public_servers"
-        else {"tool": name, "arguments": resolved}
-    )
+    expected = {"tool": name, "arguments": resolved}
 
     rest = TestClient(create_app(registry)).get(path, params=arguments)
     assert rest.status_code == 200

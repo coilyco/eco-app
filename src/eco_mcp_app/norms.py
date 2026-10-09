@@ -621,7 +621,6 @@ PRICE_FIELDS: dict[str, tuple[PriceSpec, ...]] = {
 # Every other tool, named so a new tool has to be placed in one list or the other.
 NO_PRICE_TOOLS = frozenset(
     {
-        "list_public_servers",
         "get_server_status",
         "get_currency",
         "get_civics",

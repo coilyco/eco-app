@@ -8,7 +8,7 @@ consolidation (coilysiren/inbox#101).
 `eco_mcp_app.http_app:app`, port 4000.
 
 - **MCP server** - `src/eco_mcp_app/`. Stdio for Claude Desktop,
-  Streamable-HTTP at `/mcp/`. Twenty read-only operations register once through
+  Streamable-HTTP at `/mcp/`. Twenty-one read-only operations register once through
   `DualRouteRegistry`. See [dual-route-inventory.md](dual-route-inventory.md).
 - **Reply templates** - one-line answers carried on a tool's MCP `_meta` under
   `coilyco/templates`, so a router that already picked the tool can reply

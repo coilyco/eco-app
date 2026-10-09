@@ -20,18 +20,6 @@ READ_ONLY_ANNOTATIONS = ToolAnnotations(
     idempotentHint=True,
     openWorldHint=True,
 )
-CURATED_SERVERS_ANNOTATIONS = ToolAnnotations(
-    readOnlyHint=True,
-    destructiveHint=False,
-    idempotentHint=True,
-    openWorldHint=False,
-)
-
-
-class EmptyInput(BaseModel):
-    """An operation with no inputs."""
-
-    model_config = ConfigDict(extra="forbid")
 
 
 class ServerInput(BaseModel):

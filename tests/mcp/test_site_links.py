@@ -8,9 +8,13 @@ knows where the rest lives.
 
 from __future__ import annotations
 
+import json
+from typing import Any
+
 import mcp.types as mt
 import pytest
 
+from eco_mcp_app.dual_routes import DualRouteRegistry
 from eco_mcp_app.server import (
     PUBLIC_SITE_URL,
     TOOL_SITE_PATHS,
@@ -18,6 +22,7 @@ from eco_mcp_app.server import (
     build_server,
     site_url_for,
 )
+from eco_mcp_app.wave1_routes import register_wave1_routes
 
 
 def _result(text: str) -> mt.CallToolResult:
@@ -59,13 +64,29 @@ def test_an_empty_result_is_left_alone() -> None:
 
 @pytest.mark.asyncio
 async def test_a_live_tool_call_carries_the_link() -> None:
-    """End-to-end through the dispatcher, not just the helper."""
-    mcp = build_server()
-    handler = mcp.request_handlers[mt.CallToolRequest]
+    """End-to-end through the dispatcher, not just the helper.
+
+    Every tool with a page reads a live Eco server, so the call goes through a
+    registry whose invoker answers locally.
+    """
+
+    async def invoke(tool_name: str, arguments: dict[str, Any]) -> mt.CallToolResult:
+        payload = {"tool": tool_name, "arguments": arguments}
+        return mt.CallToolResult(
+            content=[
+                mt.TextContent(type="text", text=f"Called {tool_name}."),
+                mt.TextContent(type="text", text=json.dumps(payload)),
+            ],
+            structuredContent=payload,
+        )
+
+    registry = DualRouteRegistry()
+    register_wave1_routes(registry, invoke)
+    handler = build_server(registry).request_handlers[mt.CallToolRequest]
     result = await handler(
         mt.CallToolRequest(
             method="tools/call",
-            params=mt.CallToolRequestParams(name="list_public_servers", arguments={}),
+            params=mt.CallToolRequestParams(name="get_server_status", arguments={}),
         )
     )
     assert f"{PUBLIC_SITE_URL}/info" in result.root.content[0].text

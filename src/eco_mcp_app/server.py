@@ -49,8 +49,6 @@ from .telemetry import instrument_mcp_server
 from .trades import fetch_ledger, ledger_markdown
 from .world import fetch_world, world_markdown
 
-PUBLIC_SERVERS_OUTPUT_SCHEMA = wave1_routes.PUBLIC_SERVERS_OUTPUT_SCHEMA
-
 DEFAULT_ECO_INFO_URL = os.environ.get("ECO_INFO_URL", "http://eco.coilysiren.me:3001/info")
 DEFAULT_ECO_PORT = int(os.environ.get("ECO_INFO_PORT", "3001"))
 # Base URL for non-/info endpoints on the same server. Derived from
@@ -95,43 +93,6 @@ ECONOMY_DATASETS: tuple[str, ...] = ECONOMY_FLOW_DATASETS + ECONOMY_LEVEL_DATASE
 # for local dev / tests). None → the tool will still run but get 401s, which
 # surface as per-action warnings on the rendered card.
 ADMIN_API_KEY_ENV = "ECO_ADMIN_API_KEY"
-
-# Single source of truth for the public servers surfaced both as "try-others"
-# pills on the rendered card and as the `list_public_servers` tool's
-# response. Curated from eco-servers.org, chosen for variety in Eco markup
-# patterns + ruleset (so the iframe gets exercised against diverse titles).
-KNOWN_PUBLIC_SERVERS: list[dict[str, str]] = [
-    {
-        "label": "Eco via Sirens",
-        "host": "eco.coilysiren.me:3001",
-        "notes": "Kai's server (default for this MCP). Highly modded, collaborative.",
-    },
-    {
-        "label": "AWLGaming",
-        "host": "ecoserver.awlgaming.net:5679",
-        "notes": "Hex + named color mix in the TMP title.",
-    },
-    {
-        "label": "GreenLeaf Prime",
-        "host": "eco.greenleafserver.com:3021",
-        "notes": "<#RRGGBB> shorthand rainbow title.",
-    },
-    {
-        "label": "GreenLeaf Vanilla",
-        "host": "eco.greenleafserver.com:3031",
-        "notes": "Same host as Prime, vanilla ruleset.",
-    },
-    {
-        "label": "The Dao Kingdom",
-        "host": "daokingdom.eu:3001",
-        "notes": "Short-form hex + explicit </color> closes.",
-    },
-    {
-        "label": "Peaceful Utopia",
-        "host": "eco.bleedcraft.com:3001",
-        "notes": "No markup in the title; meteor already passed.",
-    },
-]
 
 
 def normalize_server_url(server: str | None) -> str:
@@ -991,7 +952,6 @@ TOOL_SITE_PATHS: dict[str, str] = {
     "get_species": "/species",
     "explain_item": "/items",
     "get_social": "/civics",
-    "list_public_servers": "/info",
 }
 
 
@@ -2692,21 +2652,6 @@ def build_server(
                     TextContent(type="text", text=markdown),
                     TextContent(type="text", text=json.dumps(social_payload)),
                 ],
-            )
-
-        if name == "list_public_servers":
-            lines = ["**Known public Eco servers:**", ""]
-            for s in KNOWN_PUBLIC_SERVERS:
-                lines.append(f"- **{s['label']}** — `{s['host']}` · {s['notes']}")
-            return CallToolResult(
-                content=[
-                    TextContent(type="text", text="\n".join(lines)),
-                    TextContent(
-                        type="text",
-                        text=json.dumps({"servers": KNOWN_PUBLIC_SERVERS}),
-                    ),
-                ],
-                structuredContent={"servers": KNOWN_PUBLIC_SERVERS},
             )
 
         if name == "get_economy":
