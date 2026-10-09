@@ -34,8 +34,6 @@ consolidation (coilysiren/inbox#101).
   overflow, or transfer weight. See [frontend/kit-checks.md](frontend/kit-checks.md).
 - **Jobs API** at `/jobs/api` and **Replay API** at `/replay/api`. See
   [progression.md](progression.md).
-- **Discord worker** - `src/eco_discord/`, a separate Pycord gateway process.
-  See [discord-bot.md](discord-bot.md), [discord-parity.md](discord-parity.md).
 - **Telemetry** - shared OTLP init in `eco_mcp_app/telemetry.py`, plus Sentry
   for crashes only when `SENTRY_DSN` is set. Handled errors stay in SigNoz.
 - **Crawl surface** - `robots.txt`, `sitemap.xml`, `301`s for retired paths,

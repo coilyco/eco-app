@@ -23,15 +23,12 @@ dependencies = [
   "opentelemetry-sdk>=1.39.0,<2.0.0",
   "cachetools>=5.3.0",
   "aiolimiter>=1.1.0",
-  "py-cord>=2.6.1,<3.0.0",
   "sentry-sdk>=2.0,<3",
 ]
 
 [project.scripts]
 # Keeps the name Claude Desktop configs already point at.
 eco-mcp-app = "eco_mcp_app.__main__:main"
-eco-discord-worker = "eco_discord.worker:main"
-eco-discord-register = "eco_discord.register:main"
 
 [tool.uv]
 managed = true
@@ -41,7 +38,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/eco_mcp_app", "src/eco_discord", "src/eco_spec_tracker", "src/eco_replay", "src/eco_snapshot"]
+packages = ["src/eco_mcp_app", "src/eco_spec_tracker", "src/eco_replay", "src/eco_snapshot"]
 
 [tool.hatch.build.targets.wheel.force-include]
 "data/ecoregions.json" = "eco_mcp_app/data/ecoregions.json"
