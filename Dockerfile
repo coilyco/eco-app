@@ -7,7 +7,18 @@ WORKDIR /frontend
 RUN corepack enable
 
 COPY frontend/package.json frontend/pnpm-lock.yaml /frontend/
-RUN pnpm install --frozen-lockfile
+# A cold install takes 3-6 s, but it has hung 15-16 min on the final tarball
+# three times (COI-2066), which holds the deploy runner. pnpm's own fetchTimeout
+# did not cut those stalls, so a wall-clock bound plus retry does. Only a bound
+# hit (exit 124) retries - a real install failure still fails at once.
+ARG PNPM_INSTALL_TIMEOUT_SECONDS=90
+RUN for attempt in 1 2 3; do \
+      timeout "${PNPM_INSTALL_TIMEOUT_SECONDS}" pnpm install --frozen-lockfile && exit 0; \
+      status=$?; \
+      [ "${status}" -eq 124 ] || exit "${status}"; \
+      echo "pnpm install passed ${PNPM_INSTALL_TIMEOUT_SECONDS}s (attempt ${attempt} of 3)" >&2; \
+    done; \
+    exit 1
 
 COPY frontend/ /frontend/
 # The SPA route table is shared with the Python service (robots.txt, sitemap,
