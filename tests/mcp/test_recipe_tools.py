@@ -20,11 +20,7 @@ from starlette.testclient import TestClient
 
 from eco_mcp_app.http_app import create_app
 from eco_mcp_app.recipes import load_recipe_index
-from eco_mcp_app.wave3_routes import (
-    DEFAULT_RECIPE_LIMIT,
-    annotate_skills_coverage,
-    skills_payload,
-)
+from eco_mcp_app.wave3_routes import DEFAULT_RECIPE_LIMIT
 
 
 async def _call(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
@@ -157,65 +153,6 @@ async def test_price_recipe_costs_a_product() -> None:
     assert all("cost" in row for row in rows)
 
 
-@pytest.mark.asyncio
-async def test_get_skills_reports_recipe_coverage() -> None:
-    payload = await _call("get_skills", {})
-    assert payload["skills"]
-    assert payload["counts"]["skills"] == len(payload["skills"])
-    # Ranked by coverage, so the profession axis reads at a glance.
-    counts = [s["recipeCount"] for s in payload["skills"]]
-    assert counts == sorted(counts, reverse=True)
-
-
-def test_skills_payload_counts_each_skills_recipes() -> None:
-    index = load_recipe_index()
-    payload = skills_payload(index)
-    total = sum(s["recipeCount"] for s in payload["skills"])
-    assert total == payload["counts"]["recipesCovered"]
-    assert total > 0
-
-
-def test_skills_payload_discloses_a_non_server_specific_roster() -> None:
-    """The bundled graph omits modded specialties; say so on the roster tool (#263)."""
-    index = load_recipe_index()
-    payload = skills_payload(index)
-    if payload["serverSpecific"]:
-        pytest.skip("an operator export is configured; the roster is server-specific")
-    assert "coverageNote" in payload
-    assert "modded" in payload["coverageNote"]
-
-
-def test_cross_check_names_the_specialties_the_graph_is_missing() -> None:
-    """Turn "may be incomplete" into the specific missing set (#263)."""
-    payload: dict[str, Any] = {
-        "skills": [{"name": "SmeltingSkill"}, {"name": "MasonrySkill"}],
-        "serverSpecific": False,
-        "warnings": [],
-    }
-    annotate_skills_coverage(
-        payload,
-        ["SmeltingSkill", "FishingReloadedSkill", "LibrarianSkill", "BiochemistSkill"],
-    )
-    assert payload["skillsInUseNotInGraph"] == [
-        "BiochemistSkill",
-        "FishingReloadedSkill",
-        "LibrarianSkill",
-    ]
-    assert payload["skillsCrossChecked"] is True
-    assert any("LibrarianSkill" in w for w in payload["warnings"])
-
-
-def test_cross_check_stays_quiet_when_the_graph_covers_the_server() -> None:
-    payload: dict[str, Any] = {
-        "skills": [{"name": "SmeltingSkill"}],
-        "serverSpecific": True,
-        "warnings": [],
-    }
-    annotate_skills_coverage(payload, ["SmeltingSkill"])
-    assert payload["skillsInUseNotInGraph"] == []
-    assert payload["warnings"] == []
-
-
 def test_the_spa_recipe_route_keeps_its_contract() -> None:
     """`/preview/recipes.json` moved onto the registry but kept its params."""
     client = TestClient(create_app())
@@ -232,71 +169,3 @@ def test_the_spa_recipe_route_keeps_its_contract() -> None:
     )
     assert filtered.status_code == 200
     assert filtered.json()["recipes"] == []
-
-
-@pytest.mark.asyncio
-async def test_an_unreachable_server_does_not_report_a_cross_check(monkeypatch) -> None:
-    """fetch_history records transport failures rather than raising, so the
-    caller must read the history to know whether anything answered (#269)."""
-    from eco_mcp_app import progression, server
-
-    async def unreachable(**_: Any) -> progression.ProgressionHistory:
-        history = progression.ProgressionHistory(
-            fetched_at_iso="2026-01-01T00:00:00Z", source_base_url="http://nope.invalid"
-        )
-        history.warnings.append("SkillGained: ConnectError: Name or service not known")
-        return history
-
-    monkeypatch.setattr(server, "fetch_history", unreachable)
-    payload = await _call("get_skills", {"server": "nope.invalid:3001"})
-
-    assert payload["skillsCrossChecked"] is False, (
-        "a cross-check was reported against a server that never answered"
-    )
-    assert any("ConnectError" in w for w in payload["warnings"]), (
-        "the transport failure was swallowed, so the caller cannot see why"
-    )
-
-
-@pytest.mark.asyncio
-async def test_a_reachable_server_with_no_extra_specialties_still_cross_checks(
-    monkeypatch,
-) -> None:
-    """The distinction the fix must preserve: nothing missing is not the same
-    as nothing checked."""
-    from eco_mcp_app import progression, server
-
-    async def reachable(**_: Any) -> progression.ProgressionHistory:
-        history = progression.ProgressionHistory(
-            fetched_at_iso="2026-01-01T00:00:00Z", source_base_url="http://eco.example"
-        )
-        history.per_action_counts["SkillGained"] = 0
-        return history
-
-    monkeypatch.setattr(server, "fetch_history", reachable)
-    payload = await _call("get_skills", {"server": "eco.example:3001"})
-
-    assert payload["skillsCrossChecked"] is True
-    assert payload["skillsInUseNotInGraph"] == []
-
-
-@pytest.mark.asyncio
-async def test_a_reachable_server_reports_the_specialties_the_graph_omits(
-    monkeypatch,
-) -> None:
-    from eco_mcp_app import progression, server
-
-    async def modded(**_: Any) -> progression.ProgressionHistory:
-        history = progression.ProgressionHistory(
-            fetched_at_iso="2026-01-01T00:00:00Z", source_base_url="http://eco.example"
-        )
-        history.per_action_counts["SkillGained"] = 12
-        history.by_specialty = [("BeekeepingSkill", 1), ("MixologySkill", 2)]
-        return history
-
-    monkeypatch.setattr(server, "fetch_history", modded)
-    payload = await _call("get_skills", {"server": "eco.example:3001"})
-
-    assert payload["skillsCrossChecked"] is True
-    assert "BeekeepingSkill" in payload["skillsInUseNotInGraph"]
-    assert "MixologySkill" in payload["skillsInUseNotInGraph"]

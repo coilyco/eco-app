@@ -239,7 +239,7 @@ def test_unfiltered_index_keeps_the_whole_graph() -> None:
 
 
 def test_filter_accepts_display_names_and_ids_interchangeably() -> None:
-    """`get_skills` reports displayName "Masonry"; that must filter too (#255)."""
+    """A recipe's skill displayName "Masonry" must filter too (#255)."""
     index = build_recipe_index(_RAW)
     by_id = filter_index(index, skill="MasonrySkill")
     by_display = filter_index(index, skill="Masonry")

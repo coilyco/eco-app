@@ -190,8 +190,8 @@ def register_wave1_routes(registry: DualRouteRegistry, invoke: ToolInvoker) -> N
             "specialty yet (a tailor, a mason, a cook), plus level-ups, class "
             "completions, leaderboards, and per-day trends in how fast the server "
             "is moving through the skill tree. Pass citizen for one player's "
-            "history. For the fixed list of skills and how many recipes each "
-            "unlocks use get_skills. Requires the server-side admin API key."
+            "history. For which recipes a skill unlocks use get_recipes with a "
+            "skill filter. Requires the server-side admin API key."
         ),
         rest_path="/preview/progression.json",
         input_model=ProgressionInput,

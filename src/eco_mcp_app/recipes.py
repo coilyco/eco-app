@@ -611,7 +611,7 @@ def _norm_key(value: str) -> str:
     """Collapse an id or display name to a comparable key.
 
     `SmeltingSkill`, `Smelting` and `smelting` all fold together, so a caller
-    who grounded themselves with `get_skills` and reached for the display name
+    who read a display name off a recipe and reached for it as a filter
     matches the same rows as one who passed the raw id (#255).
     """
     text = (value or "").strip().lower()

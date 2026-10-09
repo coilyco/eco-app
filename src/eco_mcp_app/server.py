@@ -1063,19 +1063,6 @@ def _format_recipes_markdown(payload: dict[str, Any], tool: str) -> str:
     return "\n".join(lines)
 
 
-def _format_skills_markdown(payload: dict[str, Any]) -> str:
-    skills = payload.get("skills") or []
-    lines = [f"**Eco skills** — {len(skills)} skills gating recipes", ""]
-    for skill in skills[:20]:
-        lines.append(
-            f"- **{skill.get('display') or skill.get('name')}** — "
-            f"{skill.get('recipeCount', 0)} recipe(s)"
-        )
-    for warning in payload.get("warnings") or []:
-        lines.append(f"- ⚠ {warning}")
-    return "\n".join(lines)
-
-
 _UNREPORTED = "not reported"
 
 
@@ -2488,66 +2475,15 @@ def build_server(
                 ],
             )
 
-        if name in ("get_recipes", "price_recipe", "get_skills"):
+        if name in ("get_recipes", "price_recipe"):
             from .cost import CostParams, annotate_payload
             from .recipes import filter_index, load_recipe_index, narrow_index_maps
-            from .wave3_routes import skills_payload
 
             args = arguments or {}
             index = load_recipe_index()
 
-            if name == "get_skills":
-                recipe_payload: dict[str, Any] = skills_payload(index)
-                # The recipe graph is bundled, so on a modded server it omits
-                # the specialties players actually hold. Given a server, name
-                # exactly which ones are missing instead of leaving the caller
-                # to cross-reference get_progression (#263).
-                if args.get("server"):
-                    from .wave3_routes import annotate_skills_coverage
-
-                    try:
-                        history = await fetch_history(
-                            base_url=args.get("server"), api_key=_get_admin_token()
-                        )
-                        # fetch_history records transport failures rather than
-                        # raising, so an unreachable server arrives here as an
-                        # empty history. per_action_counts is set only when an
-                        # exporter answered, so an empty one means the server
-                        # was never observed and no cross-check happened (#269).
-                        if history.per_action_counts:
-                            annotate_skills_coverage(
-                                recipe_payload, [n for n, _ in history.by_specialty]
-                            )
-                        else:
-                            recipe_payload["skillsCrossChecked"] = False
-                            _recipe_warn(
-                                recipe_payload,
-                                "skills: no exporter on this server answered, so the "
-                                "specialties in use were not cross-checked; the list "
-                                "below is the bundled graph only",
-                            )
-                        # Surface what failed either way. A partially read server
-                        # cross-checks against an incomplete specialty set, and a
-                        # caller cannot see that from the boolean alone.
-                        for detail in history.warnings:
-                            _recipe_warn(recipe_payload, f"skills: {detail}")
-                    except (httpx.HTTPError, OSError) as exc:
-                        recipe_payload["skillsCrossChecked"] = False
-                        _recipe_warn(
-                            recipe_payload,
-                            "skills: could not reach the server to cross-check which "
-                            f"specialties are in use ({type(exc).__name__}); the list "
-                            "below is the bundled graph only",
-                        )
-                return CallToolResult(
-                    content=[
-                        TextContent(type="text", text=_format_skills_markdown(recipe_payload)),
-                        TextContent(type="text", text=json.dumps(recipe_payload)),
-                    ],
-                )
-
             product = args.get("product")
-            recipe_payload = filter_index(
+            recipe_payload: dict[str, Any] = filter_index(
                 index,
                 product=product,
                 skill=args.get("skill"),

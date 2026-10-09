@@ -634,7 +634,6 @@ NO_PRICE_TOOLS = frozenset(
         "get_region",
         "get_climate",
         "get_government",
-        "get_skills",
         # Its stages are the norm on one basis. Attaching `norm` would add this
         # cycle's own median and quartiles beside them (teable:coilyco/eco-app#8423).
         "price_by_stage",

@@ -291,22 +291,15 @@ async def test_the_series_tools_lead_with_their_caveats(
     assert_caveats_lead(payload)
 
 
-@pytest.mark.parametrize(
-    ("tool", "arguments"),
-    [("get_recipes", {"limit": 3}), ("get_skills", {})],
-)
 @pytest.mark.asyncio
-async def test_the_bundled_recipe_tools_lead_with_their_coverage(
-    tool: str, arguments: dict[str, Any]
-) -> None:
+async def test_the_bundled_recipe_tool_leads_with_its_coverage() -> None:
     """Offline and real: the largest list in the bundled recipe graph, no stub."""
-    payload = _json_block(await _call(tool, arguments))
+    payload = _json_block(await _call("get_recipes", {"limit": 3}))
 
     assert_caveats_lead(payload)
-    if tool == "get_recipes":
-        keys = list(payload)
-        assert keys.index("recipesMatched") < keys.index("recipes")
-        assert keys.index("recipesReturned") < keys.index("recipes")
+    keys = list(payload)
+    assert keys.index("recipesMatched") < keys.index("recipes")
+    assert keys.index("recipesReturned") < keys.index("recipes")
 
 
 @pytest.mark.asyncio
