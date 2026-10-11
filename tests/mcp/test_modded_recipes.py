@@ -188,3 +188,51 @@ def test_the_ingestion_never_writes(tmp_path: Path, monkeypatch: pytest.MonkeyPa
 
     assert sorted(p.name for p in tmp_path.iterdir()) == before
     assert path.stat().st_mtime_ns == stat_before
+
+
+def test_an_export_that_cannot_be_parsed_falls_back_and_says_why(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    path = _write(tmp_path, {"Version": 5, "Recipes": ["not a recipe object"]})
+    monkeypatch.setenv(MODDED_EXPORT_ENV, str(path))
+
+    result = load_recipe_index().to_dict()
+
+    assert result["serverSpecific"] is False
+    assert "could not be parsed" in " ".join(result["warnings"])
+    assert result["counts"]["recipes"] > 0
+
+
+def test_an_export_whose_layout_changed_yields_no_recipes_and_is_refused(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Renamed keys parse without raising. Serving the empty graph as server-specific is the bug."""
+    renamed = [{"Name": f"R{i}", "Outputs": [{"Name": "X", "Quantity": 1}]} for i in range(10)]
+    path = _write(tmp_path, _export(Version=5, Recipes=renamed))
+    monkeypatch.setenv(MODDED_EXPORT_ENV, str(path))
+
+    result = load_recipe_index().to_dict()
+
+    assert result["serverSpecific"] is False
+    assert "layout may have changed" in " ".join(result["warnings"])
+
+
+def test_a_parseable_export_of_an_unchecked_version_is_served_with_a_warning(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    path = _write(tmp_path, _export(Version=5))
+    monkeypatch.setenv(MODDED_EXPORT_ENV, str(path))
+
+    result = load_recipe_index().to_dict()
+
+    assert result["serverSpecific"] is True
+    assert "Version 5 has not been checked" in " ".join(result["warnings"])
+
+
+def test_a_checked_version_carries_no_version_warning(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    path = _write(tmp_path, _export(Version=3))
+    monkeypatch.setenv(MODDED_EXPORT_ENV, str(path))
+
+    assert load_recipe_index().to_dict()["warnings"] == []

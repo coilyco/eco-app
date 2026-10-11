@@ -68,6 +68,9 @@ MODDED_EXPORT_ENV = "ECO_MODDED_RECIPE_EXPORT"
 # An export older than this is treated as stale and refused, because a modded
 # graph that no longer matches the server is worse than an honest vanilla
 # fallback — it is wrong *and* it claims to be server-specific.
+# DataExporter layouts the parser has been run against. EcoGnomeMod 1.4.0 writes 3.
+MODDED_EXPORT_CHECKED_VERSIONS = frozenset({3})
+
 MODDED_EXPORT_MAX_AGE_DAYS = float(os.environ.get("ECO_MODDED_RECIPE_MAX_AGE_DAYS", "14"))
 
 GNOME_DATA_SOURCE = (
@@ -497,12 +500,31 @@ def _load_modded_export() -> tuple[RecipeIndex | None, str | None]:
         f"DataExporter modded export from {server} "
         f"(version {version}, exported {exported_at_iso or 'at an unstated time'})"
     )
-    index = build_recipe_index(
-        raw,
-        source=source,
-        source_kind=SOURCE_KIND_MODDED_EXPORT,
-        exported_at_iso=exported_at_iso,
-    )
+    try:
+        index = build_recipe_index(
+            raw,
+            source=source,
+            source_kind=SOURCE_KIND_MODDED_EXPORT,
+            exported_at_iso=exported_at_iso,
+        )
+    except (AttributeError, KeyError, TypeError, ValueError) as e:
+        return (
+            None,
+            f"{MODDED_EXPORT_ENV}={configured} could not be parsed ({type(e).__name__}: {e})",
+        )
+    # A layout change that renames keys parses without raising and yields few or no recipes, so
+    # count output against input rather than serve an empty graph as server-specific.
+    if len(index.recipes) * 2 < len(raw["Recipes"]):
+        return None, (
+            f"{MODDED_EXPORT_ENV}={configured} parsed only {len(index.recipes)} of "
+            f"{len(raw['Recipes'])} recipes (Version {version}), so its layout may have changed"
+        )
+    if version not in MODDED_EXPORT_CHECKED_VERSIONS:
+        checked = sorted(MODDED_EXPORT_CHECKED_VERSIONS)
+        index.warnings.append(
+            f"Export Version {version} has not been checked against this parser "
+            f"(checked: {checked}). It parsed, so verify the recipes."
+        )
     return index, None
 
 

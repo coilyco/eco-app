@@ -13,9 +13,11 @@ the worst way, because it looks authoritative.
 
 Any refusal falls back **and says why**, on the payload's `warnings`. Refusals
 are an unreadable file, invalid JSON, a payload that is not DataExporter-shaped
-(no `Recipes[]`), an unparseable `ExportedAt`, or an export past the freshness
-bound. A stale modded graph is refused rather than trusted, because one that no
-longer matches the server is wrong *and* claims to be server-specific. An
+(no `Recipes[]`), an unparseable `ExportedAt`, a parse error, fewer than half the
+recipes parsing (a changed layout), or an export past the freshness bound. A
+stale modded graph is refused rather than trusted, because one that no longer
+matches the server is wrong *and* claims to be server-specific. A `Version`
+outside `MODDED_EXPORT_CHECKED_VERSIONS` (3 today) is served with a warning. An
 export with no `ExportedAt` is accepted, since the operator pointed at it
 deliberately, but the source string says so. When no export is configured
 nothing warns: vanilla is correct for a vanilla deploy, and crying wolf on
