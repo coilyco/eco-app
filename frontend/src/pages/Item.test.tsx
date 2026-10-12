@@ -227,6 +227,44 @@ describe("Item", () => {
     expect(screen.getByTestId("back-to-items")).toHaveAttribute("href", "/items")
   })
 
+  it("suggests an ask and a bid from sales in several credits, and says how", async () => {
+    // HewnLog on 2026-10-12: six stores, six personal credits, 1,130 past sales in none of them.
+    const sale = (unitPrice: number, currency: string, n: number) =>
+      Array.from({ length: n }, () => ({ unitPrice, currency, quantity: 1, eventCount: 1, direction: "buy" }))
+    const trades = [
+      ...sale(0.14, "Zynx Credit", 6),
+      ...sale(0.3, "Upgrade Credit", 4),
+      ...sale(0.29, "Ice Dragon Credit", 3),
+      ...sale(0.3, "reihtnog Credit", 3),
+      ...sale(0.4, "Cookie Credit", 3),
+      ...sale(0.4, "elizacorn Credit", 1),
+    ]
+    const norm = { basis: "all", n: 1130, cycles: 13, referenceCurrency: "Sirens Credit" }
+    stubPivotFetch({ ...PIVOT, trades, tradeCount: 20, norm })
+    renderItem()
+
+    const ask = await screen.findByTestId("item-suggestion-ask")
+    expect(ask).toHaveTextContent("0.3 per unit")
+    expect(screen.getByTestId("item-suggestion-bid")).toHaveTextContent("0.14 per unit")
+    const basis = screen.getByTestId("item-suggestion-basis")
+    expect(basis).toHaveTextContent("Based on 20 sales in 6 shop credits, from 0.14 to 0.4 each.")
+    expect(basis).toHaveTextContent("no exchange rate between them")
+    expect(basis).not.toHaveTextContent("few sales")
+    expect(screen.queryByTestId("item-suggestion-empty")).toBeNull()
+  })
+
+  it("says so when sales exist but none has a price, and shows no block with no sales", async () => {
+    stubPivotFetch({ ...PIVOT, trades: [{ unitPrice: null, currency: "Barter", quantity: 1 }], tradeCount: 1 })
+    renderItem()
+    expect(await screen.findByTestId("item-suggestion-empty")).toHaveTextContent("No sale of Mortar has a price yet")
+    cleanup()
+
+    stubPivotFetch({ ...PIVOT, trades: [], tradeCount: 0, craftCount: 4 })
+    renderItem()
+    await waitFor(() => expect(screen.getByTestId("item-pill")).toBeInTheDocument())
+    expect(screen.queryByTestId("item-suggestion")).toBeNull()
+  })
+
   it("filters the feed by event type", async () => {
     stubPivotFetch()
     renderItem()
