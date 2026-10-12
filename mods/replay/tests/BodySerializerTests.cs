@@ -114,6 +114,51 @@ public class BodySerializerTests
         Assert.DoesNotContain("Children", body);
     }
 
+    // Stand-ins for Eco's Vector3i: one struct that overrides ToString, one that
+    // inherits ValueType.ToString, and one whose override is far too chatty.
+    private readonly struct FakeVector3i
+    {
+        public FakeVector3i(int x, int y, int z) => (X, Y, Z) = (x, y, z);
+        public int X { get; }
+        public int Y { get; }
+        public int Z { get; }
+        public override string ToString() => $"({X}, {Y}, {Z})";
+    }
+
+    private readonly struct PlainStruct
+    {
+        public int X { get; init; }
+    }
+
+    private readonly struct ChattyStruct
+    {
+        public override string ToString() => new string('z', 10_000);
+    }
+
+    [Fact]
+    public void StructWithToString_IsRenderedAsItsText()
+    {
+        var holder = new { ActionLocation = new FakeVector3i(164, 83, -783) };
+        var json = JObject.Parse(BodySerializer.Serialize(holder));
+        Assert.Equal("(164, 83, -783)", (string?)json["ActionLocation"]);
+    }
+
+    [Fact]
+    public void StructWithoutToString_FallsBackToTypeName()
+    {
+        var holder = new { Thing = new PlainStruct { X = 1 } };
+        var json = JObject.Parse(BodySerializer.Serialize(holder));
+        Assert.Equal(nameof(PlainStruct), (string?)json["Thing"]);
+    }
+
+    [Fact]
+    public void StructText_IsCapped()
+    {
+        var holder = new { Thing = new ChattyStruct() };
+        var json = JObject.Parse(BodySerializer.Serialize(holder));
+        Assert.Equal(BodySerializer.MaxStructTextChars, ((string?)json["Thing"])!.Length);
+    }
+
     [Fact]
     public void ObjectTypedProperty_HoldingAScalar_KeepsTheScalar()
     {

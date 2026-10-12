@@ -85,6 +85,29 @@ public static class BodySerializer
             || t == typeof(Guid);
     }
 
+    // Cap on a struct's ToString, so a value type with a chatty override cannot
+    // widen the body. Coordinates are a few dozen characters.
+    internal const int MaxStructTextChars = 128;
+
+    // A struct's own ToString text, or its type name when it only inherits
+    // ValueType.ToString (which would print the full type name anyway).
+    internal static string StructText(object value, Type type)
+    {
+        var toString = type.GetMethod("ToString", Type.EmptyTypes);
+        if (toString == null || toString.DeclaringType != type) return type.Name;
+        string? text;
+        try
+        {
+            text = value.ToString();
+        }
+        catch
+        {
+            return type.Name;
+        }
+        if (string.IsNullOrEmpty(text)) return type.Name;
+        return text.Length <= MaxStructTextChars ? text : text[..MaxStructTextChars];
+    }
+
     // A bounded count summary for a collection. Never enumerates the elements
     // themselves — the whole point is to avoid materializing a wide graph.
     internal static string SummarizeEnumerable(IEnumerable items)
@@ -168,6 +191,11 @@ internal sealed class SummaryValueProvider : IValueProvider
         // Collections: a bounded count summary, never the elements. (Checked
         // before the name lookup so an enumerable entity is still summarized.)
         if (v is IEnumerable en) return BodySerializer.SummarizeEnumerable(en);
+
+        // A value type with its own ToString (Vector3i, Vector3) is a small,
+        // copy-by-value coordinate rather than an entity graph, so its text is
+        // the useful summary. Without this, positions collapsed to "Vector3i".
+        if (t.IsValueType) return BodySerializer.StructText(v, t);
 
         // Named Eco entity (User, WorldObject, Deed, ...): its display name.
         try
