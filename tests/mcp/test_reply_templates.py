@@ -166,6 +166,60 @@ def test_find_trade_with_no_offers_falls_back() -> None:
     )
 
 
+def _store_reply(offers: list[ShelfOffer], *, item: str, store: str | None = None) -> str | None:
+    args = {"item": item, **({"store": store} if store else {})}
+    report = build_logistics(offers, item=item, store=store)
+    return render_reply(REPLY_TEMPLATES["find_trade"], report.to_dict(), args)
+
+
+def test_find_trade_store_and_item_answers_for_that_store_not_the_market() -> None:
+    """COI-2612: the Quarry is dearer than Shiny Rocks, and the reply is the Quarry's."""
+    offers = [_offer("Shiny Rocks", 3.0, "Snorf"), _offer("Quarry", 4.5, "Ada")]
+    text = _store_reply(offers, store="quarry", item="limestone")
+    assert text == "Quarry has 40 Limestone at 4.5 Credits in stock."
+    # Without the store the market-wide entry still answers.
+    assert "cheapest" in (_store_reply(offers, item="limestone") or "")
+
+
+def test_find_trade_store_and_item_sold_out_says_so_for_that_store() -> None:
+    offers = [_stocked("RATWORKS", 0.7, "TheBarracksRat", 0, "Barter")]
+    text = _store_reply(offers, store="ratworks", item="lumber")
+    assert text == "RATWORKS lists Lumber but is out of stock right now."
+
+
+def test_find_trade_store_and_item_names_the_cheapest_stocked_lines_first() -> None:
+    cheap = _stocked("Lumberaholics", 0.7, "Scuba Steve", 185, "Spectres")
+    dear = _stocked("Lumberaholics", 2.0, "Scuba Steve", 10, "Credits")
+    out = _stocked("Lumberaholics", 0.1, "Scuba Steve", 0, "Barter")
+    text = _store_reply([dear, out, cheap], store="lumberaholics", item="lumber")
+    assert text == "Lumberaholics has 185 Lumber at 0.7 Spectres, 10 Lumber at 2 Credits in stock."
+
+
+def test_find_trade_store_and_item_with_no_sell_line_falls_through() -> None:
+    buyer = _offer("Quarry", 4.5, "Ada")
+    buyer.side = "buy"
+    assert _store_reply([buyer], store="quarry", item="limestone") is None
+
+
+def test_find_trade_store_and_item_misses_fall_through_to_the_model() -> None:
+    offers = [_offer("Quarry", 4.5, "Ada")]
+    assert _store_reply(offers, store="nowhere", item="limestone") is None
+    assert _store_reply(offers, store="quarry", item="plutonium") is None
+
+
+def test_find_trade_store_and_item_stays_silent_when_several_stores_match() -> None:
+    offers = [_offer("Quarry North", 4.5, "Ada"), _offer("Quarry South", 5.0, "Bo")]
+    report = build_logistics(offers, store="quarry", item="limestone")
+    assert report.stores_matched == 2 and report.reply is None
+
+
+def test_find_trade_store_and_item_on_a_history_only_shelf_admits_unknown_stock() -> None:
+    offer = _offer("Quarry", 4.5, "Ada")
+    offer.source = "history"
+    text = _store_reply([offer], store="quarry", item="limestone")
+    assert text == "Quarry has no live shelf, so its stock is not known."
+
+
 def test_get_market_reports_latest_median_and_trend() -> None:
     rows = [
         {

@@ -227,6 +227,9 @@ class LogisticsReport:
     stores: list[dict[str, Any]] = field(default_factory=list)
     store_query: str | None = None
     stores_matched: int | None = None
+    # The one-line answer `{{reply}}` templates when `store` and `item` were both
+    # asked and exactly one store matched; null otherwise (COI-2612).
+    reply: str | None = None
     warnings: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
@@ -245,6 +248,7 @@ class LogisticsReport:
             "storeQuery": self.store_query,
             "storesMatched": self.stores_matched,
             "stores": list(self.stores),
+            "reply": self.reply,
             "warnings": list(self.warnings),
         }
 
@@ -563,6 +567,7 @@ def _fill_store_board(
         meta[k].owner for k in matched_keys if meta[k].source == "live" and meta[k].owner
     }
     rows: list[dict[str, Any]] = []
+    replies: dict[str, str] = {}
     superseded = 0
     for key in matched_keys:
         first = meta[key]
@@ -602,6 +607,8 @@ def _fill_store_board(
             )
         if notes:
             row["note"] = "; ".join(notes)
+        if want_item and (reply := _store_reply(first.store_label, live, lines)):
+            replies[key] = reply
         rows.append(row)
     rows.sort(key=lambda r: (-r["shelfLines"], r["store"].lower()))
     if len(rows) > STORE_ROWS:
@@ -610,10 +617,38 @@ def _fill_store_board(
             "most shelf lines first. Narrow the store name to see the rest."
         )
     report.stores = rows[:STORE_ROWS]
+    # One store only: with several matches a single line would speak for all of them.
+    if len(rows) == 1:
+        report.reply = replies.get(rows[0]["storeKey"])
     if superseded:
         report.warnings.append(
             f"{superseded:,} history-only store(s) left out because their owner has a live shelf"
         )
+
+
+def _num(value: float, places: int) -> str:
+    text = f"{round(value, places):.{places}f}".rstrip("0").rstrip(".")
+    return "0" if text in ("", "-0") else text
+
+
+def _store_reply(store: str, live: bool, lines: list[ShelfOffer]) -> str | None:
+    """What one named store has of the asked item, for the `find_trade` store+item
+    template (COI-2612). Sell side only: a store that merely buys the item, or has
+    no priced line for it, gets None so the call falls through to the model."""
+    sells = [o for o in lines if o.side == "sell"]
+    if not sells:
+        return None
+    if not live:
+        return f"{store} has no live shelf, so its stock is not known."
+    stocked = sorted((o for o in sells if o.quantity > 0), key=lambda o: o.price)
+    if not stocked:
+        names = ", ".join(sorted({o.item_display for o in sells})[:3])
+        return f"{store} lists {names} but is out of stock right now."
+    shown = [
+        f"{_num(o.quantity, 2)} {o.item_display} at {_num(o.price, 4)} {o.currency}".rstrip()
+        for o in stocked[:3]
+    ]
+    return f"{store} has {', '.join(shown)} in stock."
 
 
 # Supply-gap severity, for ranking: an unmet buy order beats a lone monopolist

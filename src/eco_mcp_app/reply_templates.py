@@ -25,6 +25,9 @@ _PLACEHOLDER = re.compile(r"\{\{\s*([A-Za-z0-9_.]+)\s*\}\}")
 # through the builder that produces the tool's structuredContent.
 REPLY_TEMPLATES: dict[str, list[dict[str, Any]]] = {
     "find_trade": [
+        # Store and item both asked: the board is that one store's slice, so the
+        # market-wide wording below would misread. The payload carries the line.
+        {"when_args": ["store", "item"], "text": "{{reply}}"},
         {
             "when_args": ["item"],
             "text": (

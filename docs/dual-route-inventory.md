@@ -1,6 +1,6 @@
 # Dual REST and MCP route inventory
 
-Classifies the fused service's routes for the shared [`DualRouteRegistry`](../src/eco_mcp_app/dual_routes.py) (eco-app#205). Sources: `server.py`, `http_app.py`, `eco_spec_tracker/`, `eco_replay/`.
+Classifies the fused service's routes for the shared [`DualRouteRegistry`](../src/eco_mcp_app/dual_routes.py) (eco-app#205).
 
 - **Dual-register** - REST and MCP share one contract.
 - **After prerequisite** - needs typed models, bounds, or a read-only split first.
@@ -28,7 +28,7 @@ A tool's `tools/list` entry carries one-line reply templates so a router answers
 - **Values** - floats print at most 2 decimals. Missing, null, blank, boolean, object, or list values make it ineligible.
 - **Cap** - over 280 code points is ineligible.
 
-Shipped: `find_trade`, `get_market`, `price_recipe`, `get_currency`, `price_by_stage`, `get_server_status`. `get_recipes` has none (a list needs a loop). `tests/mcp/test_reply_templates.py` renders each.
+Shipped: `find_trade`, `get_market`, `price_recipe`, `get_currency`, `price_by_stage`, `get_server_status`. `find_trade` with `store` and `item` renders `{{reply}}`, built from that one store's shelf and null unless one store matched. `get_recipes` has none (a list needs a loop).
 
 ### Argument vocabularies
 
