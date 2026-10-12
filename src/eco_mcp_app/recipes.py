@@ -68,8 +68,10 @@ MODDED_EXPORT_ENV = "ECO_MODDED_RECIPE_EXPORT"
 # An export older than this is treated as stale and refused, because a modded
 # graph that no longer matches the server is worse than an honest vanilla
 # fallback — it is wrong *and* it claims to be server-specific.
-# DataExporter layouts the parser has been run against. EcoGnomeMod 1.4.0 writes 3.
-MODDED_EXPORT_CHECKED_VERSIONS = frozenset({3})
+# DataExporter layouts the parser has been run against. EcoGnomeMod 1.4.0 writes 3 and
+# 1.6.1 writes 5. A real v5 export parsed to the same 1,913 recipes as v3, same
+# stations, skills, levels and quantities (COI-2711).
+MODDED_EXPORT_CHECKED_VERSIONS = frozenset({3, 5})
 
 MODDED_EXPORT_MAX_AGE_DAYS = float(os.environ.get("ECO_MODDED_RECIPE_MAX_AGE_DAYS", "14"))
 

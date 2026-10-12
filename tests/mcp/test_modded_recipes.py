@@ -220,13 +220,14 @@ def test_an_export_whose_layout_changed_yields_no_recipes_and_is_refused(
 def test_a_parseable_export_of_an_unchecked_version_is_served_with_a_warning(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    path = _write(tmp_path, _export(Version=5))
+    unchecked = max(recipes_mod.MODDED_EXPORT_CHECKED_VERSIONS) + 1
+    path = _write(tmp_path, _export(Version=unchecked))
     monkeypatch.setenv(MODDED_EXPORT_ENV, str(path))
 
     result = load_recipe_index().to_dict()
 
     assert result["serverSpecific"] is True
-    assert "Version 5 has not been checked" in " ".join(result["warnings"])
+    assert f"Version {unchecked} has not been checked" in " ".join(result["warnings"])
 
 
 def test_a_checked_version_carries_no_version_warning(
