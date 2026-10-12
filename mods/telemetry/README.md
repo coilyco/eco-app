@@ -1,74 +1,38 @@
 # EcoTelemetry
 
-OpenTelemetry-backed observability for [Eco](https://play.eco) game servers. Exports exceptions, runtime metrics, simulation perf, and traces over OTLP so server admins can point them at SigNoz, Grafana, Datadog, Honeycomb, or any other OTLP-compatible backend.
-
-Eco's built-in stats system is designed for in-game economic and ecological reporting. It does not surface SRE-shaped signals: process health, exception rates, simulation tick latency, or web-request latency. EcoTelemetry fills that gap.
+OpenTelemetry observability for [Eco](https://play.eco) game servers. Exports exceptions,
+runtime metrics, simulation perf and traces over OTLP to SigNoz, Grafana, Datadog, Honeycomb
+or any OTLP backend. Eco's built-in stats cover economy and ecology, not SRE signals such as
+process health, exception rates, tick latency or web-request latency. This fills that gap.
 
 ## Status
-
-Early. v1 ships:
-
-- **Logs:** exception capture (`AppDomain.UnhandledException`, optional `FirstChanceException`) and an Eco `ILogWriter` decorator that mirrors the server's own log lines through OTel.
-- **Metrics:** runtime instrumentation (GC, threadpool, allocations) plus `eco.players.online`. Each signal can route to its own OTLP endpoint via per-signal overrides.
-
+Early. v1 ships logs (exception capture via `AppDomain.UnhandledException`, optional
+`FirstChanceException`, and an Eco `ILogWriter` decorator) and metrics (runtime GC,
+threadpool, allocations, plus `eco.players.online`). Each signal can route to its own endpoint.
 Traces are stubbed.
 
 ## Install
-
-1. Download `EcoTelemetry-<version>.zip` from the [latest release](https://github.com/coilyco-flight-deck/eco-telemetry/releases).
-2. Extract into your Eco server's `Mods/` directory so the result looks like `Mods/EcoTelemetry/EcoTelemetry.dll`.
-3. Copy `Configs/EcoTelemetry.example.jsonc` to `Configs/EcoTelemetry.json` and edit:
-   - `OtlpEndpoint`: your collector's OTLP HTTP or gRPC endpoint
-   - `OtlpHeaders`: any auth headers required by the selected OTLP backend
-   - `ServiceName`, `ResourceAttributes`: how this server identifies itself
-   - per-signal toggles: `EnableLogs`, `EnableMetrics`, `EnableTraces`
-4. Restart the Eco server.
-
-If `OtlpEndpoint` is empty, EcoTelemetry falls back to the console exporter so you can verify the pipeline locally before pointing it at a real backend.
-
+1. Download `EcoTelemetry-<version>.zip` from the
+   [latest release](https://github.com/coilyco-flight-deck/eco-telemetry/releases) and extract
+   it into the server's `Mods/` so you get `Mods/EcoTelemetry/EcoTelemetry.dll`.
+2. Copy `Configs/EcoTelemetry.example.jsonc` to `Configs/EcoTelemetry.json` and set
+   `OtlpEndpoint`, `OtlpHeaders` (backend auth), `ServiceName`, `ResourceAttributes`, and the
+   toggles `EnableLogs`, `EnableMetrics`, `EnableTraces`.
+3. Restart the server. An empty `OtlpEndpoint` falls back to the console exporter, to check
+   the pipeline before pointing at a real backend.
 ## Build
-
-```bash
-dotnet build EcoTelemetry.csproj -c Release
-```
-
-The build pulls `Eco.ReferenceAssemblies` from NuGet for type-checking. The DLL plus its OpenTelemetry dependencies must be deployed together — see `.github/workflows/release.yml` for how the release artifact is assembled.
-
+`dotnet build EcoTelemetry.csproj -c Release` (or `just build-mod-telemetry`). It pulls
+`Eco.ReferenceAssemblies` from NuGet for type-checking, and the DLL ships with its
+OpenTelemetry dependencies (see `.github/workflows/release.yml`).
 ## Routing signals
-
-Each signal (logs, metrics) can target its own OTLP endpoint via the `OtlpLogsEndpoint` / `OtlpMetricsEndpoint` overrides; anything left blank falls back to the top-level `OtlpEndpoint`. Empty everywhere means console exporter (handy for first-boot smoke test).
-
-### SigNoz
-
-Point `OtlpEndpoint` at the SigNoz collector. The collector accepts standard
-OTLP and turns recorded exception span events into entries in the Exceptions
-pane.
-
-### VictoriaMetrics (metrics)
-
-vmsingle exposes a native OTLP ingest endpoint at `/opentelemetry/api/v1/push` on its HTTP API port (8428 by default). No auth header required.
-
-- `OtlpMetricsEndpoint`: `http://<vmsingle-host>:8428/opentelemetry/api/v1/push`
-- `OtlpMetricsProtocol`: `HttpProtobuf`
-
-Any OTLP-capable backend (Honeycomb, Grafana Cloud, OTel Collector) works the same way - there is no backend-specific code path.
-
-## Public sources
-
-EcoTelemetry is built against [Eco.ReferenceAssemblies](https://www.nuget.org/packages/Eco.ReferenceAssemblies) and the public modding documentation at <https://wiki.play.eco/en/Modding>, <https://docs.play.eco/>, and <https://github.com/StrangeLoopGames/EcoModKit>.
-
-## License
-
-MIT. See [LICENSE](LICENSE).
-
-## Commands
-
-Dev commands are declared in the repo-root [`justfile`](../../justfile). Run them as `just <verb>` (this mod builds via `just build-mod-telemetry`).
-
-## See also
-
-- [AGENTS.md](../../AGENTS.md) - agent-facing operating rules.
-- [docs/FEATURES.md](docs/FEATURES.md) - inventory of what ships today.
-- [justfile](../../justfile) - dev verbs.
-
-Cross-reference convention from [coilysiren/agentic-os#59](https://github.com/coilyco-flight-deck/agentic-os/issues/59).
+`OtlpLogsEndpoint` and `OtlpMetricsEndpoint` override per signal, and a blank one falls back
+to `OtlpEndpoint`. For **SigNoz**, point at the collector, which turns exception span events
+into entries in the Exceptions pane. For **VictoriaMetrics**, vmsingle takes native OTLP at
+`http://<vmsingle-host>:8428/opentelemetry/api/v1/push` with `OtlpMetricsProtocol`
+`HttpProtobuf` and no auth header. Any OTLP backend works the same, with no backend-specific path.
+## Sources, license, commands
+Built against [Eco.ReferenceAssemblies](https://www.nuget.org/packages/Eco.ReferenceAssemblies),
+<https://wiki.play.eco/en/Modding>, <https://docs.play.eco/> and
+<https://github.com/StrangeLoopGames/EcoModKit>. MIT, see [LICENSE](LICENSE). Dev verbs are in
+the repo-root [`justfile`](../../justfile). See also [AGENTS.md](../../AGENTS.md) and
+[docs/FEATURES.md](docs/FEATURES.md).
