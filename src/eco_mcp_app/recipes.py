@@ -458,6 +458,82 @@ def index_from_serialized(raw: dict[str, Any]) -> RecipeIndex:
 _INDEX_CACHE: dict[str, RecipeIndex] = {}
 
 
+@dataclass(frozen=True)
+class _ModdedParse:
+    """One parse of the modded export file. See `_MODDED_CACHE`."""
+
+    early_refusal: str | None
+    exported_at_iso: str | None = None
+    index: RecipeIndex | None = None
+    late_refusal: str | None = None
+
+
+# The parsed modded export, keyed on path, mtime and size, so an unchanged file is parsed once
+# (COI-2703). Freshness is judged on every call, since it depends on the clock and not the file.
+_MODDED_CACHE: dict[tuple[str, int, int], _ModdedParse] = {}
+
+
+def _parse_modded_export(configured: str, path: Path) -> tuple[_ModdedParse, bool]:
+    """Parse the export once. The flag says whether the result may be cached.
+
+    A read failure is not cached: a permission fix changes neither mtime nor size.
+    Refusals run in the order a reader meets them: unreadable, not JSON, wrong shape
+    (early), then, after the freshness check, unparseable or too few recipes (late).
+    """
+    try:
+        raw_text = path.read_text()
+    except OSError as e:
+        reason = f"{MODDED_EXPORT_ENV}={configured} could not be read ({type(e).__name__})"
+        return _ModdedParse(early_refusal=reason), False
+
+    try:
+        raw = json.loads(raw_text)
+    except ValueError as e:
+        reason = f"{MODDED_EXPORT_ENV}={configured} is not valid JSON ({type(e).__name__})"
+        return _ModdedParse(early_refusal=reason), True
+
+    if not isinstance(raw, dict) or not raw.get("Recipes"):
+        reason = (
+            f"{MODDED_EXPORT_ENV}={configured} is not a DataExporter-shaped export (no Recipes[])"
+        )
+        return _ModdedParse(early_refusal=reason), True
+
+    exported_at = raw.get("ExportedAt") or raw.get("exportedAt")
+    exported_at_iso = str(exported_at) if exported_at else None
+
+    server = raw.get("ServerName") or raw.get("serverName") or "unknown server"
+    version = raw.get("Version", 0)
+    source = (
+        f"DataExporter modded export from {server} "
+        f"(version {version}, exported {exported_at_iso or 'at an unstated time'})"
+    )
+    try:
+        index = build_recipe_index(
+            raw,
+            source=source,
+            source_kind=SOURCE_KIND_MODDED_EXPORT,
+            exported_at_iso=exported_at_iso,
+        )
+    except (AttributeError, KeyError, TypeError, ValueError) as e:
+        reason = f"{MODDED_EXPORT_ENV}={configured} could not be parsed ({type(e).__name__}: {e})"
+        return _ModdedParse(None, exported_at_iso, late_refusal=reason), True
+    # A layout change that renames keys parses without raising and yields few or no recipes, so
+    # count output against input rather than serve an empty graph as server-specific.
+    if len(index.recipes) * 2 < len(raw["Recipes"]):
+        reason = (
+            f"{MODDED_EXPORT_ENV}={configured} parsed only {len(index.recipes)} of "
+            f"{len(raw['Recipes'])} recipes (Version {version}), so its layout may have changed"
+        )
+        return _ModdedParse(None, exported_at_iso, late_refusal=reason), True
+    if version not in MODDED_EXPORT_CHECKED_VERSIONS:
+        checked = sorted(MODDED_EXPORT_CHECKED_VERSIONS)
+        index.warnings.append(
+            f"Export Version {version} has not been checked against this parser "
+            f"(checked: {checked}). It parsed, so verify the recipes."
+        )
+    return _ModdedParse(None, exported_at_iso, index=index), True
+
+
 def _load_modded_export() -> tuple[RecipeIndex | None, str | None]:
     """Load the operator-supplied modded recipe export, if there is a good one.
 
@@ -476,58 +552,22 @@ def _load_modded_export() -> tuple[RecipeIndex | None, str | None]:
 
     path = Path(configured)
     try:
-        raw_text = path.read_text()
+        stat = path.stat()
     except OSError as e:
         return None, f"{MODDED_EXPORT_ENV}={configured} could not be read ({type(e).__name__})"
-
-    try:
-        raw = json.loads(raw_text)
-    except ValueError as e:
-        return None, f"{MODDED_EXPORT_ENV}={configured} is not valid JSON ({type(e).__name__})"
-
-    if not isinstance(raw, dict) or not raw.get("Recipes"):
-        return None, (
-            f"{MODDED_EXPORT_ENV}={configured} is not a DataExporter-shaped export (no Recipes[])"
-        )
-
-    exported_at = raw.get("ExportedAt") or raw.get("exportedAt")
-    exported_at_iso = str(exported_at) if exported_at else None
-    stale = _export_staleness(exported_at_iso)
+    key = (str(path), stat.st_mtime_ns, stat.st_size)
+    parsed = _MODDED_CACHE.get(key)
+    if parsed is None:
+        parsed, cacheable = _parse_modded_export(configured, path)
+        if cacheable:
+            _MODDED_CACHE.clear()
+            _MODDED_CACHE[key] = parsed
+    if parsed.early_refusal:
+        return None, parsed.early_refusal
+    stale = _export_staleness(parsed.exported_at_iso)
     if stale is not None:
         return None, f"{MODDED_EXPORT_ENV}={configured} {stale}"
-
-    server = raw.get("ServerName") or raw.get("serverName") or "unknown server"
-    version = raw.get("Version", 0)
-    source = (
-        f"DataExporter modded export from {server} "
-        f"(version {version}, exported {exported_at_iso or 'at an unstated time'})"
-    )
-    try:
-        index = build_recipe_index(
-            raw,
-            source=source,
-            source_kind=SOURCE_KIND_MODDED_EXPORT,
-            exported_at_iso=exported_at_iso,
-        )
-    except (AttributeError, KeyError, TypeError, ValueError) as e:
-        return (
-            None,
-            f"{MODDED_EXPORT_ENV}={configured} could not be parsed ({type(e).__name__}: {e})",
-        )
-    # A layout change that renames keys parses without raising and yields few or no recipes, so
-    # count output against input rather than serve an empty graph as server-specific.
-    if len(index.recipes) * 2 < len(raw["Recipes"]):
-        return None, (
-            f"{MODDED_EXPORT_ENV}={configured} parsed only {len(index.recipes)} of "
-            f"{len(raw['Recipes'])} recipes (Version {version}), so its layout may have changed"
-        )
-    if version not in MODDED_EXPORT_CHECKED_VERSIONS:
-        checked = sorted(MODDED_EXPORT_CHECKED_VERSIONS)
-        index.warnings.append(
-            f"Export Version {version} has not been checked against this parser "
-            f"(checked: {checked}). It parsed, so verify the recipes."
-        )
-    return index, None
+    return parsed.index, parsed.late_refusal
 
 
 def _export_staleness(exported_at_iso: str | None) -> str | None:
@@ -627,8 +667,9 @@ def load_recipe_index() -> RecipeIndex:
 
 
 def _clear_cache() -> None:
-    """Drop the memoized index (test hook)."""
+    """Drop the memoized indexes (test hook)."""
     _INDEX_CACHE.clear()
+    _MODDED_CACHE.clear()
 
 
 def _norm_key(value: str) -> str:

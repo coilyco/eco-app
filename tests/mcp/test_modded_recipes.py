@@ -14,6 +14,7 @@ tests use fixtures, which is what the issue scopes the app half to.
 from __future__ import annotations
 
 import json
+import os
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -237,3 +238,87 @@ def test_a_checked_version_carries_no_version_warning(
     monkeypatch.setenv(MODDED_EXPORT_ENV, str(path))
 
     assert load_recipe_index().to_dict()["warnings"] == []
+
+
+def _counting_build(monkeypatch: pytest.MonkeyPatch) -> list[int]:
+    """Count real builds of the modded index, so a test can tell a parse from a cache hit."""
+    calls: list[int] = []
+    real = recipes_mod.build_recipe_index
+
+    def counted(*args: Any, **kwargs: Any) -> Any:
+        calls.append(1)
+        return real(*args, **kwargs)
+
+    monkeypatch.setattr(recipes_mod, "build_recipe_index", counted)
+    return calls
+
+
+def test_an_unchanged_modded_export_is_parsed_once(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # COI-2703: every load_recipe_index call used to re-read and re-parse the file.
+    path = _write(tmp_path, _export())
+    monkeypatch.setenv(MODDED_EXPORT_ENV, str(path))
+    builds = _counting_build(monkeypatch)
+
+    first = load_recipe_index()
+    second = load_recipe_index()
+
+    assert len(builds) == 1
+    assert second is first
+    assert first.source_kind == SOURCE_KIND_MODDED_EXPORT
+
+
+def test_a_modded_export_is_reparsed_when_its_mtime_changes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    path = _write(tmp_path, _export())
+    monkeypatch.setenv(MODDED_EXPORT_ENV, str(path))
+    builds = _counting_build(monkeypatch)
+    load_recipe_index()
+
+    replacement = _export()
+    replacement["Recipes"][0]["Name"] = "ModdedAlloyTwo"
+    path.write_text(json.dumps(replacement))
+    stat = path.stat()
+    os.utime(path, ns=(stat.st_atime_ns, stat.st_mtime_ns + 5_000_000_000))
+    reloaded = load_recipe_index()
+
+    assert len(builds) == 2
+    assert any(r.name == "ModdedAlloyTwo" for r in reloaded.recipes)
+
+
+def test_freshness_is_judged_on_every_call_not_cached_with_the_parse(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # The file does not change when it ages past the bound, so the clock cannot be cached.
+    path = _write(tmp_path, _export())
+    monkeypatch.setenv(MODDED_EXPORT_ENV, str(path))
+    builds = _counting_build(monkeypatch)
+    verdicts = iter([None, "was exported 99.0 days ago, past the 30-day freshness bound"])
+    monkeypatch.setattr(recipes_mod, "_export_staleness", lambda _iso: next(verdicts))
+
+    fresh = load_recipe_index()
+    aged = load_recipe_index()
+
+    assert fresh.source_kind == SOURCE_KIND_MODDED_EXPORT
+    assert aged.source_kind != SOURCE_KIND_MODDED_EXPORT
+    assert any("freshness bound" in w for w in aged.warnings)
+    assert len(builds) == 1
+
+
+def test_an_unreadable_export_is_not_cached_so_a_permission_fix_takes_effect(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    if os.geteuid() == 0:
+        pytest.skip("root reads a mode 000 file")
+    path = _write(tmp_path, _export())
+    monkeypatch.setenv(MODDED_EXPORT_ENV, str(path))
+    path.chmod(0o000)
+    try:
+        refused = load_recipe_index()
+    finally:
+        path.chmod(0o644)
+
+    assert refused.source_kind != SOURCE_KIND_MODDED_EXPORT
+    assert load_recipe_index().source_kind == SOURCE_KIND_MODDED_EXPORT
