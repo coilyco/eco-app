@@ -7,6 +7,11 @@
 # already checks. The real service is needed because /info is a server route and
 # vite's dev proxy does not stand in for it.
 #
+# A second pass puts frontend/scripts/kit-check-stub.mjs in front of that service
+# so the price pages draw live-data states from the committed fixtures (COI-2617),
+# then two negative controls prove the pass can fail: a bloated payload must bust
+# the transfer budget and a table forced wide must scroll a phone sideways.
+#
 # Browser: CHROME_PATH wins. Otherwise on Linux this installs Playwright's
 # Chromium into the job itself (apt for the system libraries when root), so the
 # shared runner image gains nothing. On a Mac kit-check uses the installed Chrome.
@@ -67,6 +72,48 @@ fi
 
 status=0
 (cd frontend && pnpm kit-check --base "${base}") || status=$?
+
+stub_port="${KIT_CHECK_STUB_PORT:-4011}"
+pages="src/test/fixtures/norms/serve.json"
+stub_log="$(mktemp)"
+out="$(mktemp)"
+trap 'kill "${server}" "${stub:-}" 2>/dev/null || true; rm -f "${log}" "${stub_log}" "${out}"' EXIT
+
+# data_pass CONTROL EXPECT NEEDLE [kit-check args]: serve the fixtures (padded when
+# CONTROL is bloat), run kit-check on the price pages, and for a control require
+# a failure that names NEEDLE, so a control that fails for another reason is no proof.
+# A browser context pays for the shell on its first route, so the bloat control
+# lists /item first and looks for the failure on /trade, whose own payload is 7K.
+data_pass() {
+  local control="$1" expect="$2" needle="$3" rc=0
+  shift 3
+  KIT_CHECK_CONTROL="${control}" node frontend/scripts/kit-check-stub.mjs \
+    --listen "${stub_port}" --to "${base}" >"${stub_log}" 2>&1 &
+  stub=$!
+  for _ in $(seq 1 20); do
+    curl -fs -o /dev/null "http://127.0.0.1:${stub_port}/preview/market.json" && break
+    sleep 0.5
+  done
+  (cd frontend && pnpm kit-check --base "http://127.0.0.1:${stub_port}" --pages "${pages}" "$@") >"${out}" 2>&1 || rc=$?
+  cat "${out}"
+  kill "${stub}" 2>/dev/null || true
+  wait "${stub}" 2>/dev/null || true
+  [ "${expect}" = pass ] && return "${rc}"
+  if [ "${rc}" -ne 0 ] && grep -qE -- "${needle}" "${out}"; then
+    echo "negative control caught as expected: ${needle}"
+    return 0
+  fi
+  echo "negative control NOT caught (exit ${rc}, wanted '${needle}')" >&2
+  return 1
+}
+
+echo "--- live-data states (trimmed fixtures behind the stub)"
+data_pass none pass "" || status=$?
+echo "--- negative control: a bloated data payload"
+data_pass bloat fail "FAIL 1000 /trade" --only /item,/trade || status=$?
+echo "--- negative control: a data table forced wider than a phone"
+data_pass none fail "scrolls sideways" --only /trade --break-css "main table{min-width:900px}" || status=$?
+
 if [ "${status}" -ne 0 ]; then
   echo "--- fused service log (last 40 lines)" >&2
   tail -n 40 "${log}" >&2

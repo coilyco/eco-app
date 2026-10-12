@@ -5,6 +5,12 @@
 // weight}.cy.ts. Walkthrough: docs/frontend/kit-checks.md.
 //
 //   pnpm --dir frontend kit-check [--base URL] [--only /path,/path] [--json]
+//                                 [--pages FILE] [--break-css CSS]
+//
+// --pages FILE checks the data states instead of the outage ones: the pages in
+// a serve.json (src/test/fixtures/norms), which must each draw a price, against
+// FIXTURE_BUDGETS. Point --base at scripts/kit-check-stub.mjs for it (COI-2617).
+// --break-css CSS injects a rule after load, the negative control for overflow.
 //
 // Needs a Chromium-family browser on the machine (playwright-core downloads
 // none): it uses the installed Chrome, or CHROME_PATH.
@@ -24,6 +30,8 @@ const flag = (name, fallback) => {
 const BASE = flag("--base", "https://eco-app.coilysiren.me").replace(/\/$/, "")
 const ONLY = flag("--only", "")
 const JSON_OUT = args.includes("--json")
+const PAGES = flag("--pages", "")
+const BREAK_CSS = flag("--break-css", "")
 
 const TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "best-practice"]
 const VIEWPORTS = [
@@ -50,6 +58,22 @@ const BUDGETS = {
   "/cycle-14/terrace-farms": 12400,
 }
 
+// The data states, in KiB, measured on 2026-10-12 against the trimmed fixtures
+// and set just above what each route moved. The shell is most of it, so a
+// payload that grows past the fixture's few KiB is what a route has to notice.
+// /item is first through a fresh browser context, so it carries the shell (612K).
+const FIXTURE_DEFAULT = 12
+const FIXTURE_BUDGETS = {
+  "/item": 700,
+  "/trade": 11,
+  "/uses/price": 10,
+  "/uses/buy-sell": 7,
+  "/uses/arbitrage": 7,
+  "/uses/demand": 7,
+  "/uses/shop-check": 8,
+  "/uses/resolve": 11,
+}
+
 const SAMPLE = {
   "/jobs/*": "/jobs",
   "/item": "/item?id=IronBar",
@@ -57,6 +81,7 @@ const SAMPLE = {
 }
 const manifest = JSON.parse(readFileSync(path.join(ROOT, "data", "spa_routes.json"), "utf8"))
 let routes = manifest.routes.filter((r) => r.gate !== "password").map((r) => SAMPLE[r.path] ?? r.path)
+if (PAGES) routes = JSON.parse(readFileSync(path.resolve(PAGES), "utf8")).pages.map(([, url]) => url)
 if (ONLY) routes = routes.filter((r) => ONLY.split(",").includes(r.split("?")[0]))
 const AXE = readFileSync(path.join(HERE, "..", "node_modules", "axe-core", "axe.min.js"), "utf8")
 
@@ -104,6 +129,7 @@ function inspect(floor) {
   }
 
   return {
+    prices: document.querySelectorAll("[data-price]").length,
     overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
     small: [...small].map(([k, px]) => `${k} ${px}px`),
     layering: [...new Set(layering)].slice(0, 8),
@@ -145,6 +171,7 @@ for (const [width, height] of VIEWPORTS) {
     page.on("pageerror", (e) => errors.push(String(e).slice(0, 160)))
     const { slow, kib } = await open(page, BASE + route, errors)
     await page.waitForTimeout(800)
+    if (BREAK_CSS) await page.addStyleTag({ content: BREAK_CSS })
     const found = { ...(await page.evaluate(inspect, FLOOR_PX)), kib: await kib() }
     await page.evaluate(AXE)
     const axe = await page.evaluate(async (tags) => {
@@ -152,9 +179,11 @@ for (const [width, height] of VIEWPORTS) {
       return r.violations.map((v) => `${v.impact} ${v.id} x${v.nodes.length}: ${v.nodes.slice(0, 2).map((n) => n.target.join(" ")).join(" | ")}`)
     }, TAGS)
     const bare = route.split("?")[0]
-    const budget = BUDGETS[bare] ?? DEFAULT_BUDGET
+    const budget = PAGES ? (FIXTURE_BUDGETS[bare] ?? FIXTURE_DEFAULT) : (BUDGETS[bare] ?? DEFAULT_BUDGET)
     const problems = [
       ...errors.map((e) => `page error: ${e}`),
+      // An empty read must not pass: a stub that missed leaves the outage state.
+      ...(PAGES && found.prices === 0 ? ["drew no price, so the fixture never reached the page"] : []),
       ...axe.map((a) => `axe ${a}`),
       ...found.small.map((s) => `below ${FLOOR_PX}px: ${s}`),
       ...found.layering.map((l) => `layering: ${l}`),

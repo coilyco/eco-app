@@ -11,7 +11,14 @@ export function useSvgTextScale<T extends SVGSVGElement>() {
     if (!svg || typeof ResizeObserver === "undefined") return
     const update = () => {
       const box = svg.viewBox.baseVal
-      const width = svg.getBoundingClientRect().width
+      // The drawing fills the content box, so a bordered or padded svg (the price
+      // chart) would otherwise read wider than it draws and land under the floor.
+      const style = getComputedStyle(svg)
+      const inset = ["borderLeftWidth", "borderRightWidth", "paddingLeft", "paddingRight"].reduce(
+        (sum, side) => sum + (parseFloat(style[side as "paddingLeft"]) || 0),
+        0,
+      )
+      const width = svg.getBoundingClientRect().width - inset
       if (box && box.width && width) svg.style.setProperty("--svg-px", String(box.width / width))
     }
     update()

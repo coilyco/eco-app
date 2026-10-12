@@ -1,0 +1,21 @@
+{
+  "payloads": {
+    "/preview/logistics.json": "find_trade.json",
+    "/preview/market.json": "get_market.json",
+    "/preview/stores.json": "get_stores.json",
+    "/preview/item.json": "item.json",
+    "/preview/price-history.json": "price-history.json",
+    "/preview/recipes.json": "get_recipes.json",
+    "/preview/get_trades.json": "get_trades.json"
+  },
+  "pages": [
+    ["Item", "/item?item=LumberItem"],
+    ["Trade", "/trade"],
+    ["UsesPrice", "/uses/price?item=CementItem"],
+    ["UsesBuySell", "/uses/buy-sell?item=SandstoneItem"],
+    ["UsesArbitrage", "/uses/arbitrage"],
+    ["UsesDemand", "/uses/demand"],
+    ["UsesShopCheck", "/uses/shop-check?store=redacted"],
+    ["UsesResolve", "/uses/resolve?item=LumberItem"]
+  ]
+}
