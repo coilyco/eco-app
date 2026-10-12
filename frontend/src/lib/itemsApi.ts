@@ -43,6 +43,8 @@ export interface ItemTrade {
   store: string
   location: string
   direction: string
+  /** How many events a rolled-up row stands for. Absent on payloads that predate it. */
+  eventCount?: number
 }
 
 // One crafting/production event for an item.

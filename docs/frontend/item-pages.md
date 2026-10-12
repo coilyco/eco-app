@@ -2,6 +2,8 @@
 
 Each item has one page, `/item?id=<id>`, holding its market, every recipe that makes it, and what it goes into (teable:coilyco/eco-app#8383).
 
+Under `Market` it suggests an ask and a bid from its own sales: [item-price-suggestion](item-price-suggestion.md).
+
 ## The id
 
 The key is the item id with its `Item` suffix dropped (`AcornPowderItem` becomes `AcornPowder`). `lib/itemPage.ts` owns the rule (`itemPageId`, `itemPageHref`) and `components/ItemLink.tsx` builds every item link through it.

@@ -58,7 +58,10 @@ export function hydrateNorms<T>(payload: T): T {
   return payload
 }
 
-export type NormState = "missing" | "none" | "unidentified" | "median" | "reference" | "elsewhere" | "fallback" | "ok"
+export type NormState = "missing" | "none" | "unidentified" | "median" | "reference" | "elsewhere" | "pooled" | "fallback" | "ok"
+
+/** The currency of a price that pools every store's credit, as the item page's suggestion does. */
+export const POOLED_CURRENCY = "pooled credits"
 
 export interface NormText {
   state: NormState
@@ -145,6 +148,13 @@ export function describeNorm(
     return { state: "none", short: "no past sales yet", full: "No sales of this item in past cycles yet." }
   }
   const fallback = norm.fallback ? ` ${norm.fallback.charAt(0).toUpperCase()}${norm.fallback.slice(1)}.` : ""
+  if (currency === POOLED_CURRENCY) {
+    return {
+      state: "pooled",
+      short: `${n} in past cycles`,
+      full: `This price pools every store's credit, so it is not compared with one currency's history. Past cycles hold ${count}.${fallback}`,
+    }
+  }
   const multiple = multipleFor(norm, price, currency)
   if (multiple !== null) {
     if (norm.basis === "all" || norm.fallback) {
@@ -189,7 +199,7 @@ export function describeNorm(
   }
   return {
     state: "elsewhere",
-    short: usual ? `${usual} (${n})` : `no past sales in ${currency}, ${n} in other currencies`,
+    short: usual ? `${usual} (${n})` : `${n}, all in other currencies`,
     full: `No past sales of this item in ${currency}. ${reference(norm)}Based on ${count}.`,
   }
 }

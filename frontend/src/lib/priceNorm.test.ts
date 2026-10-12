@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { compareToUsual, describeNorm, formatMultiple, isFarFromUsual, type PriceNorm } from "./priceNorm"
+import { compareToUsual, describeNorm, formatMultiple, isFarFromUsual, POOLED_CURRENCY, type PriceNorm } from "./priceNorm"
 
 const base: PriceNorm = {
   stage: "Basic 4",
@@ -68,6 +68,21 @@ describe("describeNorm", () => {
     expect(t.state).toBe("elsewhere")
     expect(t.short).toBe("usually 0.84 Spectres (12 sales)")
     expect(t.full).toContain("No past sales of this item in Barter.")
+  })
+
+  it("counts the sales in other currencies instead of reading as no data when there is no usual price", () => {
+    const t = describeNorm({ ...base, multiple: null, median: null, currency: null, referencePrice: null }, "Zynx Credit")
+    expect(t.state).toBe("elsewhere")
+    expect(t.short).toBe("12 sales, all in other currencies")
+    expect(t.short).not.toMatch(/no past sales/i)
+  })
+
+  it("says a pooled price is not compared with one currency's history, and still counts the sales", () => {
+    const t = describeNorm({ ...base, multiple: 1.2 }, POOLED_CURRENCY, 0.3)
+    expect(t.state).toBe("pooled")
+    expect(t.short).toBe("12 sales in past cycles")
+    expect(t.full).toContain("pools every store's credit")
+    expect(t.full).not.toMatch(/no past sales|isn't known/i)
   })
 
   it("says the currency is not known, never no history, when the page has none", () => {

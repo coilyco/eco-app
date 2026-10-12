@@ -8,8 +8,9 @@ import RecipeCard from "../components/RecipeCard"
 import { itemPageId, itemPageModel, pivotItemFor, recipeHref, sortMakes } from "../lib/itemPage"
 import { fetchItemPivot, type ItemFeedRow, type ItemPivot } from "../lib/itemsApi"
 import { fetchRecipeIndex, fetchRecipesForProduct, type Recipe } from "../lib/recipesApi"
-import { formatCount, formatDuration, formatRelative, prettifyEcoName } from "../lib/format"
-import type { PriceNorm } from "../lib/priceNorm"
+import { formatCount, formatDuration, formatMoney, formatRelative, prettifyEcoName } from "../lib/format"
+import { POOLED_CURRENCY, type PriceNorm } from "../lib/priceNorm"
+import { suggestPrice } from "../lib/priceSuggestion"
 import { useFreshData } from "../lib/useFreshData"
 
 // Maps the raw production action id to a past-tense verb for the feed lines.
@@ -172,6 +173,7 @@ export default function Item() {
   }
 
   const summary = pivot?.summary
+  const suggestion = pivot ? suggestPrice(pivot.trades) : null
   // Reference "now" for relative time: the world clock if we have it, else the
   // newest event on the page (formatRelative clamps future to "just now").
   // Plain consts — react-compiler memoizes; a manual useMemo here trips its
@@ -277,6 +279,51 @@ export default function Item() {
           <p className="empty-note" data-testid="item-empty">
             Nobody has traded or crafted {pretty} on this server yet.
           </p>
+        </section>
+      )}
+
+      {/* What to ask and bid, from the sales this page holds. Credits are not converted. */}
+      {pivot && pivot.tradeCount > 0 && (
+        <section aria-labelledby="price-suggestion" data-testid="item-suggestion">
+          <h2 className="section-title" id="price-suggestion">
+            Suggested price{" "}
+            <span className="section-sub">(from what it sold for here)</span>
+          </h2>
+          {!suggestion ? (
+            <p className="empty-note" data-testid="item-suggestion-empty">
+              No sale of {pretty} has a price yet, so there is nothing to suggest.
+            </p>
+          ) : (
+            <>
+              <ul className="rank-rows" data-testid="item-suggestion-list">
+                <li>
+                  <div className="rank-row">
+                    <span className="rank-name">Price to ask</span>
+                    <span className="rank-count">
+                      <ItemPrice price={suggestion.ask} norm={pivot.norm} currency={POOLED_CURRENCY} suffix=" per unit" data-testid="item-suggestion-ask" />
+                    </span>
+                  </div>
+                </li>
+                <li>
+                  <div className="rank-row">
+                    <span className="rank-name">Price to bid</span>
+                    <span className="rank-count">
+                      <ItemPrice price={suggestion.bid} norm={pivot.norm} currency={POOLED_CURRENCY} suffix=" per unit" data-testid="item-suggestion-bid" />
+                    </span>
+                  </div>
+                </li>
+              </ul>
+              <p className="empty-note" data-testid="item-suggestion-basis">
+                Ask is the middle sale price. A quarter of the sales went for less than the bid.{" "}
+                Based on {formatCount(suggestion.sales)} sale{suggestion.sales === 1 ? "" : "s"} in{" "}
+                {suggestion.currencies === 1 ? "one shop credit" : `${formatCount(suggestion.currencies)} shop credits`},
+                {suggestion.low === suggestion.high ? ` all at ${formatMoney(suggestion.low)}` : ` from ${formatMoney(suggestion.low)} to ${formatMoney(suggestion.high)} each`}.
+                {suggestion.currencies > 1 &&
+                  " Each store prices in its own credit and the server has no exchange rate between them, so they are taken at face value."}
+                {suggestion.sales < 5 && " That is few sales, so treat it as a guess."}
+              </p>
+            </>
+          )}
         </section>
       )}
 
