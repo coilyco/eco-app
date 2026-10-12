@@ -18,7 +18,7 @@ import respx
 from fastapi.testclient import TestClient
 
 from eco_mcp_app import progression as prog_mod
-from eco_mcp_app.crafting import CraftingAtlas
+from eco_mcp_app.crafting import CraftingAtlas, aggregate_rows
 from eco_mcp_app.http_app import create_app
 from eco_mcp_app.progression import (
     MAX_CITIZENS,
@@ -98,6 +98,32 @@ def test_upgrades_crafted_orders_by_stage_and_folds_scholars_into_the_ladder() -
     ]
     assert rows[1]["name"] == "Scholars Advanced Upgrade 3"
     assert rows[0]["crafts"] == 5
+
+
+def test_first_day_is_the_earliest_craft_time_per_ladder_item_and_null_when_unknown() -> None:
+    rows = upgrades_crafted(
+        [("AdvancedUpgradeLvl3Item", 5.0), ("BasicUpgradeLvl1Item", 12.0)],
+        {"AdvancedUpgradeLvl3Item": 86400.0 * 9 + 5.0},
+    )
+    assert {r["item"]: r["firstDay"] for r in rows} == {
+        "AdvancedUpgradeLvl3Item": 9,
+        "BasicUpgradeLvl1Item": None,
+    }
+
+
+def test_aggregate_rows_keeps_the_earliest_time_for_ladder_items_only() -> None:
+    atlas = CraftingAtlas(fetched_at_iso="t", source_base_url=BASE)
+    rows = [
+        ["Citizen", "ItemUsed", "WorldObjectItem", "Count", "Time"],
+        ["1", "BasicUpgradeLvl1Item", "BenchItem", "1", str(86400 * 7)],
+        ["1", "BasicUpgradeLvl1Item", "BenchItem", "1", str(86400 * 3 + 10)],
+        ["1", "BasicUpgradeLvl1Item", "BenchItem", "1", "not-a-time"],
+        ["1", "AdvancedUpgradeLvl5Item", "BenchItem", "1", "100"],
+        ["1", "IronBarItem", "BenchItem", "1", "100"],
+    ]
+    aggregate_rows("ItemCraftedAction", rows, atlas)
+    assert atlas.first_craft_s == {"BasicUpgradeLvl1Item": float(86400 * 3 + 10)}
+    assert atlas.to_dict()["firstCraftSeconds"] == atlas.first_craft_s
 
 
 def test_highest_upgrade_is_the_top_stage_with_every_item_at_it() -> None:
@@ -288,6 +314,8 @@ async def test_get_progression_carries_the_tech_view_at_its_largest() -> None:
     assert tech["highestStage"] == 12
     assert tech["highest"]["stageName"] == "Modern 4"
     assert len(tech["crafted"]) == 24
+    # The mock crafts every rung at Time 5 days, so each row reports day 5 (COI-2601).
+    assert {r["firstDay"] for r in tech["crafted"]} == {5}
     assert tech["specialties"]["takenCount"] == 60
     assert "highest upgrade crafted: **Modern 4**" in md.text
     # The view is small even beside 3000 other crafts and 150 citizens: the whole

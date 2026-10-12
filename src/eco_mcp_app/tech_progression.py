@@ -22,32 +22,36 @@ The stage ladder is ``norms.STAGES`` (Basic 1 to Modern 4, Scholars folded in).
 
 from __future__ import annotations
 
-import re
 from typing import Any
 
-from .crafting import CraftingAtlas
+from .crafting import UPGRADE_ITEM_RE, CraftingAtlas
 from .norms import STAGES, upgrade_stage
-from .progression import ProgressionHistory
+from .progression import SECONDS_PER_DAY, ProgressionHistory
 
 CRAFT_ACTION = "ItemCraftedAction"
 SPECIALTY_ACTION = "GainSpecialty"
 
-# `BasicUpgradeLvl1Item`, `ScholarsAdvancedUpgradeLvl3Item`. Level 5 specialist
-# modules are not on the ladder and are left out on purpose.
-_UPGRADE_ITEM = re.compile(r"^(Scholars)?(Basic|Advanced|Modern)UpgradeLvl([1-4])Item$")
-
 UPGRADES_NOTE = (
     "Crafts are confirmed iterations, a floor. Older crafts are merged into hourly "
     "per-citizen rollups that keep one item label, so a tier crafted only inside a "
-    "rollup does not show. highestStage can read low and never high."
+    "rollup does not show. highestStage can read low and never high, and a firstDay "
+    "is the earliest confirmed craft, a ceiling on the true day."
 )
 
 
-def upgrades_crafted(by_crafted: list[tuple[str, float]]) -> list[dict[str, Any]]:
-    """Ladder upgrade items on the crafted board, highest stage first."""
+def upgrades_crafted(
+    by_crafted: list[tuple[str, float]], first_craft_s: dict[str, float] | None = None
+) -> list[dict[str, Any]]:
+    """Ladder upgrade items on the crafted board, highest stage first.
+
+    ``firstDay`` is the in-game day of the earliest craft row seen for the item,
+    null when no row carried a ``Time``. A rollup row keeps only its first merged
+    event's label, so it is a ceiling on the true first-craft day.
+    """
+    first_craft_s = first_craft_s or {}
     rows: list[dict[str, Any]] = []
     for item, crafts in by_crafted:
-        m = _UPGRADE_ITEM.match(item)
+        m = UPGRADE_ITEM_RE.match(item)
         if not m:
             continue
         scholars, tier, level = bool(m[1]), m[2], int(m[3])
@@ -61,6 +65,9 @@ def upgrades_crafted(by_crafted: list[tuple[str, float]]) -> list[dict[str, Any]
                 "stage": upgrade_stage(name),
                 "scholars": scholars,
                 "crafts": int(crafts),
+                "firstDay": (
+                    int(first_craft_s[item] / SECONDS_PER_DAY) if item in first_craft_s else None
+                ),
             }
         )
     rows.sort(key=lambda r: (-r["stage"], r["scholars"], r["item"]))
@@ -85,7 +92,7 @@ def _upgrades_section(
             f"exporter could not be read{f' ({why})' if why else ''}"
         )
         return section
-    rows = upgrades_crafted(atlas.by_crafted)
+    rows = upgrades_crafted(atlas.by_crafted, atlas.first_craft_s)
     section["crafted"] = rows
     # 0 is "none crafted yet", the `none` stage in norms.STAGES. Null stays "unmeasured".
     section["highestStage"] = rows[0]["stage"] if rows else 0

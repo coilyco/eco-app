@@ -104,6 +104,10 @@ CITIZEN_NAMES_UNAVAILABLE_WARNING = (
 )
 
 _POSITION_RE = re.compile(r"^-?\d+,-?\d+,-?\d+$")
+# `BasicUpgradeLvl1Item`, `ScholarsAdvancedUpgradeLvl3Item`. Level 5 specialist
+# modules are not on the ladder and are left out on purpose. The atlas keeps a
+# first-craft time for these items only (COI-2601), and tech_progression reads it.
+UPGRADE_ITEM_RE = re.compile(r"^(Scholars)?(Basic|Advanced|Modern)UpgradeLvl([1-4])Item$")
 _INT_RE = re.compile(r"^-?\d+$")
 
 
@@ -246,6 +250,11 @@ class CraftingAtlas:
     # history has no per-item detail (eco-app#131).
     rollup_events: int = 0
     rollup_iterations: float = 0.0
+    # Earliest `Time` (seconds since cycle start) of a craft row, for ladder
+    # upgrade items only so the map stays a few dozen keys on the biggest CSV
+    # stream (COI-2601). A rollup row's Time is its merged window, so this is the
+    # earliest confirmed row, a ceiling on the true first craft.
+    first_craft_s: dict[str, float] = field(default_factory=dict)
     # Non-fatal fetch problems — shown as a hint under the card.
     warnings: list[str] = field(default_factory=list)
 
@@ -271,6 +280,7 @@ class CraftingAtlas:
             "perActionCounts": dict(self.per_action_counts),
             "rollupEvents": self.rollup_events,
             "rollupIterations": self.rollup_iterations,
+            "firstCraftSeconds": dict(self.first_craft_s),
             "warnings": list(self.warnings),
         }
 
@@ -326,6 +336,7 @@ def _cache_get(base_url: str, api_key: str | None, ttl_s: float) -> CraftingAtla
         per_action_counts=dict(data.get("perActionCounts", {})),
         rollup_events=int(data.get("rollupEvents", 0)),
         rollup_iterations=float(data.get("rollupIterations", 0.0)),
+        first_craft_s={k: float(v) for k, v in data.get("firstCraftSeconds", {}).items()},
         warnings=list(data.get("warnings", [])),
     )
 
@@ -458,6 +469,7 @@ def aggregate_rows(
     by_citizen_iterations: dict[str, int] = dict(atlas.by_citizen_iterations)
     by_miner: dict[str, int] = dict(atlas.by_miner)
     flows: dict[tuple[str, str], float] = {(s, t): c for s, t, c in atlas.flows}
+    first_craft_s = atlas.first_craft_s
 
     # Only crafts contribute a meaningful unit Count; everything else is
     # event-counted so biomass magnitude can't swamp the boards (eco-app#70).
@@ -518,6 +530,13 @@ def aggregate_rows(
         if item:
             if is_crafted:
                 by_crafted[item] = by_crafted.get(item, 0.0) + 1.0
+                if UPGRADE_ITEM_RE.match(item):
+                    try:
+                        time_s = float(pick(row, idx, "Time") or "")
+                    except ValueError:
+                        time_s = None
+                    if time_s is not None:
+                        first_craft_s[item] = min(time_s, first_craft_s.get(item, time_s))
             else:
                 by_gathered[item] = by_gathered.get(item, 0) + 1
         if station:

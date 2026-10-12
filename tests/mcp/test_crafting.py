@@ -364,7 +364,10 @@ async def test_fetch_atlas_cache_hits_within_ttl() -> None:
     respx.get(CITIZENS_URL).mock(return_value=httpx.Response(200, json=_CITIZENS_JSON))
 
     a1 = await fetch_atlas(base_url=BASE, api_key="k", cache_ttl_s=60)
+    a1.first_craft_s["BasicUpgradeLvl1Item"] = 86400.0  # survives the SQLite round trip
+    crafting_mod._cache_put(BASE, "k", a1)
     a2 = await fetch_atlas(base_url=BASE, api_key="k", cache_ttl_s=60)
+    assert a2.first_craft_s == {"BasicUpgradeLvl1Item": 86400.0}
     assert a1.total_events == a2.total_events
     # Exactly one upstream hit — second call served from SQLite.
     assert craft_route.call_count == 1
