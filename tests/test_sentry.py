@@ -244,3 +244,14 @@ def test_a_real_mcp_request_is_a_trace(captured):
     sentry_sdk.flush()
     assert any(t["transaction"].endswith("/mcp") for t in captured.transactions)
     assert captured.events == []
+
+
+def test_a_crash_scrubs_the_query_string(captured):
+    telemetry.init_error_tracking()
+    secret = "-".join(["MEMBER", "SECRET"])
+    client = TestClient(_app(), raise_server_exceptions=False)
+    assert client.get("/crash", params={"query": secret, "page": "2"}).status_code == 500
+    sentry_sdk.flush()
+    (event,) = captured.events
+    assert secret not in json.dumps(event)
+    assert "page=2" in event["request"]["query_string"]

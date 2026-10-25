@@ -112,16 +112,15 @@ ECO_USER_DATA_KEYS = [
     "admin_token",
     # FastAPI's raw request bytes, held in its own routing frame.
     "body_bytes",
+    # The ASGI scope in a crashed frame's locals holds the raw query bytes under this key.
+    "query_string",
 ]
 _SCRUBBED = "[Filtered]"
 _DENYLIST = {key.lower() for key in DEFAULT_DENYLIST + ECO_USER_DATA_KEYS}
 
 
 def _sentry_scrub_query_string(event: Event, _hint: dict[str, Any]) -> Event:
-    """Filter denylisted values out of a transaction's raw query string.
-
-    The event scrubber skips it. Transactions only: error events keep their scrubbing.
-    """
+    """Filter denylisted values out of an event's raw query string, which the SDK scrubber skips."""
     request = event.get("request")
     if isinstance(request, dict) and request.get("query_string"):
         pairs = parse_qsl(str(request["query_string"]), keep_blank_values=True)
@@ -155,6 +154,7 @@ def init_error_tracking() -> bool:
             dsn=dsn,
             traces_sampler=_sentry_traces_sampler,
             enable_logs=True,
+            before_send=_sentry_scrub_query_string,
             before_send_transaction=_sentry_scrub_query_string,
             before_send_log=_sentry_before_send_log,
             environment=os.getenv("OTEL_DEPLOYMENT_ENVIRONMENT", "homelab"),
