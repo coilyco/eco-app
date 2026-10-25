@@ -4,17 +4,18 @@ The deploy surface points private workloads at SigNoz's OTLP/HTTP NodePort.
 ASGI instrumentation records uncaught exceptions as span events and marks the
 request span as an error, which feeds SigNoz Exceptions.
 
-Crashes also go to Sentry when SENTRY_DSN is set, and only crashes: handled
-errors stay in SigNoz to keep inside Sentry's free quota (teable:coilyco/deploy#8347).
+Sentry also runs when SENTRY_DSN is set: uncaught exceptions as errors, every
+non-health, non-static request as a trace, and ERROR-level log records as Sentry
+Logs. Handled errors still do not become error events (COI-2905, parent COI-2901).
 """
 
 from __future__ import annotations
 
 import logging
 import os
-import time
 from collections.abc import Awaitable, Callable
 from typing import TYPE_CHECKING, Any, cast
+from urllib.parse import parse_qsl, urlencode
 
 import sentry_sdk
 from mcp import types as mt
@@ -40,7 +41,7 @@ from sentry_sdk.integrations.starlette import StarletteIntegration
 from sentry_sdk.scrubber import DEFAULT_DENYLIST, EventScrubber
 
 if TYPE_CHECKING:
-    from sentry_sdk.types import Event
+    from sentry_sdk.types import Event, Log
 
 _log = logging.getLogger(__name__)
 _initialized = False
@@ -74,25 +75,24 @@ def configure_healthcheck_logging() -> None:
         access_logger.addFilter(_HealthcheckAccessFilter())
 
 
-SENTRY_EVENTS_PER_MINUTE = 20
 _sentry_initialized = False
 _sentry_active = False
-_sentry_window: list[float] = []
+
+# Team plan: 50k errors, 5M spans, 5GB logs a month. The pod's access log on
+# 2026-10-25 held about 8 requests an hour outside health checks, which is roughly
+# 6k transactions and 100k spans a month at 1.0, so sampling everything leaves
+# about 50x headroom. Re-size this from Sentry's own span stats if traffic grows.
+SENTRY_TRACES_SAMPLE_RATE = 1.0
+# Health probes and static bytes carry no signal and would spend the span quota.
+_SENTRY_UNTRACED_PREFIXES = (_HEALTHCHECK_PATH, "/assets/", "/og/")
 
 
-def _sentry_within_budget(now: float) -> bool:
-    """Cap events per process so one crash loop cannot spend the monthly quota."""
-    cutoff = now - 60.0
-    while _sentry_window and _sentry_window[0] < cutoff:
-        _sentry_window.pop(0)
-    if len(_sentry_window) >= SENTRY_EVENTS_PER_MINUTE:
-        return False
-    _sentry_window.append(now)
-    return True
-
-
-def _sentry_before_send(event: Event, _hint: dict[str, Any]) -> Event | None:
-    return event if _sentry_within_budget(time.monotonic()) else None
+def _sentry_traces_sampler(context: dict[str, Any]) -> float:
+    path = str((context.get("asgi_scope") or {}).get("path", ""))
+    if path.startswith(_SENTRY_UNTRACED_PREFIXES):
+        return 0.0
+    parent = context.get("parent_sampled")
+    return float(parent) if parent is not None else SENTRY_TRACES_SAMPLE_RATE
 
 
 # Frame locals and request bodies stay on, because they make a crash readable.
@@ -113,10 +113,33 @@ ECO_USER_DATA_KEYS = [
     # FastAPI's raw request bytes, held in its own routing frame.
     "body_bytes",
 ]
+_SCRUBBED = "[Filtered]"
+_DENYLIST = {key.lower() for key in DEFAULT_DENYLIST + ECO_USER_DATA_KEYS}
+
+
+def _sentry_scrub_query_string(event: Event, _hint: dict[str, Any]) -> Event:
+    """Filter denylisted values out of the raw query string, which the event scrubber skips."""
+    request = event.get("request")
+    if isinstance(request, dict) and request.get("query_string"):
+        pairs = parse_qsl(str(request["query_string"]), keep_blank_values=True)
+        request["query_string"] = urlencode(
+            [(k, _SCRUBBED if k.lower() in _DENYLIST else v) for k, v in pairs], safe="[]"
+        )
+    return event
+
+
+def _sentry_before_send_log(log: Log, _hint: dict[str, Any]) -> Log | None:
+    """Apply the error-event key denylist to a log's attributes, as the event scrubber does."""
+    attributes = log.get("attributes")
+    if isinstance(attributes, dict):
+        for key in attributes:
+            if key.lower() in _DENYLIST:
+                attributes[key] = _SCRUBBED
+    return log
 
 
 def init_error_tracking() -> bool:
-    """Send unhandled exceptions to Sentry once, when SENTRY_DSN is set."""
+    """Send unhandled exceptions, traces and ERROR logs to Sentry once, when SENTRY_DSN is set."""
     global _sentry_active, _sentry_initialized
     if _sentry_initialized:
         return _sentry_active
@@ -127,16 +150,20 @@ def init_error_tracking() -> bool:
     try:
         sentry_sdk.init(
             dsn=dsn,
-            traces_sample_rate=0.0,
+            traces_sampler=_sentry_traces_sampler,
+            enable_logs=True,
+            before_send=_sentry_scrub_query_string,
+            before_send_transaction=_sentry_scrub_query_string,
+            before_send_log=_sentry_before_send_log,
             environment=os.getenv("OTEL_DEPLOYMENT_ENVIRONMENT", "homelab"),
-            before_send=_sentry_before_send,
             send_default_pii=False,
             event_scrubber=EventScrubber(
                 denylist=DEFAULT_DENYLIST + ECO_USER_DATA_KEYS, recursive=True
             ),
             integrations=[
-                # Breadcrumbs only: an ERROR log is a handled error, and those stay in SigNoz.
-                LoggingIntegration(event_level=None),
+                # Breadcrumbs, plus ERROR records as Sentry Logs. An ERROR log is a handled
+                # error, so it is never an error event and never spends the error quota.
+                LoggingIntegration(event_level=None, sentry_logs_level=logging.ERROR),
                 # Only uncaught exceptions, never an HTTPException the app raised on purpose.
                 StarletteIntegration(failed_request_status_codes=set()),
                 FastApiIntegration(failed_request_status_codes=set()),

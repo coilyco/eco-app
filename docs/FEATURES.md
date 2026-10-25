@@ -10,7 +10,7 @@ Inventory of what ships from this monorepo. Component detail lives in the docs l
 - **React frontend** - `frontend/`, a Vite SPA served at `/`, coilyco kit under an Eco green theme ([kit-theme](frontend/kit-theme.md), [homepage](frontend/homepage.md), [item-pages](frontend/item-pages.md)).
 - **Kit browser checks** - the `kit-check` job in `build-publish.yml` drives Chromium over every public route at 1000px and 320px ([kit-checks](frontend/kit-checks.md)).
 - **Jobs API** at `/jobs/api` ([jobs/FEATURES.md](jobs/FEATURES.md)) and **Replay API** at `/replay/api` ([replay/README.md](replay/README.md)).
-- **Telemetry** - OTLP init in `eco_mcp_app/telemetry.py`, plus Sentry for crashes only when `SENTRY_DSN` is set.
+- **Telemetry** - OTLP init in `eco_mcp_app/telemetry.py`, plus Sentry errors, traces and ERROR-level logs (backend and SPA) when `SENTRY_DSN` is set, under the Team plan quotas.
 - **Crawl surface** - `robots.txt`, `sitemap.xml`, `301`s, `404`s and index posture from `data/spa_routes.json` ([crawl-surface](frontend/crawl-surface.md)).
 - **Link-preview cards** - a 1200x630 card per route, drawn at build time ([og-cards](frontend/og-cards.md)).
 

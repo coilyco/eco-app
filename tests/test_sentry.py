@@ -1,7 +1,8 @@
-"""Sentry receives crashes only (teable:coilyco/deploy#8347)."""
+"""Sentry receives crashes as errors, requests as traces, and ERROR records as logs (COI-2905)."""
 
 from __future__ import annotations
 
+import json
 import logging
 
 import pytest
@@ -22,11 +23,19 @@ class _Capture(Transport):
     def __init__(self) -> None:
         super().__init__()
         self.events: list[dict] = []
+        self.transactions: list[dict] = []
+        self.logs: list[dict] = []
 
     def capture_envelope(self, envelope) -> None:  # type: ignore[no-untyped-def]
         event = envelope.get_event()
         if event is not None:
             self.events.append(event)
+        transaction = envelope.get_transaction_event()
+        if transaction is not None:
+            self.transactions.append(transaction)
+        for item in envelope.items:
+            if item.type == "log":
+                self.logs.extend(item.payload.json["items"])
 
 
 @pytest.fixture
@@ -38,7 +47,6 @@ def captured(monkeypatch):
     )
     monkeypatch.setattr(telemetry, "_sentry_initialized", False)
     monkeypatch.setattr(telemetry, "_sentry_active", False)
-    monkeypatch.setattr(telemetry, "_sentry_window", [])
     monkeypatch.setenv("SENTRY_DSN", DSN)
     yield transport
     real_init()
@@ -90,15 +98,14 @@ def test_record_exception_sends_the_fatal_crash(captured, monkeypatch):
     assert [e["exception"]["values"][-1]["value"] for e in captured.events] == ["worker died"]
 
 
-def test_budget_caps_events_per_process_minute(monkeypatch):
-    monkeypatch.setattr(telemetry, "_sentry_window", [])
-    allowed = [
-        telemetry._sentry_within_budget(100.0)
-        for _ in range(telemetry.SENTRY_EVENTS_PER_MINUTE + 1)
-    ]
-    assert allowed.count(True) == telemetry.SENTRY_EVENTS_PER_MINUTE
-    assert allowed[-1] is False
-    assert telemetry._sentry_within_budget(161.0) is True
+def test_no_per_minute_cap_drops_a_crash(captured):
+    telemetry.init_error_tracking()
+    client = TestClient(_app(), raise_server_exceptions=False)
+    crashes = 60
+    for _ in range(crashes):
+        assert client.get("/crash").status_code == 500
+    sentry_sdk.flush()
+    assert len(captured.events) == crashes
 
 
 def test_init_failure_logs_the_class_and_never_the_dsn(monkeypatch, caplog):
@@ -138,8 +145,6 @@ def _crash_event(captured) -> tuple[dict, str]:
 
 
 def test_a_crash_keeps_its_locals_and_scrubs_member_text(captured):
-    import json
-
     event, secret = _crash_event(captured)
     frame_vars = event["exception"]["values"][-1]["stacktrace"]["frames"][-1]["vars"]
     # Locals are what make a crash readable, so a harmless one survives.
@@ -161,3 +166,81 @@ def test_mcp_integration_is_on_without_tool_payloads(captured):
     assert client.get_integration("mcp") is not None
     # The MCP integration records tool arguments and results only with PII on.
     assert client.options["send_default_pii"] is False
+
+
+def _by_name(captured) -> dict[str, dict]:
+    return {t["transaction"]: t for t in captured.transactions}
+
+
+def test_a_request_is_a_trace_and_health_and_static_are_not(captured):
+    async def ok(_request):
+        return PlainTextResponse("ok")
+
+    app = Starlette(routes=[Route("/mcp", ok), Route("/healthz", ok), Route("/assets/{name}", ok)])
+    telemetry.init_error_tracking()
+    client = TestClient(app)
+    for path in ("/mcp", "/healthz", "/assets/index.js"):
+        assert client.get(path).status_code == 200
+    sentry_sdk.flush()
+    assert list(_by_name(captured)) == ["/mcp"]
+
+
+def test_a_propagated_frontend_trace_is_continued(captured):
+    async def ok(_request):
+        return PlainTextResponse("ok")
+
+    telemetry.init_error_tracking()
+    client = TestClient(Starlette(routes=[Route("/jobs", ok)]))
+    trace_id = "0123456789abcdef0123456789abcdef"
+    client.get("/jobs", headers={"sentry-trace": f"{trace_id}-0123456789abcdef-1"})
+    sentry_sdk.flush()
+    (transaction,) = captured.transactions
+    assert transaction["contexts"]["trace"]["trace_id"] == trace_id
+
+
+def test_a_trace_scrubs_the_query_string_and_member_text(captured):
+    async def ok(request):
+        return PlainTextResponse("ok")
+
+    telemetry.init_error_tracking()
+    client = TestClient(Starlette(routes=[Route("/search", ok)]))
+    secret = "-".join(["MEMBER", "SECRET"])
+    client.get("/search", params={"query": secret}, headers={"authorization": secret})
+    sentry_sdk.flush()
+    assert secret not in json.dumps(captured.transactions)
+
+
+def test_error_logs_reach_sentry_logs_and_not_the_error_quota(captured):
+    telemetry.init_error_tracking()
+    log = logging.getLogger("eco_mcp_app.test")
+    log.error("upstream returned 502, serving cached")
+    log.warning("slow upstream")
+    sentry_sdk.flush()
+    assert [entry["body"] for entry in captured.logs] == ["upstream returned 502, serving cached"]
+    assert captured.events == []
+
+
+def test_a_log_attribute_under_a_denylisted_key_is_filtered(captured):
+    telemetry.init_error_tracking()
+    secret = "-".join(["MEMBER", "SECRET"])
+    logging.getLogger("eco_mcp_app.test").error("reply failed", extra={"content": secret})
+    sentry_sdk.flush()
+    assert secret not in json.dumps(captured.logs)
+    assert captured.logs[0]["attributes"]["content"]["value"] == "[Filtered]"
+
+
+def test_a_real_mcp_request_is_a_trace(captured):
+    from fastapi.testclient import TestClient
+
+    from eco_mcp_app.http_app import create_app
+
+    with TestClient(create_app()) as client:
+        response = client.post(
+            "/mcp",
+            headers={"Accept": "application/json, text/event-stream"},
+            json={"jsonrpc": "2.0", "id": 1, "method": "tools/list"},
+        )
+        assert response.status_code == 200
+    sentry_sdk.flush()
+    assert any(t["transaction"].endswith("/mcp") for t in captured.transactions)
+    assert captured.events == []

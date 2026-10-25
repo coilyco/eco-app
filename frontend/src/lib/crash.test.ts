@@ -1,17 +1,22 @@
 import * as Sentry from "@sentry/react"
 import { afterEach, describe, expect, it } from "vitest"
-import { beforeSend, initCrashReporting, sentryOptions, withinBudget } from "./crash"
+import { beforeSend, initCrashReporting, sentryOptions } from "./crash"
 
 type Sent = Record<string, unknown>
 
+const envelopes: Record<string, Sent[]> = {}
+
 function startCapturing(): Sent[] {
-  const events: Sent[] = []
+  for (const type of ["event", "transaction", "log"]) envelopes[type] = []
+  const events = envelopes.event
   Sentry.init({
     ...sentryOptions("https://public@example.invalid/1"),
     transport: () => ({
       send: async (envelope) => {
         for (const [header, item] of envelope[1]) {
-          if ((header as { type: string }).type === "event") events.push(item as Sent)
+          const type = (header as { type: string }).type
+          if (type === "log") envelopes.log.push(...(item as { items: Sent[] }).items)
+          else envelopes[type]?.push(item as Sent)
         }
         return {}
       },
@@ -59,10 +64,45 @@ describe("crash reporting", () => {
     expect(JSON.stringify(event)).toContain("/jobs")
   })
 
-  it("caps events per minute and recovers", () => {
-    const later = Date.now() + 3_600_000
-    const allowed = Array.from({ length: 21 }, () => withinBudget(later))
-    expect(allowed.filter(Boolean)).toHaveLength(20)
-    expect(withinBudget(later + 61_000)).toBe(true)
+  it("sends every crash with no per-minute cap", async () => {
+    const events = startCapturing()
+    for (let i = 0; i < 60; i++) {
+      window.onerror?.(`crash ${i}`, "app.js", 1, 1, new Error(`crash ${i}`))
+    }
+    await Sentry.flush(1000)
+    expect(events).toHaveLength(60)
+  })
+
+  it("sends a page-load trace with the query string and typed text removed", async () => {
+    startCapturing()
+    const secret = ["MEMBER", "SECRET"].join("-")
+    Sentry.startSpan({ name: "/item", op: "pageload", forceTransaction: true }, () => {
+      Sentry.startSpan(
+        { name: `GET /info?query=${secret}`, op: "http.client", attributes: { value: secret } },
+        () => {},
+      )
+    })
+    await Sentry.flush(1000)
+    expect(envelopes.transaction.length).toBeGreaterThan(0)
+    const serialized = JSON.stringify(envelopes.transaction)
+    expect(serialized).toContain("GET /info")
+    expect(serialized).not.toContain(secret)
+  })
+
+  it("sends console.error as a log and not as an error event", async () => {
+    const events = startCapturing()
+    console.error("chart failed to draw")
+    console.warn("slow chart")
+    await Sentry.flush(1000)
+    expect(envelopes.log.map((log) => log.body)).toEqual(["chart failed to draw"])
+    expect(events).toHaveLength(0)
+  })
+
+  it("filters a log attribute under a user-data key", async () => {
+    startCapturing()
+    const secret = ["MEMBER", "SECRET"].join("-")
+    Sentry.logger.error("reply failed", { text: secret })
+    await Sentry.flush(1000)
+    expect(JSON.stringify(envelopes.log)).not.toContain(secret)
   })
 })
