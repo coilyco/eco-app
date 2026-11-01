@@ -1,15 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-registry="forgejo.coilysiren.me"
+registry="ghcr.io"
 image_name="coilyco/eco-app"
 
-if [ -z "${REGISTRY_TOKEN:-}" ]; then
-  echo "REGISTRY_TOKEN is required for the trusted image-publish lane." >&2
-  exit 1
-fi
-if [ -z "${FORGEJO_EGRESS_PROXY:-}" ]; then
-  echo "FORGEJO_EGRESS_PROXY is required for the Eco dependency build." >&2
+if [ -z "${GITHUB_TOKEN:-}" ]; then
+  echo "GITHUB_TOKEN is required for the trusted image-publish lane." >&2
   exit 1
 fi
 
@@ -31,14 +27,13 @@ trap 'rm -rf "${docker_config}"' EXIT
 chmod 700 "${docker_config}"
 export DOCKER_CONFIG="${docker_config}"
 
-printf '%s' "${REGISTRY_TOKEN}" \
-  | docker login "${registry}" --username coilyco-ops --password-stdin
+printf '%s' "${GITHUB_TOKEN}" \
+  | docker login "${registry}" --username "${GITHUB_ACTOR:-coilyco-ops}" --password-stdin
 
 echo "==> building ${image}"
 docker build \
   --pull \
-  --build-arg HTTP_PROXY="${FORGEJO_EGRESS_PROXY}" \
-  --build-arg HTTPS_PROXY="${FORGEJO_EGRESS_PROXY}" \
+  --label "org.opencontainers.image.source=https://github.com/coilyco/eco-app" \
   --build-arg VITE_SENTRY_DSN="${SENTRY_DSN:-}" \
   --build-arg MOD_SOURCE_REVISION="${sha}" \
   -t "${image}" \

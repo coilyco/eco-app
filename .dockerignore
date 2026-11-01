@@ -16,6 +16,6 @@ tests/
 docs/
 .gauntlet/
 .git/
-.forgejo/
+.github/
 .agents/
 .claude/

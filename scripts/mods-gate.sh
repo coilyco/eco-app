@@ -48,7 +48,7 @@ restore_then_test() {
 case "${1:-}" in
     build-mods)
         echo "build-mods gate: restore/build each project once, then fail fast on the first broken phase."
-        projects=$(rg -l 'PackageReference Include="Eco.ReferenceAssemblies"' "$ROOT/mods" -g '*.csproj' | sort)
+        projects=$(grep -rl --include='*.csproj' 'PackageReference Include="Eco.ReferenceAssemblies"' "$ROOT/mods" | sort)
         if [ -z "$projects" ]; then
             echo "no real Eco mod projects found under mods/" >&2
             exit 1
