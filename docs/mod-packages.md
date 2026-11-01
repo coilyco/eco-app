@@ -23,8 +23,8 @@ would otherwise make ordinary application CI red. The manual
 ## Versions and registry coordinates
 
 A package version combines the repository version with the source revision, so
-a coordinate names exactly one build. Packages publish to the private Forgejo
-registry under the `coilyco-gaming` owner.
+a coordinate names exactly one build. Publishing packages to the private Forgejo
+registry retired with Forgejo on 2026-11-01 (COI-2931).
 
 **Commands.** The `build-mod-*` ward verbs build one project each, and
 `build-mods` restores and builds all four with per-project timings.
