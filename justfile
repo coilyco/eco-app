@@ -134,7 +134,7 @@ build-mods *ARGS:
 package-mods *ARGS:
     @bash scripts/ward-command.sh package-mods "$@"
 
-# Publish .build/mod-packages to Forgejo's generic package registry. Requires FORGEJO_PACKAGE_URL, OWNER, USER, and TOKEN.
+# Publish .build/mod-packages as GitHub Release assets. Requires GITHUB_TOKEN, GITHUB_REPOSITORY and GITHUB_SHA, plus gh.
 publish-mod-packages *ARGS:
     @python3 scripts/mod_packages.py publish "$@"
 

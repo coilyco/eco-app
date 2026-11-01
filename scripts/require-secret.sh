@@ -1,5 +1,5 @@
 #!/bin/sh
-# Fail the step when a named secret arrived empty. Forgejo substitutes an
+# Fail the step when a named secret arrived empty. Actions substitutes an
 # unset secret as "", so the job would otherwise reach the publisher and fail
 # far from the cause.
 

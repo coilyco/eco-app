@@ -100,21 +100,67 @@ def test_publish_mods_selects_one_manifest_package(
         json.dumps({"schema": 1, "packages": records}), encoding="utf-8"
     )
     uploads: list[str] = []
+    monkeypatch.setattr(mod_packages, "_ensure_release", lambda *_args: None)
     monkeypatch.setattr(
         mod_packages,
         "_upload_idempotently",
-        lambda _path, url, _authorization: uploads.append(url),
+        lambda path, _repo, _tag: uploads.append(path.name),
     )
 
-    mod_packages.publish_mods(
-        tmp_path,
-        "https://forgejo.example",
-        "coilyco-gaming",
-        "coilyco-ops",
-        "token",
-        "eco-replay",
-    )
+    mod_packages.publish_mods(tmp_path, "coilyco/eco-app", "mods-abc123", "a" * 40, "eco-replay")
 
     assert len(uploads) == 3
-    assert all("/eco-replay/" in url for url in uploads)
-    assert all("eco-telemetry" not in url for url in uploads)
+    assert all(name.startswith("eco-replay") for name in uploads)
+
+
+def test_release_tag_is_the_short_revision() -> None:
+    assert (
+        mod_packages.release_tag("0123456789abcdef0123456789abcdef01234567") == "mods-0123456789ab"
+    )
+
+
+def test_upload_skips_a_matching_asset_and_rejects_different_bytes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    archive = tmp_path / "EcoReplay-1.0.0.zip"
+    archive.write_bytes(b"zip")
+    calls: list[tuple[str, ...]] = []
+
+    def fake_gh_checked(*args: str) -> bytes:
+        calls.append(args)
+        if args[:2] == ("release", "view"):
+            return json.dumps({"assets": [{"name": archive.name}]}).encode()
+        return remote_bytes
+
+    monkeypatch.setattr(mod_packages, "_gh_checked", fake_gh_checked)
+
+    remote_bytes = b"zip"
+    mod_packages._upload_idempotently(archive, "coilyco/eco-app", "mods-abc123")
+    assert not any(call[:2] == ("release", "upload") for call in calls)
+
+    remote_bytes = b"other"
+    with pytest.raises(RuntimeError, match="different bytes"):
+        mod_packages._upload_idempotently(archive, "coilyco/eco-app", "mods-abc123")
+
+
+def test_upload_sends_a_new_asset(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    archive = tmp_path / "EcoReplay-1.0.0.zip"
+    archive.write_bytes(b"zip")
+    calls: list[tuple[str, ...]] = []
+
+    def fake_gh_checked(*args: str) -> bytes:
+        calls.append(args)
+        return json.dumps({"assets": []}).encode()
+
+    monkeypatch.setattr(mod_packages, "_gh_checked", fake_gh_checked)
+
+    mod_packages._upload_idempotently(archive, "coilyco/eco-app", "mods-abc123")
+
+    assert calls[-1] == (
+        "release",
+        "upload",
+        "mods-abc123",
+        str(archive),
+        "--repo",
+        "coilyco/eco-app",
+    )

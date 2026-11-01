@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-"""Promote a checksum-verified Forgejo mod package to mod.io without rebuilding it."""
+"""Promote a checksum-verified GitHub Release mod asset to mod.io without rebuilding it."""
 
 from __future__ import annotations
 
 import argparse
-import base64
 import hashlib
 import json
 import os
@@ -43,23 +42,14 @@ def _required_env(name: str) -> str:
     return value
 
 
-def _basic_authorization(username: str, token: str) -> str:
-    encoded = base64.b64encode(f"{username}:{token}".encode()).decode("ascii")
-    return f"Basic {encoded}"
-
-
-def _fetch_bytes(url: str, authorization: str) -> bytes:
-    request = urllib.request.Request(url, headers={"Authorization": authorization})
-    with urllib.request.urlopen(request, timeout=60) as response:
+def _fetch_bytes(url: str) -> bytes:
+    with urllib.request.urlopen(url, timeout=60) as response:
         return response.read()
 
 
-def _package_base_url(base_url: str, owner: str, package_name: str, registry_version: str) -> str:
-    return (
-        f"{base_url.rstrip('/')}/api/packages/{urllib.parse.quote(owner, safe='')}"
-        f"/generic/{urllib.parse.quote(package_name, safe='')}"
-        f"/{urllib.parse.quote(registry_version, safe='')}"
-    )
+def _release_base_url(repo: str, tag: str) -> str:
+    """Public release assets download without a credential."""
+    return f"https://github.com/{repo}/releases/download/{urllib.parse.quote(tag, safe='')}"
 
 
 def _record_string(record: dict[str, Any], key: str) -> str:
@@ -70,23 +60,21 @@ def _record_string(record: dict[str, Any], key: str) -> str:
 
 
 def download_artifact(
-    base_url: str,
-    owner: str,
-    authorization: str,
+    release_base: str,
     package_name: str,
     registry_version: str,
     archive_name: str,
 ) -> PackageArtifact:
-    """Download one published package and require metadata + sidecar checksum agreement."""
+    """Download one release package and require metadata + sidecar checksum agreement."""
     valid_archive_name = re.fullmatch(r"[A-Za-z0-9._+-]+\.zip", archive_name)
     if Path(archive_name).name != archive_name or not valid_archive_name:
         raise ValueError("MOD_PACKAGE_ARCHIVE must be a ZIP filename without a path")
-    package_base = _package_base_url(base_url, owner, package_name, registry_version)
-    # Every existing generic package already publishes this manifest record next
-    # to its ZIP, so promotion never needs a build or a republished artifact.
+    package_base = release_base
+    # Every release publishes this manifest record next to its ZIP, so promotion
+    # never needs a build or a republished artifact.
     metadata_name = f"{archive_name[:-4]}.json"
     metadata_url = f"{package_base}/{urllib.parse.quote(metadata_name, safe='')}"
-    manifest = json.loads(_fetch_bytes(metadata_url, authorization).decode("utf-8"))
+    manifest = json.loads(_fetch_bytes(metadata_url).decode("utf-8"))
     if manifest.get("schema") != SCHEMA_VERSION:
         raise ValueError(f"unsupported package manifest schema: {manifest.get('schema')!r}")
     record = manifest.get("package")
@@ -108,7 +96,7 @@ def download_artifact(
         raise ValueError("package manifest has an invalid SHA-256 checksum")
 
     checksum_text = _fetch_bytes(
-        f"{package_base}/{urllib.parse.quote(checksum_name, safe='')}", authorization
+        f"{package_base}/{urllib.parse.quote(checksum_name, safe='')}"
     ).decode("utf-8")
     checksum_parts = checksum_text.strip().split(maxsplit=1)
     if len(checksum_parts) != 2 or checksum_parts[0] != declared_sha256:
@@ -116,9 +104,7 @@ def download_artifact(
     if checksum_parts[1].lstrip("*") != archive_name:
         raise ValueError("package checksum sidecar names a different archive")
 
-    zip_bytes = _fetch_bytes(
-        f"{package_base}/{urllib.parse.quote(archive_name, safe='')}", authorization
-    )
+    zip_bytes = _fetch_bytes(f"{package_base}/{urllib.parse.quote(archive_name, safe='')}")
     observed_sha256 = hashlib.sha256(zip_bytes).hexdigest()
     if observed_sha256 != declared_sha256:
         raise ValueError("downloaded archive SHA-256 does not match its package manifest")
@@ -209,7 +195,7 @@ def _multipart_body(artifact: PackageArtifact, changelog: str) -> tuple[str, byt
     field("filehash", artifact.md5)
     field(
         "metadata_blob",
-        f"forgejo_package={artifact.package_name}@{artifact.registry_version};"
+        f"release_package={artifact.package_name}@{artifact.registry_version};"
         f"source_revision={artifact.source_revision};sha256={artifact.sha256}",
     )
     chunks.extend(
@@ -280,11 +266,7 @@ def main() -> int:
         package_name = args.package_name or _required_env("MOD_PACKAGE_NAME")
         registry_version = args.registry_version or _required_env("MOD_PACKAGE_VERSION")
         artifact = download_artifact(
-            _required_env("FORGEJO_PACKAGE_URL"),
-            _required_env("FORGEJO_PACKAGE_OWNER"),
-            _basic_authorization(
-                _required_env("FORGEJO_PACKAGE_USER"), _required_env("FORGEJO_PACKAGE_TOKEN")
-            ),
+            _release_base_url(_required_env("GITHUB_REPOSITORY"), _required_env("MOD_RELEASE_TAG")),
             package_name,
             registry_version,
             _required_env("MOD_PACKAGE_ARCHIVE"),
