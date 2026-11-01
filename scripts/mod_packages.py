@@ -4,15 +4,12 @@
 from __future__ import annotations
 
 import argparse
-import base64
 import hashlib
 import json
 import os
 import re
+import subprocess
 import sys
-import urllib.error
-import urllib.parse
-import urllib.request
 import zipfile
 from dataclasses import dataclass
 from pathlib import Path
@@ -160,48 +157,72 @@ def package_mods(repo_root: Path, output: Path, revision: str) -> None:
     )
 
 
-def _authorization(username: str, token: str) -> str:
-    encoded = base64.b64encode(f"{username}:{token}".encode()).decode()
-    return f"Basic {encoded}"
+GH_TIMEOUT_SECONDS = 300
 
 
-def _request_bytes(url: str, authorization: str) -> bytes:
-    request = urllib.request.Request(url, headers={"Authorization": authorization})
-    with urllib.request.urlopen(request, timeout=60) as response:
-        return response.read()
+def release_tag(revision: str) -> str:
+    """One release per source revision holds every package built from it."""
+    return f"mods-{revision[:12]}"
 
 
-def _upload_idempotently(path: Path, url: str, authorization: str) -> None:
-    data = path.read_bytes()
-    request = urllib.request.Request(
-        url,
-        data=data,
-        method="PUT",
-        headers={
-            "Authorization": authorization,
-            "Content-Type": "application/octet-stream",
-        },
+def _gh(*args: str) -> subprocess.CompletedProcess[bytes]:
+    return subprocess.run(
+        ["gh", *args], check=False, capture_output=True, timeout=GH_TIMEOUT_SECONDS
     )
-    try:
-        with urllib.request.urlopen(request, timeout=120) as response:
-            if response.status != 201:
-                raise RuntimeError(f"package upload returned HTTP {response.status}: {url}")
-        print(f"published {path.name}")
-    except urllib.error.HTTPError as error:
-        if error.code != 409:
-            raise RuntimeError(f"package upload returned HTTP {error.code}: {url}") from error
-        remote = _request_bytes(url, authorization)
+
+
+def _gh_checked(*args: str) -> bytes:
+    result = _gh(*args)
+    if result.returncode != 0:
+        detail = result.stderr.decode("utf-8", "replace").strip()
+        raise RuntimeError(f"gh {' '.join(args[:2])} failed: {detail}")
+    return result.stdout
+
+
+def _ensure_release(repo: str, tag: str, target: str) -> None:
+    """Create the release at the source commit, tolerating a parallel job that won the race."""
+    if _gh("release", "view", tag, "--repo", repo).returncode == 0:
+        return
+    created = _gh(
+        "release",
+        "create",
+        tag,
+        "--repo",
+        repo,
+        "--target",
+        target,
+        "--title",
+        tag,
+        "--notes",
+        f"Install-ready Eco mod archives built from {target}.",
+        "--latest=false",
+    )
+    if created.returncode != 0 and _gh("release", "view", tag, "--repo", repo).returncode != 0:
+        detail = created.stderr.decode("utf-8", "replace").strip()
+        raise RuntimeError(f"could not create release {tag}: {detail}")
+
+
+def _upload_idempotently(path: Path, repo: str, tag: str) -> None:
+    data = path.read_bytes()
+    listing = _gh_checked("release", "view", tag, "--repo", repo, "--json", "assets")
+    names = {asset["name"] for asset in json.loads(listing)["assets"]}
+    if path.name in names:
+        remote = _gh_checked(
+            "release", "download", tag, "--repo", repo, "--pattern", path.name, "--output", "-"
+        )
         if hashlib.sha256(remote).digest() != hashlib.sha256(data).digest():
-            raise RuntimeError(f"package already exists with different bytes: {url}") from error
+            raise RuntimeError(f"release {tag} already has {path.name} with different bytes")
         print(f"already published with matching checksum: {path.name}")
+        return
+    _gh_checked("release", "upload", tag, str(path), "--repo", repo)
+    print(f"published {path.name}")
 
 
 def publish_mods(
     package_dir: Path,
-    base_url: str,
-    owner: str,
-    username: str,
-    token: str,
+    repo: str,
+    tag: str,
+    target: str,
     package_name: str | None = None,
 ) -> None:
     manifest_path = package_dir / "manifest.json"
@@ -215,18 +236,10 @@ def publish_mods(
         if not records:
             raise ValueError(f"package manifest has no package named {package_name!r}")
 
-    authorization = _authorization(username, token)
+    _ensure_release(repo, tag, target)
     for record in records:
-        package_name = urllib.parse.quote(record["package_name"], safe="")
-        package_version = urllib.parse.quote(record["registry_version"], safe="")
-        package_base = (
-            f"{base_url.rstrip('/')}/api/packages/{urllib.parse.quote(owner, safe='')}"
-            f"/generic/{package_name}/{package_version}"
-        )
         for field in ("archive", "metadata", "checksum_file"):
-            path = package_dir / record[field]
-            file_name = urllib.parse.quote(path.name, safe="")
-            _upload_idempotently(path, f"{package_base}/{file_name}", authorization)
+            _upload_idempotently(package_dir / record[field], repo, tag)
 
 
 def _required_env(name: str) -> str:
@@ -245,11 +258,14 @@ def parse_args() -> argparse.Namespace:
     package_parser.add_argument("--output", type=Path, required=True)
     package_parser.add_argument("--revision", required=True)
 
-    publish_parser = subparsers.add_parser("publish", help="upload ZIPs to Forgejo Packages")
+    publish_parser = subparsers.add_parser("publish", help="upload ZIPs as GitHub Release assets")
     publish_parser.add_argument(
         "--input",
         type=Path,
         default=Path(os.environ.get("MOD_PACKAGE_DIR", ".build/mod-packages")),
+    )
+    publish_parser.add_argument(
+        "--tag", default=os.environ.get("MOD_RELEASE_TAG") or None, help="release tag"
     )
     publish_parser.add_argument(
         "--package-name",
@@ -265,15 +281,15 @@ def main() -> int:
         if args.command == "package":
             package_mods(args.repo_root.resolve(), args.output.resolve(), args.revision)
         else:
+            target = _required_env("GITHUB_SHA")
             publish_mods(
                 args.input.resolve(),
-                _required_env("FORGEJO_PACKAGE_URL"),
-                _required_env("FORGEJO_PACKAGE_OWNER"),
-                _required_env("FORGEJO_PACKAGE_USER"),
-                _required_env("FORGEJO_PACKAGE_TOKEN"),
+                _required_env("GITHUB_REPOSITORY"),
+                args.tag or release_tag(target),
+                target,
                 args.package_name,
             )
-    except (OSError, ValueError, RuntimeError, urllib.error.URLError) as error:
+    except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as error:
         print(f"mod packages: {error}", file=sys.stderr)
         return 1
     return 0

@@ -36,7 +36,7 @@ def test_download_artifact_requires_the_published_checksum_manifest(
     archive_name = manifest["package"]["archive"]
     checksum = manifest["package"]["checksum"]
 
-    def fetch(url: str, _authorization: str) -> bytes:
+    def fetch(url: str) -> bytes:
         if url.endswith(".json"):
             return json.dumps(manifest).encode()
         if url.endswith(".sha256"):
@@ -46,9 +46,7 @@ def test_download_artifact_requires_the_published_checksum_manifest(
 
     monkeypatch.setattr(modio_publish, "_fetch_bytes", fetch)
     artifact = modio_publish.download_artifact(
-        "https://forgejo.example",
-        "owner",
-        "Basic test",
+        "https://github.com/coilyco/eco-app/releases/download/mods-abc123",
         package_name,
         version,
         "EcoReplay-1.2.3.zip",
@@ -66,7 +64,7 @@ def test_download_artifact_rejects_tampered_zip(monkeypatch: pytest.MonkeyPatch)
     manifest = _manifest(package_name, version, archive)
     checksum = manifest["package"]["checksum"]
 
-    def fetch(url: str, _authorization: str) -> bytes:
+    def fetch(url: str) -> bytes:
         if url.endswith(".json"):
             return json.dumps(manifest).encode()
         if url.endswith(".sha256"):
@@ -77,9 +75,7 @@ def test_download_artifact_rejects_tampered_zip(monkeypatch: pytest.MonkeyPatch)
 
     with pytest.raises(ValueError, match="SHA-256"):
         modio_publish.download_artifact(
-            "https://forgejo.example",
-            "owner",
-            "Basic test",
+            "https://github.com/coilyco/eco-app/releases/download/mods-abc123",
             package_name,
             version,
             "EcoReplay-1.2.3.zip",

@@ -1,0 +1,87 @@
+# A deliberate promotion boundary: normal main builds neither call nor depend on mod.io.
+# This uploads ZIP bytes already published as GitHub Release assets (COI-3122).
+name: modio-publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      package:
+        description: Mod package to promote
+        required: true
+        type: choice
+        options:
+          - eco-jobs-tracker
+          - eco-replay
+          - eco-store-exporter
+          - eco-telemetry
+      release_tag:
+        description: Release tag holding the package (for example mods-0123456789ab)
+        required: true
+        type: string
+      registry_version:
+        description: Package version recorded in the metadata (for example 1.2.3+<full-sha>)
+        required: true
+        type: string
+      archive_name:
+        description: Exact ZIP filename from that release
+        required: true
+        type: string
+      modio_game_id:
+        description: mod.io game ID for this target (not stored in the repository)
+        required: true
+        type: string
+      modio_mod_id:
+        description: mod.io mod ID for this target (not stored in the repository)
+        required: true
+        type: string
+      modio_file_id:
+        description: Optional existing mod.io file ID to verify on a retry
+        required: false
+        type: string
+      release_notes:
+        description: Release notes sent as the mod.io file changelog
+        required: false
+        type: string
+      dry_run:
+        description: Verify the release asset only; do not contact mod.io
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Require mod.io publisher credential
+        if: ${{ !inputs.dry_run }}
+        env:
+          MODIO_ACCESS_TOKEN: ${{ secrets.MODIO_ACCESS_TOKEN }}
+        run: sh scripts/require-secret.sh MODIO_ACCESS_TOKEN
+
+      - name: Verify and promote the published release asset
+        env:
+          MOD_RELEASE_TAG: ${{ inputs.release_tag }}
+          MOD_PACKAGE_NAME: ${{ inputs.package }}
+          MOD_PACKAGE_VERSION: ${{ inputs.registry_version }}
+          MOD_PACKAGE_ARCHIVE: ${{ inputs.archive_name }}
+          MODIO_GAME_ID: ${{ inputs.modio_game_id }}
+          MODIO_MOD_ID: ${{ inputs.modio_mod_id }}
+          MODIO_FILE_ID: ${{ inputs.modio_file_id }}
+          MODIO_ACCESS_TOKEN: ${{ secrets.MODIO_ACCESS_TOKEN }}
+          MODIO_CHANGELOG: ${{ inputs.release_notes }}
+          MODIO_DRY_RUN: ${{ inputs.dry_run }}
+        run: python3 scripts/modio_publish.py
+
+      - name: Alert Sentry on main failure
+        if: ${{ failure() && github.ref == 'refs/heads/main' }}
+        continue-on-error: true
+        env:
+          SENTRY_DSN: ${{ secrets.SENTRY_CI_DSN }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: python3 scripts/alert_sentry.py

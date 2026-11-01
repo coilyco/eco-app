@@ -13,6 +13,7 @@ cleanup() {
 trap cleanup EXIT
 
 export FAKE_DOCKER_LOG="${test_dir}/docker.log"
+export FAKE_GH_LOG="${test_dir}/gh.log"
 
 docker() {
   local command="${1:-}"
@@ -29,23 +30,17 @@ docker() {
       cat >/dev/null
       ;;
     create)
-      case " $* " in
-        *" just publish-mod-packages "*)
-          if [ "${FORGEJO_PACKAGE_TOKEN:-}" != "${REGISTRY_TOKEN:-}" ]; then
-            printf 'publisher did not reuse the trusted registry credential\n' >&2
-            return 1
-          fi
-          printf 'publisher-container\n'
-          ;;
-        *)
-          printf 'image-container\n'
-          ;;
-      esac
+      printf 'image-container\n'
       ;;
-    wait)
-      printf '%s\n' "${FAKE_PUBLISHER_STATUS:-0}"
+    cp)
+      # docker cp <container>:/mod-packages/. <dir>/ : lay down one package.
+      local destination="${2%/}"
+      printf 'zip' >"${destination}/eco-replay-1.0.0.zip"
+      printf '{}' >"${destination}/eco-replay-1.0.0.json"
+      printf 'sum' >"${destination}/eco-replay-1.0.0.zip.sha256"
+      printf '%s' '{"schema":1,"packages":[{"package_name":"eco-replay","archive":"eco-replay-1.0.0.zip","metadata":"eco-replay-1.0.0.json","checksum_file":"eco-replay-1.0.0.zip.sha256","registry_version":"1.0.0+aaaa"}]}' >"${destination}/manifest.json"
       ;;
-    cp | pull | rm | start)
+    pull | rm)
       ;;
     *)
       printf 'unexpected docker command in publisher contract test: %s\n' "${command}" >&2
@@ -55,62 +50,52 @@ docker() {
 }
 export -f docker
 
+mkdir -p "${test_dir}/bin"
+cat >"${test_dir}/bin/gh" <<'GH'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >>"${FAKE_GH_LOG}"
+case "$1 $2" in
+  "release view")
+    if [[ " $* " == *" --json "* ]]; then
+      printf '{"assets":[]}\n'
+    elif ! grep -q '^release create' "${FAKE_GH_LOG}"; then
+      exit 1
+    fi
+    ;;
+esac
+GH
+chmod +x "${test_dir}/bin/gh"
+
 (
   cd "${repo_root}"
-  REGISTRY_TOKEN="test-registry-token" \
-    MOD_PACKAGE_NAME="eco-replay" \
+  PATH="${test_dir}/bin:${PATH}" \
+    GITHUB_TOKEN="test-token" \
+    GITHUB_REPOSITORY="coilyco/eco-app" \
     GITHUB_SHA="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" \
-    GITHUB_SERVER_URL="https://forgejo.invalid" \
-    FORGEJO_EGRESS_PROXY="http://proxy.invalid" \
     bash scripts/publish-mod-from-image.sh
 )
 
 require_log_entry() {
-  local expected="$1"
-  if ! rg --fixed-strings --quiet -- "${expected}" "${FAKE_DOCKER_LOG}"; then
-    printf 'publisher contract is missing docker operation: %s\n' "${expected}" >&2
+  local log="$1"
+  local expected="$2"
+  if ! grep -F -q -- "${expected}" "${log}"; then
+    printf 'publisher contract is missing operation: %s\n' "${expected}" >&2
     return 1
   fi
 }
 
-expected_repo_copy="$(
-  printf 'cp\t%s\t%s' \
-    "${repo_root}/." \
-    "publisher-container:/workspace/"
-)"
-require_log_entry $'create\t--workdir\t/workspace'
-require_log_entry $'\tward\texec\tpublish-mod-packages'
-require_log_entry "${expected_repo_copy}"
-require_log_entry "publisher-container:/packages"
-require_log_entry $'start\t--attach\tpublisher-container'
-require_log_entry $'wait\tpublisher-container'
+require_log_entry "${FAKE_DOCKER_LOG}" $'pull\tghcr.io/coilyco/eco-app:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+require_log_entry "${FAKE_DOCKER_LOG}" "image-container:/mod-packages/."
+require_log_entry "${FAKE_GH_LOG}" "release create mods-aaaaaaaaaaaa --repo coilyco/eco-app --target aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+for asset in eco-replay-1.0.0.zip eco-replay-1.0.0.json eco-replay-1.0.0.zip.sha256; do
+  if ! grep -E -q "^release upload mods-aaaaaaaaaaaa .*${asset} --repo coilyco/eco-app$" "${FAKE_GH_LOG}"; then
+    printf 'publisher contract never uploaded %s\n' "${asset}" >&2
+    exit 1
+  fi
+done
 
-if rg --fixed-strings --quiet -- "--volume" "${FAKE_DOCKER_LOG}"; then
+if grep -F -q -- "--volume" "${FAKE_DOCKER_LOG}"; then
   printf 'publisher contract must not bind-mount runner-local paths\n' >&2
-  exit 1
-fi
-if rg --fixed-strings --quiet -- $'--env\tHTTP_PROXY' "${FAKE_DOCKER_LOG}" \
-  || rg --fixed-strings --quiet -- $'--env\tHTTPS_PROXY' "${FAKE_DOCKER_LOG}"; then
-  printf 'publisher contract must keep internal Forgejo traffic direct\n' >&2
-  exit 1
-fi
-
-set +e
-(
-  cd "${repo_root}"
-  REGISTRY_TOKEN="test-registry-token" \
-    MOD_PACKAGE_NAME="eco-replay" \
-    GITHUB_SHA="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" \
-    GITHUB_SERVER_URL="https://forgejo.invalid" \
-    FORGEJO_EGRESS_PROXY="http://proxy.invalid" \
-    FAKE_PUBLISHER_STATUS="17" \
-    bash scripts/publish-mod-from-image.sh >/dev/null 2>&1
-)
-publisher_failure_status=$?
-set -e
-if [ "${publisher_failure_status}" -ne 17 ]; then
-  printf 'publisher container failure returned status %s, expected 17\n' \
-    "${publisher_failure_status}" >&2
   exit 1
 fi
 

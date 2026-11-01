@@ -1,5 +1,5 @@
 # Gates every push and pull request, and on main pushes the app image to GHCR. Rollout
-# stays in coilyco/deploy. Mod package publishing is not ported: docs/mod-packages.md.
+# stays in coilyco/deploy. Mod ZIPs ship as release assets: docs/mod-packages.md.
 name: build-publish
 
 on:
@@ -147,6 +147,33 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SENTRY_DSN: ${{ secrets.SENTRY_FRONTEND_DSN }}
         run: bash scripts/publish-image.sh
+
+      - name: Alert Sentry on main failure
+        if: ${{ failure() && github.ref == 'refs/heads/main' }}
+        continue-on-error: true
+        env:
+          SENTRY_DSN: ${{ secrets.SENTRY_CI_DSN }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: python3 scripts/alert_sentry.py
+
+  publish-mods:
+    if: >-
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
+      github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [build-image]
+    permissions:
+      contents: write
+      packages: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Publish the mod ZIPs from the image as release assets
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: bash scripts/publish-mod-from-image.sh
 
       - name: Alert Sentry on main failure
         if: ${{ failure() && github.ref == 'refs/heads/main' }}

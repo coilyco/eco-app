@@ -52,9 +52,9 @@ Keep every artifact public-safe. Opaque ids, tokens, and sensitive hosts go in A
 
 Canonical history lives on GitHub (`coilyco/eco-app`). GitHub Actions
 (`.github/workflows/build-publish.yml`, hosted runners, COI-3102) tests, builds, and
-publishes `ghcr.io/coilyco/eco-app:<full-source-sha>` on every push to `main`. Mod
-package publication and the mod.io promotion are not ported, because their Forgejo
-package registry is gone. A commit to `main` is not a deploy. Rollout is driven
+publishes `ghcr.io/coilyco/eco-app:<full-source-sha>` on every push to `main`, then
+the mod ZIPs from that image as release assets on a `mods-<sha>` tag. The `modio-publish`
+workflow promotes one of those assets to mod.io. A commit to `main` is not a deploy. Rollout is driven
 from `coilyco/deploy`.
 
 ## Agent rules

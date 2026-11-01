@@ -28,9 +28,9 @@ currency export, and `telemetry` for logs, metrics, and exception capture.
 
 Gameplay mods live in the sibling
 [eco-mods](https://github.com/coilyco/eco-mods) repo, not
-here. Forgejo CI built every real mod project and published install-ready ZIPs
-to Forgejo Packages. That publishing retired with Forgejo on 2026-11-01 (COI-2931)
-and is not ported yet, per [docs/mod-packages.md](docs/mod-packages.md).
+here. Every push to `main` builds every real mod project and publishes install-ready
+ZIPs as release assets on a `mods-<sha>` tag (COI-3122), per
+[docs/mod-packages.md](docs/mod-packages.md).
 
 ## Host files are read, never exposed
 
