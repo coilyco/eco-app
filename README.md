@@ -29,8 +29,8 @@ currency export, and `telemetry` for logs, metrics, and exception capture.
 Gameplay mods live in the sibling
 [eco-mods](https://github.com/coilyco/eco-mods) repo, not
 here. Forgejo CI built every real mod project and published install-ready ZIPs
-to Forgejo Packages. That retired with Forgejo on 2026-11-01 (COI-2931), per
-[docs/mod-packages.md](docs/mod-packages.md).
+to Forgejo Packages. That publishing retired with Forgejo on 2026-11-01 (COI-2931)
+and is not ported yet, per [docs/mod-packages.md](docs/mod-packages.md).
 
 ## Host files are read, never exposed
 
@@ -48,9 +48,8 @@ just http-offline   # the same, against the local snapshot fixture
 just frontend-dev   # Vite with HMR on :5173, proxying the API
 ```
 
-`just` alone lists every recipe. Publishing the fused image to
-`forgejo.coilysiren.me/coilyco-gaming/eco-app:<full-source-sha>` retired with
-Forgejo on 2026-11-01 (COI-2953), and no GitHub image replaces it yet.
+`just` alone lists every recipe. Every push to `main` publishes the fused image to
+`ghcr.io/coilyco/eco-app:<full-source-sha>` (`build-publish`, COI-3102).
 
 ## See also
 

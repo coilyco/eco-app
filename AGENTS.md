@@ -50,11 +50,11 @@ Keep every artifact public-safe. Opaque ids, tokens, and sensitive hosts go in A
 
 ## Release
 
-Canonical history lives on GitHub (`coilyco/eco-app`). The Forgejo CI that
-tested, built, and published the private image
-`forgejo.coilysiren.me/coilyco-gaming/eco-app:<full-source-sha>` retired with
-Forgejo on 2026-11-01 (COI-2953, COI-2931), and no GitHub workflow or registry
-image replaces it yet. A commit to `main` is not a deploy. Rollout is driven
+Canonical history lives on GitHub (`coilyco/eco-app`). GitHub Actions
+(`.github/workflows/build-publish.yml`, hosted runners, COI-3102) tests, builds, and
+publishes `ghcr.io/coilyco/eco-app:<full-source-sha>` on every push to `main`. Mod
+package publication and the mod.io promotion are not ported, because their Forgejo
+package registry is gone. A commit to `main` is not a deploy. Rollout is driven
 from `coilyco/deploy`.
 
 ## Agent rules

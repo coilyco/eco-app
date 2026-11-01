@@ -1,6 +1,4 @@
-ARG AOS_IMAGE=forgejo.coilysiren.me/coilyco-flight-deck/agentic-os:release
-
-FROM ${AOS_IMAGE} AS frontend
+FROM node:22-bookworm-slim AS frontend
 
 WORKDIR /frontend
 
@@ -31,7 +29,11 @@ COPY data/server_brief.json /data/server_brief.json
 ARG VITE_SENTRY_DSN=""
 RUN VITE_SENTRY_DSN="$VITE_SENTRY_DSN" pnpm build
 
-FROM ${AOS_IMAGE} AS mods
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS mods
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends python3 \
+    && rm -rf /var/lib/apt/lists/*
 
 ARG MOD_SOURCE_REVISION=dev
 
@@ -46,7 +48,9 @@ RUN python3 scripts/mod_packages.py package \
     --output /mod-packages \
     --revision "${MOD_SOURCE_REVISION}"
 
-FROM ${AOS_IMAGE} AS runtime
+FROM python:3.13-slim-bookworm AS runtime
+
+COPY --from=ghcr.io/astral-sh/uv:0.12.0 /uv /uvx /bin/
 
 WORKDIR /app
 

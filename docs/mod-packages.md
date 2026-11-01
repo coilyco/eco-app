@@ -24,7 +24,9 @@ would otherwise make ordinary application CI red. The manual
 
 A package version combines the repository version with the source revision, so
 a coordinate names exactly one build. Publishing packages to the private Forgejo
-registry retired with Forgejo on 2026-11-01 (COI-2931).
+registry retired with Forgejo on 2026-11-01 (COI-2931). The `publish-mod` job and the
+`modio-publish` workflow, which read those packages, were not ported (COI-3102), because
+GitHub has no generic package registry.
 
 **Commands.** The `build-mod-*` ward verbs build one project each, and
 `build-mods` restores and builds all four with per-project timings.
