@@ -50,12 +50,12 @@ Keep every artifact public-safe. Opaque ids, tokens, and sensitive hosts go in A
 
 ## Release
 
-Canonical history lives on Forgejo (`coilyco-gaming/eco-app`). CI tests,
-builds, and publishes the private single-architecture image as
-`forgejo.coilysiren.me/coilyco-gaming/eco-app:<full-source-sha>` on every push
-to `main`. The trusted publisher verifies the remote manifest. A commit to
-`main` is not a deploy. Rollout is driven from `coilyco-bridge/deploy` through
-a separate read-only package credential.
+Canonical history lives on GitHub (`coilyco/eco-app`). The Forgejo CI that
+tested, built, and published the private image
+`forgejo.coilysiren.me/coilyco-gaming/eco-app:<full-source-sha>` retired with
+Forgejo on 2026-11-01 (COI-2953, COI-2931), and no GitHub workflow or registry
+image replaces it yet. A commit to `main` is not a deploy. Rollout is driven
+from `coilyco/deploy`.
 
 ## Agent rules
 
@@ -80,7 +80,7 @@ The fleet runs one lane, and it authorizes the agent end to end. Pushing straigh
 * **NEVER merge on `pull-request` or `remote-branch-only`.** Those two stop where they stop, and the director merge lane carries a `pull-request` from there.
 <!-- END managed by agentic-os/scripts/apply-git-workflow.py -->
 
-Name the actor in action sentences. Route every command through the gate, never bare tooling. Pull every server dataset that could be remotely interesting - code is cheap, the game server is colocated, CPU is fine. Interesting-but-messy data gets a Forgejo cleanup issue, never a silent skip.
+Name the actor in action sentences. Route every command through the gate, never bare tooling. Pull every server dataset that could be remotely interesting - code is cheap, the game server is colocated, CPU is fine. Interesting-but-messy data gets a Linear cleanup record, never a silent skip.
 
 **Product UX is the SPA (`frontend/`).** Server HTML is only the MCP `_meta.ui` card - never build browser UI as an iframe/Jinja card.
 

@@ -27,9 +27,10 @@ API, `replay` for the player-action event store, `stores` for live store and
 currency export, and `telemetry` for logs, metrics, and exception capture.
 
 Gameplay mods live in the sibling
-[eco-mods](https://forgejo.coilysiren.me/coilyco-gaming/eco-mods) repo, not
-here. Main CI builds every real mod project and publishes install-ready ZIPs to
-Forgejo Packages, per [docs/mod-packages.md](docs/mod-packages.md).
+[eco-mods](https://github.com/coilyco/eco-mods) repo, not
+here. Forgejo CI built every real mod project and published install-ready ZIPs
+to Forgejo Packages. That retired with Forgejo on 2026-11-01 (COI-2931), per
+[docs/mod-packages.md](docs/mod-packages.md).
 
 ## Host files are read, never exposed
 
@@ -47,10 +48,9 @@ just http-offline   # the same, against the local snapshot fixture
 just frontend-dev   # Vite with HMR on :5173, proxying the API
 ```
 
-`just` alone lists every recipe. Each push to canonical `main` publishes the
-fused image as
-`forgejo.coilysiren.me/coilyco-gaming/eco-app:<full-source-sha>`, and deploy
-consumes that exact reference through a separate read-only credential.
+`just` alone lists every recipe. Publishing the fused image to
+`forgejo.coilysiren.me/coilyco-gaming/eco-app:<full-source-sha>` retired with
+Forgejo on 2026-11-01 (COI-2953), and no GitHub image replaces it yet.
 
 ## See also
 
