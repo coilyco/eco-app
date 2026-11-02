@@ -31,8 +31,8 @@ card builds its device table from it (COI-3149). Air only: `GroundPolluterReport
 exposes no rate, so ground polluters are not listed.
 Both endpoints render their body in the mod with `System.Text.Json` (`WireJson`) and return it as
 content, because Eco's Newtonsoft contract resolver turns `double?` and `bool?` into `{}`
-(COI-3157, COI-3160). The climate-settings body had the same bug, so the card read the Eco defaults. Rows come from a
-snapshot refreshed at most every 30s in the background, so a request never walks the world: a cold
+(COI-3157, COI-3160). The climate-settings body had the same bug, so the card read the Eco defaults.
+Polluter rows come from a snapshot refreshed at most every 30s in the background, so a request never walks the world: a cold
 start answers `503` with `Retry-After` until the first pass ends. `Server-Timing: scan;dur=` is the
 cost of the pass behind the snapshot, `X-Polluters-Visited` the objects it walked, and
 `X-Polluters-Typed-Rows` and `X-Polluters-Typed-Rate-Sum` a typed second read to compare with the
