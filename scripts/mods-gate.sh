@@ -63,8 +63,12 @@ case "${1:-}" in
         echo "test-mod-replay gate: restore/test the replay project once, then fail fast on the first broken phase."
         restore_then_test "mods/replay tests" "$ROOT/mods/replay/tests/EcoReplay.Tests.csproj"
         ;;
+    test-mod-telemetry)
+        echo "test-mod-telemetry gate: restore/test the telemetry polluter project once, then fail fast on the first broken phase."
+        restore_then_test "mods/telemetry-tests" "$ROOT/mods/telemetry-tests/EcoTelemetry.Tests.csproj"
+        ;;
     *)
-        echo "usage: $0 {build-mods|test-mod-replay}" >&2
+        echo "usage: $0 {build-mods|test-mod-replay|test-mod-telemetry}" >&2
         exit 2
         ;;
 esac

@@ -3,57 +3,61 @@
 namespace EcoTelemetry;
 
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Reflection;
-using System.Text.RegularExpressions;
+using System.Diagnostics;
+using Eco.Gameplay.Components;
 using Eco.Gameplay.Objects;
 
-// Walks every live WorldObject and flattens the ones carrying an
-// AirPollutionComponent into PolluterDto rows for /api/v1/polluters.
+// The one Eco-bound piece of /api/v1/polluters: walks every live WorldObject and
+// hands each to PolluterRowBuilder. Everything else in the endpoint names no Eco
+// type, so the test project can drive it.
 //
-// Reflection by member name, guarded, for the reasons ClimateSettingsReader and
-// mods/stores give: Eco member names drift across ReferenceAssemblies betas, and
-// a dangling object must cost one skipped row, never a 500. Row building takes a
-// plain object so it can be driven without a running Eco server.
-//
-// Air only. GroundPolluterReportComponent exposes no public rate (its numbers
-// come out of ComputePollutionForStacks over whatever the device holds), so
-// ground polluters are not listed rather than listed with a made-up rate.
+// WorldObjectManager.ForEach is `objectsByID.Select(...)` over a ConcurrentDictionary
+// (Eco source, Eco.Gameplay/Objects/WorldObjectManager.cs), so this walk takes no
+// world lock and runs on the caller's thread, not the simulation thread. The same
+// walk backs the eco.world_objects.count metric in MetricsWorker.
 internal static class PolluterReader
 {
-    public const string AirRateUnit = "tons/hour";
-
-    // A settlement or group owner can stand for hundreds of users. The alias name
-    // is the row's owner, and this bounds the member list riding alongside it.
-    private const int MaxOwnerUsers = 25;
-
-    private const BindingFlags Members = BindingFlags.Public | BindingFlags.Instance;
-
-    private static readonly Regex MarkupTag = new("<[^>]*>", RegexOptions.Compiled);
-
     // Null means the object manager was unreadable before any row came out (for
     // example queried before the simulation is up), which the controller answers
-    // with 404. An empty array is a real answer: the world has no air polluters.
-    public static PolluterDto[]? Read()
+    // with 404. An empty row set is a real answer: the world has no air polluters.
+    public static PolluterScan? Scan()
     {
+        var clock = Stopwatch.StartNew();
         var rows = new List<PolluterDto>();
+        var visited = 0;
+        var typedRows = 0;
+        var typedRateSum = 0d;
         var enumerated = false;
 
         try
         {
-            // ForEach is the manager-owned iterator MetricsWorker already uses.
             WorldObjectManager.ForEach(wo =>
             {
                 if (wo is null) return;
+                visited++;
                 try
                 {
-                    var row = BuildRow(wo);
+                    var row = PolluterRowBuilder.BuildRow(wo);
                     if (row is not null) rows.Add(row);
                 }
                 catch
                 {
                     // Orphaned object or mid-iteration mutation. Skip this one.
+                }
+
+                try
+                {
+                    var rate = TypedAirRate(wo);
+                    if (rate is not null)
+                    {
+                        typedRows++;
+                        typedRateSum += rate.Value;
+                    }
+                }
+                catch
+                {
+                    // Same: the cross-check skips what it cannot read.
                 }
             });
             enumerated = true;
@@ -63,148 +67,20 @@ internal static class PolluterReader
             // Manager unready or the collection mutated under us. Keep what we have.
         }
 
-        return enumerated || rows.Count > 0 ? rows.ToArray() : null;
+        if (!enumerated && rows.Count == 0) return null;
+        return new PolluterScan(rows.ToArray(), visited, clock.Elapsed.TotalMilliseconds, typedRows, typedRateSum, default);
     }
 
-    internal static PolluterDto? BuildRow(object worldObject)
+    // The cross-check read: the component by type and the rate by its compiled
+    // property, so it fails to build, instead of silently reading null, if Eco
+    // renames either. Disagreement with the reflected rows is the signal.
+    private static double? TypedAirRate(WorldObject wo)
     {
-        var air = FindComponent(worldObject, "AirPollutionComponent");
-        if (air is null) return null;
-
-        var type = worldObject.GetType().Name;
-        var name = CleanName(AsString(GetMember(worldObject, "FriendlyName", "DisplayName", "Name")));
-
-        var alias = GetMember(worldObject, "Owners");
-        var owner = AsString(GetMember(alias, "Name")) ?? AsString(GetMember(worldObject, "NameOfCreator"));
-
-        return new PolluterDto(
-            ObjectId: AsString(GetMember(worldObject, "ObjectID")),
-            Type: type,
-            Name: name ?? type,
-            Owner: owner,
-            OwnerUsers: ReadOwnerUsers(alias),
-            Position: ReadPosition(worldObject),
-            RatePerHour: AsDouble(GetMember(air, "PollutionTonsPerHour")),
-            RateUnit: AirRateUnit,
-            Operating: GetMember(worldObject, "Operating") as bool?,
-            OperatingEfficiency: AsDouble(GetMember(worldObject, "OperatingEfficiency")),
-            TotalTons: AsDouble(GetMember(air, "TotalTonsPollution")));
-    }
-
-    private static object? FindComponent(object worldObject, string typeName)
-    {
-        var raw = GetMember(worldObject, "Components") ?? Invoke(worldObject, "GetComponents");
-        if (raw is not IEnumerable seq || raw is string) return null;
-
-        foreach (var component in seq)
+        foreach (var component in wo.Components)
         {
-            if (component is not null && component.GetType().Name == typeName) return component;
+            if (component is AirPollutionComponent air) return air.PollutionTonsPerHour;
         }
 
         return null;
-    }
-
-    private static string[] ReadOwnerUsers(object? alias)
-    {
-        var names = new List<string>();
-        if (GetMember(alias, "UserSet") is IEnumerable users && users is not string)
-        {
-            foreach (var user in users)
-            {
-                var userName = AsString(GetMember(user, "Name"));
-                if (userName is not null) names.Add(userName);
-                if (names.Count >= MaxOwnerUsers) break;
-            }
-        }
-
-        return names.ToArray();
-    }
-
-    private static PolluterPositionDto? ReadPosition(object worldObject)
-    {
-        var pos = GetMember(worldObject, "Position3i", "Position");
-        if (pos is null) return null;
-
-        var x = AsDouble(GetMember(pos, "X"));
-        var y = AsDouble(GetMember(pos, "Y"));
-        var z = AsDouble(GetMember(pos, "Z"));
-        if (x is null || y is null || z is null) return null;
-
-        return new PolluterPositionDto((int)Math.Round(x.Value), (int)Math.Round(y.Value), (int)Math.Round(z.Value));
-    }
-
-    // Eco display names can carry rich-text tags. The card renders plain text.
-    private static string? CleanName(string? raw)
-    {
-        if (raw is null) return null;
-        var cleaned = MarkupTag.Replace(raw, string.Empty).Trim();
-        return cleaned.Length == 0 ? null : cleaned;
-    }
-
-    private static object? GetMember(object? target, params string[] names)
-    {
-        if (target is null) return null;
-        var type = target.GetType();
-
-        foreach (var name in names)
-        {
-            try
-            {
-                var prop = type.GetProperty(name, Members);
-                if (prop is not null && prop.GetIndexParameters().Length == 0)
-                {
-                    var value = prop.GetValue(target);
-                    if (value is not null) return value;
-                }
-
-                var field = type.GetField(name, Members);
-                if (field is not null)
-                {
-                    var value = field.GetValue(target);
-                    if (value is not null) return value;
-                }
-            }
-            catch
-            {
-                // Accessor threw (dangling reference). Try the next candidate name.
-            }
-        }
-
-        return null;
-    }
-
-    private static object? Invoke(object target, string name)
-    {
-        try
-        {
-            return target.GetType().GetMethod(name, Members, binder: null, types: Type.EmptyTypes, modifiers: null)?.Invoke(target, null);
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
-    private static string? AsString(object? value)
-    {
-        if (value is null) return null;
-        var s = value.ToString();
-        return string.IsNullOrWhiteSpace(s) ? null : s;
-    }
-
-    // Non-finite values would serialize as the string "NaN" under Newtonsoft and
-    // break the consumer's number parse, so they read as unknown instead.
-    private static double? AsDouble(object? value)
-    {
-        if (value is null) return null;
-        try
-        {
-            var d = Convert.ToDouble(value);
-            return double.IsFinite(d) ? d : null;
-        }
-        catch
-        {
-            return null;
-        }
     }
 }

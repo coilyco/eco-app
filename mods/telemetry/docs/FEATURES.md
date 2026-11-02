@@ -29,6 +29,14 @@ owner (the owner alias plus up to 25 member users), position, `ratePerHour` in t
 made so far. Same reflection, nullable fields, `404` and auth as above, and the eco-app pollution
 card builds its device table from it (COI-3149). Air only: `GroundPolluterReportComponent`
 exposes no rate, so ground polluters are not listed.
+The body is rendered in the mod with `System.Text.Json` and returned as content, because Eco's
+Newtonsoft contract resolver turns `double?` and `bool?` into `{}` (COI-3157). Rows come from a
+snapshot refreshed at most every 30s in the background, so a request never walks the world: a cold
+start answers `503` with `Retry-After` until the first pass ends. `Server-Timing: scan;dur=` is the
+cost of the pass behind the snapshot, `X-Polluters-Visited` the objects it walked, and
+`X-Polluters-Typed-Rows` and `X-Polluters-Typed-Rate-Sum` a typed second read to compare with the
+body. The world walk takes no lock and runs off the simulation thread. Unit tests:
+`just test-mod-telemetry` (`mods/telemetry-tests`).
 ## Configuration
 Per-signal endpoint, protocol (gRPC or HttpProtobuf) and headers fall back to the top-level
 defaults, and empty everywhere means console-only. `Configs/EcoTelemetry.json` loads at init
