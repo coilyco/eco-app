@@ -9,7 +9,7 @@
     <RootNamespace>EcoTelemetry.Tests</RootNamespace>
   </PropertyGroup>
 
-  <!-- Link the Eco-free sources of /api/v1/polluters instead of referencing the
+  <!-- Link the Eco-free sources of /api/v1/polluters and /api/v1/climate-settings instead of referencing the
        mod project, the same way mods/replay/tests does: nothing here needs the
        Eco.ReferenceAssemblies feed or the AspNetCore FrameworkReference. This
        directory sits beside the mod, not inside it, because the mod project
@@ -19,7 +19,8 @@
     <Compile Include="../telemetry/src/PolluterDto.cs" />
     <Compile Include="../telemetry/src/PolluterRowBuilder.cs" />
     <Compile Include="../telemetry/src/PolluterSnapshotCache.cs" />
-    <Compile Include="../telemetry/src/PolluterJson.cs" />
+    <Compile Include="../telemetry/src/ClimateSettingsDto.cs" />
+    <Compile Include="../telemetry/src/WireJson.cs" />
   </ItemGroup>
 
   <ItemGroup>

@@ -21,7 +21,7 @@ using Microsoft.AspNetCore.Mvc;
 // Python consumer treats as "endpoint absent", and so is the 503 a cold start
 // answers while the first pass is still running.
 //
-// The body is rendered by PolluterJson and returned as content, never as DTOs,
+// The body is rendered by WireJson and returned as content, never as DTOs,
 // and the rows come from PolluterSnapshotCache (COI-3157 for both). Server-Timing
 // reports how long the pass behind this snapshot took, so the cost of a world walk
 // is read off any response instead of guessed. The X-Polluters-Typed-* headers carry
@@ -52,7 +52,7 @@ public class PolluterApiController : ControllerBase
                 this.Response.Headers["X-Polluters-Typed-Rows"] = scan.TypedRows.ToString(CultureInfo.InvariantCulture);
                 this.Response.Headers["X-Polluters-Typed-Rate-Sum"] = scan.TypedRateSum.ToString("R", CultureInfo.InvariantCulture);
                 this.Response.Headers["X-Polluters-Age-Ms"] = ((long)age.TotalMilliseconds).ToString(CultureInfo.InvariantCulture);
-                return this.Content(PolluterJson.Render(scan.Rows), "application/json");
+                return this.Content(WireJson.Render(scan.Rows), "application/json");
             case PolluterSnapshotCache.Status.Warming:
                 this.Response.Headers["Retry-After"] = "5";
                 return this.StatusCode(StatusCodes.Status503ServiceUnavailable);
