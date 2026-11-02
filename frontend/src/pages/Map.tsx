@@ -3,7 +3,8 @@ import { Link } from "react-router-dom"
 import FreshnessNote from "../components/FreshnessNote"
 import Layout from "../components/Layout"
 import Loading from "../components/Loading"
-import { type ClimateSnapshot, fetchClimate } from "../lib/climateApi"
+import PollutersTable from "../components/PollutersTable"
+import { type ClimateSnapshot, fetchClimateWithDevices } from "../lib/climateApi"
 import { useFreshData } from "../lib/useFreshData"
 import {
   type DriftRow,
@@ -458,6 +459,7 @@ function ClimateSection({ snap, pageLoadedAt }: { snap: ClimateSnapshot; pageLoa
           ))}
         </ul>
       )}
+      {snap.polluters && <PollutersTable block={snap.polluters} />}
       <ClimateCoordination snap={snap} />
     </section>
   )
@@ -512,7 +514,7 @@ export default function MapPage() {
   // section rather than the page.
   const region = useFreshData("region", fetchEcoregion)
   const mapPlane = useFreshData("map", fetchMap)
-  const climatePlane = useFreshData("climate", fetchClimate)
+  const climatePlane = useFreshData("climate", fetchClimateWithDevices)
 
   const snap = region.data
   const map = mapPlane.data

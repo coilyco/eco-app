@@ -23,6 +23,11 @@ state, not an error:
    percentage when no ``/datasets`` series exists. Same endpoint that
    ``ecoregion.py`` already hits.
 
+4. **Device list via the telemetry mod's ``/api/v1/polluters``** — one row per
+   air-polluting world object with its owner and configured emission rate
+   (COI-3149). Absent on an un-modded server, which is a valid state: the card
+   hides the table and the action-count attribution above still stands.
+
 Real-world Earth CO2 anchor: bundled NOAA Mauna Loa annual averages so the
 card can say "412 ppm — Earth crossed that in 2019." Public-domain values
 trimmed to ~10 inflection points so the bundle stays small.
@@ -32,6 +37,7 @@ from __future__ import annotations
 
 import asyncio
 import csv
+import math
 import os
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
@@ -228,6 +234,10 @@ class ClimateSnapshot:
     # when the endpoint is absent (un-modded / older server), in which case the
     # effects block falls back to the documented Eco defaults (``_RULE_*``).
     climate_settings: dict[str, Any] | None = None
+    # Every air-polluting device from the telemetry mod's /api/v1/polluters
+    # endpoint, normalized by ``_normalize_polluter``. ``None`` means the endpoint
+    # was absent or unreadable, which is distinct from ``[]``, a world with none.
+    polluters: list[dict[str, Any]] | None = None
     warnings: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
@@ -263,6 +273,7 @@ class ClimateSnapshot:
             "pollutionActionTypesSeen": list(self.pollution_action_types_seen),
             "availableClimateDatasets": list(self.available_climate_datasets),
             "climateSettings": self.climate_settings,
+            "polluters": self.polluters,
             "warnings": list(self.warnings),
         }
 
@@ -535,6 +546,80 @@ async def _fetch_climate_settings(
     return data
 
 
+POLLUTER_RATE_UNIT = "tons/hour"
+
+
+def _finite_number(value: Any) -> float | None:
+    """A JSON number as a float, or ``None`` for anything else (bool included)."""
+    if isinstance(value, bool) or not isinstance(value, int | float):
+        return None
+    number = float(value)
+    return number if math.isfinite(number) else None
+
+
+def _clean_str(value: Any) -> str | None:
+    return value.strip() or None if isinstance(value, str) else None
+
+
+def _normalize_polluter(row: Any) -> dict[str, Any] | None:
+    """One mod row as the card's snake_case device, or ``None`` for a non-object.
+
+    Every field except ``type`` may be null: the mod leaves a value null when
+    reflection could not read it, and the card shows that as unknown rather than
+    dropping the device.
+    """
+    if not isinstance(row, dict):
+        return None
+    position = row.get("position")
+    coords: dict[str, int] = {}
+    if isinstance(position, dict):
+        for axis in ("x", "y", "z"):
+            value = _finite_number(position.get(axis))
+            if value is not None:
+                coords[axis] = int(value)
+    users = row.get("ownerUsers")
+    owner_users = (
+        [name for name in (_clean_str(u) for u in users) if name] if isinstance(users, list) else []
+    )
+    operating = row.get("operating")
+    type_name = _clean_str(row.get("type")) or "Unknown"
+    return {
+        "object_id": _clean_str(row.get("objectId")),
+        "type": type_name,
+        "name": _clean_str(row.get("name")) or type_name,
+        "owner": _clean_str(row.get("owner")),
+        "owner_users": owner_users,
+        "position": coords if len(coords) == 3 else None,
+        "rate_per_hour": _finite_number(row.get("ratePerHour")),
+        "rate_unit": _clean_str(row.get("rateUnit")) or POLLUTER_RATE_UNIT,
+        "operating": operating if isinstance(operating, bool) else None,
+        "operating_efficiency": _finite_number(row.get("operatingEfficiency")),
+        "total_tons": _finite_number(row.get("totalTons")),
+    }
+
+
+async def _fetch_polluters(
+    client: httpx.AsyncClient, base: str, headers: dict[str, str]
+) -> list[dict[str, Any]] | None:
+    """GET the telemetry mod's ``/api/v1/polluters`` endpoint.
+
+    Returns the normalized device list, ``[]`` for a world with no polluters,
+    or ``None`` when the endpoint is absent (un-modded server, or the mod's 404
+    before the simulation is up) or answers with anything but a JSON array.
+    Same admin-gated ``X-API-Key`` ride as ``_fetch_climate_settings``.
+    """
+    try:
+        r = await client.get(f"{base}/api/v1/polluters", headers=headers)
+        if r.status_code != 200:
+            return None
+        data = r.json()
+    except (httpx.HTTPError, ValueError):
+        return None
+    if not isinstance(data, list):
+        return None
+    return [device for row in data if (device := _normalize_polluter(row)) is not None]
+
+
 async def _fetch_pollution_layer_summary(client: httpx.AsyncClient, base: str) -> str | None:
     """Pull the ``Pollution`` layer's ``Summary`` (e.g. ``"4%"``) from worldlayers.
 
@@ -751,6 +836,7 @@ async def fetch_climate(
             # Live per-server climate ruleset (thresholds/rates). Absent on
             # un-modded servers — the effects block falls back to Eco defaults.
             settings_task = asyncio.create_task(_fetch_climate_settings(client, base, headers))
+            polluters_task = asyncio.create_task(_fetch_polluters(client, base, headers))
             poll_src_task = asyncio.create_task(
                 _fetch_first_nonempty(
                     client, base, CO2_FROM_POLLUTION_CANDIDATES, snapshot.days_elapsed, headers
@@ -787,6 +873,7 @@ async def fetch_climate(
             snapshot.temperature_unit = temperature_result.unit
             snapshot.temperature_interval_seconds = temperature_result.interval_seconds
             snapshot.climate_settings = await settings_task
+            snapshot.polluters = await polluters_task
             (pollution_source_name, pollution_source_result) = await poll_src_task
             snapshot.co2_pollution_series = pollution_source_result.points
             (animal_source_name, animal_source_result) = await animal_src_task
@@ -1282,6 +1369,49 @@ def _build_explainer(breakdown: dict[str, Any], effects: dict[str, Any]) -> list
     return out
 
 
+def _compute_polluters(snapshot: ClimateSnapshot) -> dict[str, Any]:
+    """The device table's payload: rows sorted by rate, plus whole-set totals.
+
+    The totals cover every device even when a caller later bounds ``devices``.
+    ``rate_source`` names where the rate column came from, so a future fallback
+    (rates derived from ``PolluteAir`` counts) can say so on the card instead of
+    passing as a per-object reading.
+    """
+    devices = snapshot.polluters
+    if devices is None:
+        return {
+            "available": False,
+            "devices": [],
+            "total_devices": 0,
+            "operating_devices": 0,
+            "total_rate_per_hour": None,
+            "operating_rate_per_hour": None,
+            "unknown_rate_count": 0,
+            "rate_unit": None,
+            "rate_source": "none",
+        }
+    rated = [d for d in devices if d["rate_per_hour"] is not None]
+    ordered = sorted(
+        devices,
+        key=lambda d: (d["rate_per_hour"] is None, -(d["rate_per_hour"] or 0.0), d["name"]),
+    )
+    return {
+        "available": True,
+        "devices": ordered,
+        "total_devices": len(devices),
+        "operating_devices": sum(1 for d in devices if d["operating"] is True),
+        "total_rate_per_hour": round(sum(d["rate_per_hour"] for d in rated), 4) if rated else None,
+        "operating_rate_per_hour": (
+            round(sum(d["rate_per_hour"] for d in rated if d["operating"] is True), 4)
+            if rated
+            else None
+        ),
+        "unknown_rate_count": len(devices) - len(rated),
+        "rate_unit": next((d["rate_unit"] for d in rated), POLLUTER_RATE_UNIT),
+        "rate_source": "per-object" if rated else "none",
+    }
+
+
 def compute_climate_payload(snapshot: ClimateSnapshot) -> dict[str, Any]:
     """Shape the snapshot for the Jinja card. Pure — no IO, no SVG.
 
@@ -1443,6 +1573,7 @@ def compute_climate_payload(snapshot: ClimateSnapshot) -> dict[str, Any]:
                 "station": snapshot.unattributed_station_rows,
             },
         },
+        "polluters": _compute_polluters(snapshot),
         "warnings": list(snapshot.warnings),
         "available_climate_datasets": list(snapshot.available_climate_datasets),
         "fetched_at_iso": snapshot.fetched_at_iso,

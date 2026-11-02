@@ -2180,6 +2180,10 @@ def build_server(
                 "co2PlantsSeries",
             )
             _bound_rows(payload, climate_limit, "topPolluterCitizens")
+            # The device table is bounded for MCP callers like every other detail
+            # array. Its totals were summed over every device before this cut, and
+            # the SPA asks for limit=0.
+            _bound_rows(payload["polluters"], climate_limit, "devices")
             return CallToolResult(
                 content=[
                     TextContent(type="text", text=climate_markdown),
