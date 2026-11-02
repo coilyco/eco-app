@@ -19,14 +19,18 @@ using Microsoft.AspNetCore.Mvc;
 // A 404 (settings unreadable, e.g. queried before the simulation is up) is a
 // valid answer: the Python consumer treats any non-200 as "endpoint absent"
 // and falls back to the documented Eco defaults.
+//
+// The body is rendered by WireJson and returned as content, never as the DTO:
+// Eco's Newtonsoft resolver serializes double? as `{}` (COI-3157, COI-3160), which
+// the consumer read as "no usable value" and fell back to defaults for every field.
 [ApiController]
 [Route("api/v1/climate-settings")]
 public class ClimateSettingsApiController : ControllerBase
 {
     [HttpGet]
-    public ActionResult<ClimateSettingsDto> Get()
+    public ActionResult Get()
     {
         var dto = ClimateSettingsReader.Read();
-        return dto is null ? this.NotFound() : dto;
+        return dto is null ? this.NotFound() : this.Content(WireJson.Render(dto), "application/json");
     }
 }

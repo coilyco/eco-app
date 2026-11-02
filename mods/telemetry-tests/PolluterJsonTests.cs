@@ -24,7 +24,7 @@ public class PolluterJsonTests
     private static JsonElement[] RenderRows(params object[] worldObjects)
     {
         var rows = worldObjects.Select(PolluterRowBuilder.BuildRow).OfType<PolluterDto>().ToArray();
-        return JsonDocument.Parse(PolluterJson.Render(rows)).RootElement.EnumerateArray().Select(e => e.Clone()).ToArray();
+        return JsonDocument.Parse(WireJson.Render(rows)).RootElement.EnumerateArray().Select(e => e.Clone()).ToArray();
     }
 
     // The invariant the live bug broke. Only position is an object and only
@@ -116,6 +116,6 @@ public class PolluterJsonTests
     [Fact]
     public void An_empty_world_renders_an_empty_array()
     {
-        Assert.Equal("[]", PolluterJson.Render(Array.Empty<PolluterDto>()));
+        Assert.Equal("[]", WireJson.Render(Array.Empty<PolluterDto>()));
     }
 }
