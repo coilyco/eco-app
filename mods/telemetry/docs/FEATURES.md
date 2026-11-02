@@ -23,6 +23,12 @@ eco-app `/climate` card would otherwise show Eco defaults on a retuned server
 ([eco-app#8](https://forgejo.coilysiren.me/coilyco-gaming/eco-app/issues/8)). Reflection-based and
 best-effort like `mods/stores`: unreadable fields are `null`, and `404` before the simulation is
 up is valid. It rides the `/api/v1/*` admin-token (`X-API-Key`) middleware.
+`GET /api/v1/polluters` lists every world object carrying an `AirPollutionComponent`: type, name,
+owner (the owner alias plus up to 25 member users), position, `ratePerHour` in tons/hour
+(`PollutionTonsPerHour`, the configured rate and not a measurement), `operating`, and `totalTons`
+made so far. Same reflection, nullable fields, `404` and auth as above, and the eco-app pollution
+card builds its device table from it (COI-3149). Air only: `GroundPolluterReportComponent`
+exposes no rate, so ground polluters are not listed.
 ## Configuration
 Per-signal endpoint, protocol (gRPC or HttpProtobuf) and headers fall back to the top-level
 defaults, and empty everywhere means console-only. `Configs/EcoTelemetry.json` loads at init

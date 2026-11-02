@@ -255,6 +255,52 @@ describe("Map page", () => {
     expect(raster).toHaveStyle({ opacity: "0" })
   })
 
+  it("lists the polluting devices on the climate card, and asks for all of them", async () => {
+    const withDevices: ClimateSnapshot = {
+      ...CLIMATE,
+      polluters: {
+        available: true,
+        devices: [
+          {
+            object_id: "g1",
+            type: "AirPollutionGeneratorObject",
+            name: "Air Pollution Generator",
+            owner: "alice",
+            owner_users: ["alice"],
+            position: { x: 10, y: 5, z: -3 },
+            rate_per_hour: 12.5,
+            rate_unit: "tons/hour",
+            operating: true,
+            operating_efficiency: 1,
+            total_tons: 340.25,
+          },
+        ],
+        total_devices: 1,
+        operating_devices: 1,
+        total_rate_per_hour: 12.5,
+        operating_rate_per_hour: 12.5,
+        unknown_rate_count: 0,
+        rate_unit: "tons/hour",
+        rate_source: "per-object",
+      },
+    }
+    stubFetch(SNAP, withDevices)
+    renderPage()
+    await waitFor(() => expect(screen.getByTestId("polluters-table")).toBeInTheDocument())
+    expect(screen.getByTestId("polluters-row")).toHaveTextContent("Air Pollution Generator")
+    expect(screen.getByTestId("polluters-row")).toHaveTextContent("alice")
+    expect(screen.getByTestId("polluters-total")).toHaveTextContent("Total, 1 device")
+    const urls = (fetch as unknown as { mock: { calls: [string][] } }).mock.calls.map((c) => c[0])
+    expect(urls).toContain("/preview/get_climate.json?limit=0")
+  })
+
+  it("leaves the device list out of the card when the payload has none", async () => {
+    stubFetch()
+    renderPage()
+    await waitFor(() => expect(screen.getByTestId("climate")).toBeInTheDocument())
+    expect(screen.queryByTestId("polluters")).not.toBeInTheDocument()
+  })
+
   it("removes Mutation timeline plus everything below it", async () => {
     stubFetch()
     renderPage()

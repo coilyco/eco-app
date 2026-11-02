@@ -956,6 +956,14 @@ a.k-card:visited {
   background: var(--leaf-wash);
 }
 
+/* A totals row closes a table whose rows a filter can change (the pollution card). */
+.ledger-table tfoot th,
+.ledger-table tfoot td {
+  color: var(--ink);
+  font-weight: 700;
+  border-top: 2px solid var(--card-border);
+}
+
 /* A price column carries its norm line (eco-app#8368), so a dense table can
    outgrow a phone. It scrolls in its own frame there, and the tables are
    already focusable for keyboard scrolling. */

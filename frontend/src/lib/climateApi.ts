@@ -95,6 +95,40 @@ export interface EarthMatch {
   note: string
 }
 
+// One air-polluting device from the telemetry mod's /api/v1/polluters, as
+// climate.py's _normalize_polluter shapes it. Every field but `type` and `name`
+// can be null: the mod leaves a value null when reflection could not read it.
+export interface Polluter {
+  object_id: string | null
+  type: string
+  name: string
+  owner: string | null
+  owner_users: string[]
+  position: { x: number; y: number; z: number } | null
+  rate_per_hour: number | null
+  rate_unit: string
+  operating: boolean | null
+  operating_efficiency: number | null
+  total_tons: number | null
+}
+
+export interface PollutersBlock {
+  // False when the server has no telemetry mod endpoint (or it was not ready),
+  // which is different from a world that simply has no polluting devices.
+  available: boolean
+  devices: Polluter[]
+  // Totals cover every device even when `devices` was cut down for an MCP caller.
+  total_devices: number
+  operating_devices: number
+  total_rate_per_hour: number | null
+  operating_rate_per_hour: number | null
+  unknown_rate_count: number
+  rate_unit: string | null
+  // "per-object" is a rate the game reports for that device. "none" means no
+  // device had a readable rate.
+  rate_source: "per-object" | "none"
+}
+
 export interface ClimateSnapshot {
   server: { description: string; category: string | null; sourceUrl: string | null }
   days_elapsed: number
@@ -109,13 +143,27 @@ export interface ClimateSnapshot {
   effects: Effects
   explainer: string[]
   earth_match: EarthMatch | null
+  // Optional so a payload from before the device list shipped still parses.
+  polluters?: PollutersBlock
   fetched_at_iso: string
 }
 
-export async function fetchClimate(signal?: AbortSignal): Promise<ClimateSnapshot> {
-  const resp = await fetch("/preview/get_climate.json", { signal })
+async function getClimate(url: string, signal?: AbortSignal): Promise<ClimateSnapshot> {
+  const resp = await fetch(url, { signal })
   if (!resp.ok) {
     throw new Error(`climate fetch failed: HTTP ${resp.status}`)
   }
   return (await resp.json()) as ClimateSnapshot
+}
+
+// The bounded payload: enough for the headline numbers, and the cut the home
+// page pulse takes.
+export function fetchClimate(signal?: AbortSignal): Promise<ClimateSnapshot> {
+  return getClimate("/preview/get_climate.json", signal)
+}
+
+// limit=0: the pollution card renders every device. Without it the endpoint
+// returns the bounded MCP default of 50 devices.
+export function fetchClimateWithDevices(signal?: AbortSignal): Promise<ClimateSnapshot> {
+  return getClimate("/preview/get_climate.json?limit=0", signal)
 }

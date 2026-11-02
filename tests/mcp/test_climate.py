@@ -133,17 +133,35 @@ def _route_actions_empty() -> None:
         respx.get(url).mock(return_value=httpx.Response(200, text="Time,Citizen,Count\n"))
 
 
-def _route_climate_settings(settings: dict[str, object] | None = None) -> None:
-    """Stub the telemetry mod's ``/api/v1/climate-settings`` endpoint.
+def _route_polluters(rows: object = None) -> None:
+    """Stub the telemetry mod's ``/api/v1/polluters`` endpoint.
+
+    ``None`` → 404 (un-modded server, or the mod's pre-simulation 404). Anything
+    else is served as the 200 body, so a test can also hand it a malformed shape.
+    """
+    url = f"{_DEFAULT_BASE}/api/v1/polluters"
+    if rows is None:
+        respx.get(url).mock(return_value=httpx.Response(404))
+    else:
+        respx.get(url).mock(return_value=httpx.Response(200, json=rows))
+
+
+def _route_climate_settings(
+    settings: dict[str, object] | None = None, polluters: object = None
+) -> None:
+    """Stub the telemetry mod's ``/api/v1/climate-settings`` and ``/polluters``.
 
     ``None`` → 404 (endpoint absent, un-modded server → defaults fallback).
-    A dict → 200 with the live per-server ruleset.
+    A dict → 200 with the live per-server ruleset. ``polluters`` follows
+    ``_route_polluters``; both ride the mod, so one helper keeps every fetch test
+    covering the pair.
     """
     url = f"{_DEFAULT_BASE}/api/v1/climate-settings"
     if settings is None:
         respx.get(url).mock(return_value=httpx.Response(404))
     else:
         respx.get(url).mock(return_value=httpx.Response(200, json=settings))
+    _route_polluters(polluters)
 
 
 def _route_flatlist(names: list[str]) -> None:
@@ -335,6 +353,231 @@ async def test_fetch_climate_defaults_when_settings_endpoint_absent() -> None:
     assert eff["temperature"]["ppm_per_degree"] == 25.0
     # No live extras when the endpoint is absent.
     assert "pollution_multiplier" not in eff
+
+
+def _polluter_row(**overrides: object) -> dict[str, object]:
+    """One row as the telemetry mod serializes it (camelCase, nullable fields)."""
+    row: dict[str, object] = {
+        "objectId": "11111111-2222-3333-4444-555555555555",
+        "type": "AirPollutionGeneratorObject",
+        "name": "Air Pollution Generator",
+        "owner": "alice",
+        "ownerUsers": ["alice"],
+        "position": {"x": 10, "y": 5, "z": -3},
+        "ratePerHour": 12.5,
+        "rateUnit": "tons/hour",
+        "operating": True,
+        "operatingEfficiency": 1.0,
+        "totalTons": 340.25,
+    }
+    row.update(overrides)
+    return row
+
+
+async def _fetch_with_polluters(rows: object) -> ClimateSnapshot:
+    _route_datasets({"TotalCO2": [430, 435]})
+    _route_flatlist([])
+    _route_worldlayers_empty()
+    _route_climate_settings(None, polluters=rows)
+    _route_actions_empty()
+    return await fetch_climate(
+        None,
+        info=_info(),
+        days_elapsed=4,
+        admin_token="test-token",
+        default_admin_base=_DEFAULT_BASE,
+    )
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_fetch_climate_lists_every_polluting_device() -> None:
+    """The mod's /api/v1/polluters rows land in the snapshot, normalized to the
+    card's snake_case shape, and the payload sorts them by rate with whole-set
+    totals (COI-3149)."""
+    snap = await _fetch_with_polluters(
+        [
+            _polluter_row(name="Slow", ratePerHour=1.0, owner="bob", ownerUsers=["bob"]),
+            _polluter_row(name="Fast", ratePerHour=30.0),
+            _polluter_row(name="Idle", ratePerHour=4.0, operating=False),
+            _polluter_row(name="Unreadable", ratePerHour=None, operating=None, position=None),
+        ]
+    )
+    assert snap.polluters is not None
+    assert len(snap.polluters) == 4
+
+    fast = next(d for d in snap.polluters if d["name"] == "Fast")
+    assert fast == {
+        "object_id": "11111111-2222-3333-4444-555555555555",
+        "type": "AirPollutionGeneratorObject",
+        "name": "Fast",
+        "owner": "alice",
+        "owner_users": ["alice"],
+        "position": {"x": 10, "y": 5, "z": -3},
+        "rate_per_hour": 30.0,
+        "rate_unit": "tons/hour",
+        "operating": True,
+        "operating_efficiency": 1.0,
+        "total_tons": 340.25,
+    }
+
+    block = compute_climate_payload(snap)["polluters"]
+    assert block["available"] is True
+    # Rate descending, the device with no readable rate last.
+    assert [d["name"] for d in block["devices"]] == ["Fast", "Idle", "Slow", "Unreadable"]
+    assert block["total_devices"] == 4
+    assert block["operating_devices"] == 2
+    assert block["total_rate_per_hour"] == 35.0
+    assert block["operating_rate_per_hour"] == 31.0
+    assert block["unknown_rate_count"] == 1
+    assert block["rate_unit"] == "tons/hour"
+    assert block["rate_source"] == "per-object"
+    unreadable = block["devices"][-1]
+    assert unreadable["rate_per_hour"] is None
+    assert unreadable["operating"] is None
+    assert unreadable["position"] is None
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_fetch_climate_polluters_absent_is_not_an_error() -> None:
+    """A server without the mod (404) leaves the rest of the card intact and the
+    device block unavailable, not an empty table that reads as 'no polluters'."""
+    snap = await _fetch_with_polluters(None)
+    assert snap.polluters is None
+    assert snap.co2_series  # the rest of the climate fetch still landed
+
+    block = compute_climate_payload(snap)["polluters"]
+    assert block["available"] is False
+    assert block["devices"] == []
+    assert block["total_rate_per_hour"] is None
+    assert block["rate_source"] == "none"
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_fetch_climate_polluters_empty_world_is_available() -> None:
+    """200 with [] is a real answer: the world has no polluters."""
+    snap = await _fetch_with_polluters([])
+    assert snap.polluters == []
+    block = compute_climate_payload(snap)["polluters"]
+    assert block["available"] is True
+    assert block["devices"] == []
+    assert block["total_devices"] == 0
+    assert block["total_rate_per_hour"] is None
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_fetch_climate_polluters_tolerates_a_malformed_body() -> None:
+    """A wrong top-level shape reads as absent. Bad rows are dropped and bad
+    fields go null, so one corrupt device never sinks the table."""
+    assert (await _fetch_with_polluters({"error": "nope"})).polluters is None
+
+    climate_mod._clear_cache()
+    respx.reset()
+    snap = await _fetch_with_polluters(
+        [
+            "not-an-object",
+            None,
+            _polluter_row(name="Strings", ratePerHour="12", operating="yes", totalTons=True),
+            _polluter_row(name="NoType", type=None, position={"x": 1}, ownerUsers="alice"),
+        ]
+    )
+    assert snap.polluters is not None
+    assert [d["name"] for d in snap.polluters] == ["Strings", "NoType"]
+    strings, no_type = snap.polluters
+    assert strings["rate_per_hour"] is None
+    assert strings["operating"] is None
+    assert strings["total_tons"] is None
+    assert no_type["type"] == "Unknown"
+    assert no_type["position"] is None
+    assert no_type["owner_users"] == []
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_fetch_climate_polluters_ignores_a_non_200_with_rows() -> None:
+    """Only a 200 is an answer. A 503 that happens to carry a list is not."""
+    _route_datasets({"TotalCO2": [430, 435]})
+    _route_flatlist([])
+    _route_worldlayers_empty()
+    respx.get(f"{_DEFAULT_BASE}/api/v1/climate-settings").mock(return_value=httpx.Response(404))
+    respx.get(f"{_DEFAULT_BASE}/api/v1/polluters").mock(
+        return_value=httpx.Response(503, json=[_polluter_row()])
+    )
+    _route_actions_empty()
+
+    snap = await fetch_climate(
+        None,
+        info=_info(),
+        days_elapsed=4,
+        admin_token="test-token",
+        default_admin_base=_DEFAULT_BASE,
+    )
+    assert snap.polluters is None
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_fetch_climate_polluters_connection_error_is_absent() -> None:
+    """The mod endpoint failing at the transport level must not fail the card."""
+    _route_datasets({"TotalCO2": [430, 435]})
+    _route_flatlist([])
+    _route_worldlayers_empty()
+    respx.get(f"{_DEFAULT_BASE}/api/v1/climate-settings").mock(return_value=httpx.Response(404))
+    respx.get(f"{_DEFAULT_BASE}/api/v1/polluters").mock(side_effect=httpx.ConnectError("refused"))
+    _route_actions_empty()
+
+    snap = await fetch_climate(
+        None,
+        info=_info(),
+        days_elapsed=4,
+        admin_token="test-token",
+        default_admin_base=_DEFAULT_BASE,
+    )
+    assert snap.polluters is None
+    assert snap.co2_series
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_get_climate_bounds_devices_for_mcp_but_not_the_totals() -> None:
+    """The MCP default limit cuts the device rows and says so, while the totals
+    still describe every device. limit=0 (what the SPA sends) returns them all."""
+    respx.get(DEFAULT_ECO_INFO_URL).mock(return_value=httpx.Response(200, json=_info()))
+    _route_datasets({"TotalCO2": [430, 435]})
+    _route_flatlist([])
+    _route_worldlayers_empty()
+    _route_climate_settings(
+        None, polluters=[_polluter_row(name=f"Gen {i}", ratePerHour=float(i)) for i in range(1, 6)]
+    )
+    _route_actions_empty()
+
+    mcp = build_server()
+    handler = mcp.request_handlers[mt.CallToolRequest]
+
+    async def call(arguments: dict[str, object]) -> dict[str, Any]:
+        result = await handler(
+            mt.CallToolRequest(
+                method="tools/call",
+                params=mt.CallToolRequestParams(name="get_climate", arguments=arguments),
+            )
+        )
+        block = result.root.content[1]
+        assert isinstance(block, mt.TextContent)
+        parsed: dict[str, Any] = json.loads(block.text)
+        return parsed
+
+    bounded = (await call({"limit": 2}))["polluters"]
+    assert [d["name"] for d in bounded["devices"]] == ["Gen 5", "Gen 4"]
+    assert bounded["total_devices"] == 5
+    assert bounded["total_rate_per_hour"] == 15.0
+    assert any("devices: showing 2 of 5 rows" in w for w in bounded["warnings"])
+
+    everything = (await call({"limit": 0}))["polluters"]
+    assert len(everything["devices"]) == 5
+    assert "warnings" not in everything
 
 
 @pytest.mark.asyncio
