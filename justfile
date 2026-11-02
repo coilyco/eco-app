@@ -154,6 +154,10 @@ test-mod-replay *ARGS:
 build-mod-telemetry *ARGS:
     @dotnet build mods/telemetry/EcoTelemetry.csproj -c Release "$@"
 
+# Restore and run the telemetry mod C# unit tests (mods/telemetry-tests) with per-phase timings.
+test-mod-telemetry *ARGS:
+    @sh scripts/mods-gate.sh test-mod-telemetry "$@"
+
 # Build the store-exporter Eco mod DLL (mods/stores/src).
 build-mod-stores *ARGS:
     @dotnet build mods/stores/src/EcoStoreExporter.csproj -c Release "$@"

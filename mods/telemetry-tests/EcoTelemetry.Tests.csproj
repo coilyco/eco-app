@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <AssemblyName>EcoTelemetry.Tests</AssemblyName>
+    <RootNamespace>EcoTelemetry.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <!-- Link the Eco-free sources of /api/v1/polluters instead of referencing the
+       mod project, the same way mods/replay/tests does: nothing here needs the
+       Eco.ReferenceAssemblies feed or the AspNetCore FrameworkReference. This
+       directory sits beside the mod, not inside it, because the mod project
+       globs every *.cs under its own folder. It carries no Eco.ReferenceAssemblies
+       reference, so build-mods and package-mods skip it as not a mod. -->
+  <ItemGroup>
+    <Compile Include="../telemetry/src/PolluterDto.cs" />
+    <Compile Include="../telemetry/src/PolluterRowBuilder.cs" />
+    <Compile Include="../telemetry/src/PolluterSnapshotCache.cs" />
+    <Compile Include="../telemetry/src/PolluterJson.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+  </ItemGroup>
+
+</Project>
