@@ -27,4 +27,10 @@ public record ClimateSettingsDto(
     [property: JsonPropertyName("co2PpmPerMeter"), JsonProperty("co2PpmPerMeter")] double? Co2PpmPerMeter,
     [property: JsonPropertyName("pollutionMultiplier"), JsonProperty("pollutionMultiplier")] double? PollutionMultiplier,
     [property: JsonPropertyName("maxCo2PerDayFromAnimals"), JsonProperty("maxCo2PerDayFromAnimals")] double? MaxCo2PerDayFromAnimals,
-    [property: JsonPropertyName("minCo2PerDayFromPlants"), JsonProperty("minCo2PerDayFromPlants")] double? MinCo2PerDayFromPlants);
+    [property: JsonPropertyName("minCo2PerDayFromPlants"), JsonProperty("minCo2PerDayFromPlants")] double? MinCo2PerDayFromPlants,
+    // The caps on how far the sim may move, so a retuned MaxSeaLevelRise is readable (COI-3216).
+    // Trailing and defaulted, so callers built before they existed still compile.
+    [property: JsonPropertyName("maxSeaLevelRise"), JsonProperty("maxSeaLevelRise")] double? MaxSeaLevelRise = null,
+    [property: JsonPropertyName("maxSeaLevelRiseRatePerDay"), JsonProperty("maxSeaLevelRiseRatePerDay")] double? MaxSeaLevelRiseRatePerDay = null,
+    [property: JsonPropertyName("maxTemperatureRise"), JsonProperty("maxTemperatureRise")] double? MaxTemperatureRise = null,
+    [property: JsonPropertyName("maxTemperatureChangePerDay"), JsonProperty("maxTemperatureChangePerDay")] double? MaxTemperatureChangePerDay = null);

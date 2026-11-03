@@ -18,7 +18,7 @@ reads JSON config from `Configs/`.
 ## HTTP surface
 `GET /api/v1/climate-settings` is a read-only `[ApiController]` serving the live climate ruleset
 (`EcoDef.Obj.ClimateSettings`: CO2 and temperature thresholds and rates, `PollutionMultiplier`,
-animal and plant caps) as camelCase JSON, because Eco has no HTTP surface for them and the
+animal and plant caps, and the max sea-level and temperature rise with their daily rates) as camelCase JSON, because Eco has no HTTP surface for them and the
 eco-app `/climate` card would otherwise show Eco defaults on a retuned server
 ([eco-app#8](https://forgejo.coilysiren.me/coilyco-gaming/eco-app/issues/8)). Reflection-based and
 best-effort like `mods/stores`: unreadable fields are `null`, and `404` before the simulation is

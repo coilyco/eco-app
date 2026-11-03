@@ -355,6 +355,50 @@ async def test_fetch_climate_defaults_when_settings_endpoint_absent() -> None:
     assert "pollution_multiplier" not in eff
 
 
+_EMPTY_OBJECT_SETTINGS: dict[str, object] = {
+    key: {}
+    for key in (
+        "minCo2Ppm",
+        "temperatureThresholdPpm",
+        "co2PpmPerDegree",
+        "seaLevelThresholdPpm",
+        "co2PpmPerMeter",
+        "pollutionMultiplier",
+        "maxCo2PerDayFromAnimals",
+        "minCo2PerDayFromPlants",
+    )
+}
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_fetch_climate_reads_empty_object_settings_as_the_defaults() -> None:
+    """COI-3216: a mod build that predates WireJson answers every field as ``{}``.
+    The dict arrives intact, but no ``{}`` is a rule, so the card shows the Eco
+    defaults and says so rather than reading eight empty objects as live values."""
+    _route_datasets({"TotalCO2": [400, 410]})
+    _route_flatlist([])
+    _route_worldlayers_empty()
+    _route_climate_settings(_EMPTY_OBJECT_SETTINGS)
+    _route_actions_empty()
+
+    snap = await fetch_climate(
+        None,
+        info=_info(),
+        days_elapsed=4,
+        admin_token="test-token",
+        default_admin_base=_DEFAULT_BASE,
+    )
+    assert snap.climate_settings == _EMPTY_OBJECT_SETTINGS
+
+    eff = compute_climate_payload(snap)["effects"]
+    assert eff["source"] == "default"
+    assert eff["temperature"]["threshold_ppm"] == 400.0
+    assert eff["temperature"]["ppm_per_degree"] == 25.0
+    assert eff["sea_level"]["threshold_ppm"] == 400.0
+    assert "pollution_multiplier" not in eff
+
+
 def _polluter_row(**overrides: object) -> dict[str, object]:
     """One row as the telemetry mod serializes it (camelCase, nullable fields)."""
     row: dict[str, object] = {
@@ -1019,6 +1063,31 @@ def test_resolve_rules_partial_settings_fall_back_per_field() -> None:
     assert rules["sea_threshold_ppm"] == 400.0
     assert rules["ppm_per_meter"] == 25.0
     assert rules["min_co2_ppm"] == 325.0
+
+
+def test_resolve_rules_reads_an_empty_object_as_no_rule() -> None:
+    """COI-3216: ``{}`` is what Eco's Newtonsoft resolver wrote for a ``double?``.
+    It is a dict, not a number, so it falls back to the Eco default and is never
+    counted as a live field."""
+    rules = _resolve_rules(_EMPTY_OBJECT_SETTINGS)
+    assert rules["source"] == "default"
+    assert rules["min_co2_ppm"] == 325.0
+    assert rules["temp_threshold_ppm"] == 400.0
+    assert rules["ppm_per_degree"] == 25.0
+    assert rules["sea_threshold_ppm"] == 400.0
+    assert rules["ppm_per_meter"] == 25.0
+    assert rules["pollution_multiplier"] is None
+    assert rules["max_co2_per_day_from_animals"] is None
+    assert rules["min_co2_per_day_from_plants"] is None
+
+
+def test_resolve_rules_keeps_a_real_number_beside_empty_objects() -> None:
+    """One readable field among ``{}`` values is live for that field alone."""
+    rules = _resolve_rules({**_EMPTY_OBJECT_SETTINGS, "seaLevelThresholdPpm": 420.0})
+    assert rules["source"] == "live"
+    assert rules["sea_threshold_ppm"] == 420.0
+    assert rules["temp_threshold_ppm"] == 400.0
+    assert rules["pollution_multiplier"] is None
 
 
 def test_resolve_rules_ignores_non_numeric_and_bool() -> None:
