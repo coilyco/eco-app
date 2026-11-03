@@ -30,8 +30,12 @@ internal static class ClimateSettingsReader
     public static ClimateSettingsDto? Read()
     {
         var settings = FindClimateSettings();
-        if (settings is null) return null;
+        return settings is null ? null : From(settings);
+    }
 
+    // Split out so a test can hand it an object carrying the EcoSim.eco member names.
+    internal static ClimateSettingsDto From(object settings)
+    {
         return new ClimateSettingsDto(
             MinCo2Ppm: AsDouble(GetMember(settings, "MinCO2ppm", "MinCo2Ppm", "MinCO2PPM")),
             TemperatureThresholdPpm: AsDouble(GetMember(settings, "TemperaturesRiseAtCO2ppm", "TemperatureRiseAtCO2ppm")),
@@ -40,7 +44,11 @@ internal static class ClimateSettingsReader
             Co2PpmPerMeter: AsDouble(GetMember(settings, "CO2ppmPerSeaLevelMeterRise")),
             PollutionMultiplier: AsDouble(GetMember(settings, "PollutionMultiplier")),
             MaxCo2PerDayFromAnimals: AsDouble(GetMember(settings, "MaxCO2PerDayFromAnimals")),
-            MinCo2PerDayFromPlants: AsDouble(GetMember(settings, "MinCO2PerDayFromPlants")));
+            MinCo2PerDayFromPlants: AsDouble(GetMember(settings, "MinCO2PerDayFromPlants")),
+            MaxSeaLevelRise: AsDouble(GetMember(settings, "MaxSeaLevelRise")),
+            MaxSeaLevelRiseRatePerDay: AsDouble(GetMember(settings, "MaxSeaLevelRiseRatePerDay")),
+            MaxTemperatureRise: AsDouble(GetMember(settings, "MaxTemperatureRise")),
+            MaxTemperatureChangePerDay: AsDouble(GetMember(settings, "MaxTemperatureChangePerDay")));
     }
 
     // EcoDef.Obj.ClimateSettings. EcoDef is a singleton in Eco.Simulation; we

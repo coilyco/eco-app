@@ -20,6 +20,7 @@
     <Compile Include="../telemetry/src/PolluterRowBuilder.cs" />
     <Compile Include="../telemetry/src/PolluterSnapshotCache.cs" />
     <Compile Include="../telemetry/src/ClimateSettingsDto.cs" />
+    <Compile Include="../telemetry/src/ClimateSettingsReader.cs" />
     <Compile Include="../telemetry/src/WireJson.cs" />
   </ItemGroup>
 
