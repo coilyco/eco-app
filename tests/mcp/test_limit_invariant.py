@@ -394,11 +394,13 @@ async def test_a_filtered_find_trade_keeps_the_ordinary_row_limit(
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize(("limit", "rows"), [(0, 160), (12, 12)])
-async def test_an_unfiltered_find_trade_still_gives_the_caller_the_rows_it_asks_for(
-    monkeypatch: pytest.MonkeyPatch, limit: int, rows: int
+@pytest.mark.parametrize(("limit", "rows", "offers"), [(0, 160, 6), (7, 7, 3), (100, 10, 3)])
+async def test_an_unfiltered_find_trade_caps_a_models_own_limit_and_zero_means_all(
+    monkeypatch: pytest.MonkeyPatch, limit: int, rows: int, offers: int
 ) -> None:
     payload = await _find_trade(monkeypatch, {"limit": limit})
 
     assert len(payload["marketSummaries"]) == rows
-    assert len(payload["cheapest"][0]["offers"]) == 6
+    assert len(payload["cheapest"][0]["offers"]) == offers
+    if limit:
+        assert not any("limit=0" in w for w in payload["warnings"])
