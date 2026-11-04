@@ -48,7 +48,7 @@ const PIVOT = {
       kind: "craft",
       time: 100000,
       day: 1.16,
-      actor: "elizacorn",
+      actor: "tarnbright",
       actionType: "ItemCraftedAction",
       station: "(hand)",
       quantity: 1,
@@ -65,7 +65,7 @@ const PIVOT = {
   summary: {
     crafters: [
       { name: "Reihtnog", quantity: 12, events: 3 },
-      { name: "elizacorn", quantity: 1, events: 1 },
+      { name: "tarnbright", quantity: 1, events: 1 },
     ],
     supply: {
       storeCount: 1,
@@ -237,7 +237,7 @@ describe("Item", () => {
       ...sale(0.29, "Ice Dragon Credit", 3),
       ...sale(0.3, "reihtnog Credit", 3),
       ...sale(0.4, "Cookie Credit", 3),
-      ...sale(0.4, "elizacorn Credit", 1),
+      ...sale(0.4, "tarnbright Credit", 1),
     ]
     const norm = { basis: "all", n: 1130, cycles: 13, referenceCurrency: "Sirens Credit" }
     stubPivotFetch({ ...PIVOT, trades, tradeCount: 20, norm })

@@ -39,11 +39,11 @@ public class PolluterRowBuilderTests
     {
         var truck = new SteamTruckObject
         {
-            NameOfCreator = "Netty",
+            NameOfCreator = "Pip Okoro",
             Components = { new AirPollutionComponent() },
         };
 
-        Assert.Equal("Netty", PolluterRowBuilder.BuildRow(truck)?.Owner);
+        Assert.Equal("Pip Okoro", PolluterRowBuilder.BuildRow(truck)?.Owner);
     }
 
     [Fact]

@@ -122,8 +122,8 @@ def _norm_item(name: str) -> str:
 
 def _norm_store(text: str) -> str:
     """Fold a store name or owner handle to a comparison key: lowercase letters
-    and digits only, so `@Elizabeth1337` and `charred corns & more` both meet the
-    label `elizabeth1337's Charred Corns & More` (COI-758)."""
+    and digits only, so `@Quillfeather` and `charred corns & more` both meet the
+    label `quillfeather's Charred Corns & More` (COI-758)."""
     return "".join(ch for ch in (text or "").lower() if ch.isalnum())
 
 

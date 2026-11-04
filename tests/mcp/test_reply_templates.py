@@ -125,10 +125,10 @@ def _offer(store: str, price: float, owner: str) -> ShelfOffer:
 
 def test_find_trade_names_the_cheapest_seller() -> None:
     report = build_logistics(
-        [_offer("Shiny Rocks", 3.0, "Snorf"), _offer("Quarry", 4.5, "Ada")], item="limestone"
+        [_offer("Shiny Rocks", 3.0, "Wick Arden"), _offer("Quarry", 4.5, "Ada")], item="limestone"
     )
     text = render_reply(REPLY_TEMPLATES["find_trade"], report.to_dict(), {"item": "limestone"})
-    assert text == "The cheapest Limestone is 3 Credits at Shiny Rocks, owned by Snorf."
+    assert text == "The cheapest Limestone is 3 Credits at Shiny Rocks, owned by Wick Arden."
 
 
 def _stocked(store: str, price: float, owner: str, quantity: float, currency: str) -> ShelfOffer:
@@ -143,12 +143,12 @@ def test_find_trade_names_a_store_with_stock_over_a_zero_stock_tie() -> None:
     report = build_logistics(
         [
             _stocked("RATWORKS", 0.7, "TheBarracksRat", 0, "Barter"),
-            _stocked("Lumberaholics", 0.7, "Scuba Steve", 185, "Spectres"),
+            _stocked("Lumberaholics", 0.7, "Marlow Fenn", 185, "Spectres"),
         ],
         item="lumber",
     )
     text = render_reply(REPLY_TEMPLATES["find_trade"], report.to_dict(), {"item": "lumber"})
-    assert text == "The cheapest Lumber is 0.7 Spectres at Lumberaholics, owned by Scuba Steve."
+    assert text == "The cheapest Lumber is 0.7 Spectres at Lumberaholics, owned by Marlow Fenn."
 
 
 def test_find_trade_all_zero_stock_says_sold_out_not_a_price() -> None:
@@ -174,7 +174,7 @@ def _store_reply(offers: list[ShelfOffer], *, item: str, store: str | None = Non
 
 def test_find_trade_store_and_item_answers_for_that_store_not_the_market() -> None:
     """COI-2612: the Quarry is dearer than Shiny Rocks, and the reply is the Quarry's."""
-    offers = [_offer("Shiny Rocks", 3.0, "Snorf"), _offer("Quarry", 4.5, "Ada")]
+    offers = [_offer("Shiny Rocks", 3.0, "Wick Arden"), _offer("Quarry", 4.5, "Ada")]
     text = _store_reply(offers, store="quarry", item="limestone")
     assert text == "Quarry has 40 Limestone at 4.5 Credits in stock."
     # Without the store the market-wide entry still answers.
@@ -188,9 +188,9 @@ def test_find_trade_store_and_item_sold_out_says_so_for_that_store() -> None:
 
 
 def test_find_trade_store_and_item_names_the_cheapest_stocked_lines_first() -> None:
-    cheap = _stocked("Lumberaholics", 0.7, "Scuba Steve", 185, "Spectres")
-    dear = _stocked("Lumberaholics", 2.0, "Scuba Steve", 10, "Credits")
-    out = _stocked("Lumberaholics", 0.1, "Scuba Steve", 0, "Barter")
+    cheap = _stocked("Lumberaholics", 0.7, "Marlow Fenn", 185, "Spectres")
+    dear = _stocked("Lumberaholics", 2.0, "Marlow Fenn", 10, "Credits")
+    out = _stocked("Lumberaholics", 0.1, "Marlow Fenn", 0, "Barter")
     text = _store_reply([dear, out, cheap], store="lumberaholics", item="lumber")
     assert text == "Lumberaholics has 185 Lumber at 0.7 Spectres, 10 Lumber at 2 Credits in stock."
 
@@ -288,8 +288,8 @@ def _currency_payload(holder: str | None) -> dict[str, Any]:
 def test_get_currency_names_the_top_holder_or_its_account() -> None:
     templates = REPLY_TEMPLATES["get_currency"]
     assert (
-        render_reply(templates, _currency_payload("Snorf"), {"currency": "spectres"})
-        == "The top holder of Spectres is Snorf with 120.5."
+        render_reply(templates, _currency_payload("Wick Arden"), {"currency": "spectres"})
+        == "The top holder of Spectres is Wick Arden with 120.5."
     )
     assert (
         render_reply(templates, _currency_payload(None), {"currency": "spectres"})
