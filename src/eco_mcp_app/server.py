@@ -1075,6 +1075,7 @@ MCP_ROW_LIMIT = 50
 # model is handed. Its rows and the offers inside them are cut to a few, with
 # the count of the rest (COI-3373). A filtered call keeps MCP_ROW_LIMIT.
 OVERVIEW_ROWS = 5
+OVERVIEW_MAX_ROWS = 10
 OVERVIEW_OFFERS = 3
 _OVERVIEW_NESTED = {"cheapest": "offers", "resale": "offers", "supplyGaps": "buyers"}
 
@@ -1256,7 +1257,7 @@ def _bound_overview_nested(payload: dict[str, Any], offers: int) -> None:
         if cut:
             payload.setdefault("warnings", []).append(
                 f"{board}.{inner}: showing {offers:,} per row, {cut:,} more left out; "
-                "pass limit=0 or a filter for all of them"
+                "ask about one item, store or currency for the rest"
             )
 
 
@@ -2404,7 +2405,9 @@ def build_server(
             logistics_md = logistics_markdown(report)
             overview = not (item_arg or currency_arg or store_arg)
             limit = _resolve_limit(arguments or {}, OVERVIEW_ROWS if overview else MCP_ROW_LIMIT)
-            if overview and limit == OVERVIEW_ROWS:
+            if overview and limit:
+                # A model asks for limit=100 on its own (96 KB live, COI-3373).
+                limit = min(limit, OVERVIEW_MAX_ROWS)
                 _bound_overview_nested(logistics_payload, OVERVIEW_OFFERS)
             _bound_rows(
                 logistics_payload,
@@ -2416,6 +2419,12 @@ def build_server(
                 "marketSummaries",
                 "stores",
             )
+            if overview and limit:
+                narrow = "ask about one item or store for more"
+                logistics_payload["warnings"] = [
+                    w.replace("pass limit=0 for all of them", narrow)
+                    for w in logistics_payload.get("warnings", [])
+                ]
             return CallToolResult(
                 content=[
                     TextContent(type="text", text=logistics_md),
