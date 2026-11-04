@@ -41,7 +41,7 @@ from .civics import civics_markdown, fetch_civics
 from .crafting import CraftingAtlas, atlas_markdown, fetch_atlas
 from .dual_routes import DualRouteRegistry
 from .ledger_freshness import WorldClock, apply_freshness, read_world_clock
-from .logistics import fetch_logistics, logistics_markdown, resolved_item_id
+from .logistics import fetch_logistics, fetch_store_names, logistics_markdown, resolved_item_id
 from .mods import read_mods
 from .progression import fetch_history, history_markdown
 from .public_routes import STORES_MAX_JSON_BYTES, STORES_NESTED_LIMIT, STORES_ROW_LIMIT
@@ -902,6 +902,16 @@ def _append_site_link(
     return result
 
 
+async def _store_vocabulary_entries() -> list[dict[str, Any]]:
+    """The default server's store names, empty rather than failing when it is out of reach."""
+    try:
+        api_key = os.environ.get(ADMIN_API_KEY_ENV) or _get_admin_token()
+        pairs = await fetch_store_names(None, api_key)
+    except Exception:  # a vocabulary degrades to empty, never an error
+        return []
+    return vocab_mod.store_vocabulary(pairs)
+
+
 async def _currency_vocabulary_entries() -> list[dict[str, Any]]:
     """The default server's named currencies, empty rather than failing when the
     server or its admin data is out of reach."""
@@ -1632,6 +1642,12 @@ def build_server(
                 mimeType="application/json",
             ),
             Resource(
+                uri=AnyUrl(vocab_mod.STORES_URI),
+                name="eco-store-vocabulary",
+                description="Every store name on the server, for find_trade's store argument.",
+                mimeType="application/json",
+            ),
+            Resource(
                 uri=AnyUrl(vocab_mod.PRICED_ITEMS_URI),
                 name="eco-priced-item-vocabulary",
                 description="Every item price_by_stage resolves, shorthand included.",
@@ -1654,6 +1670,8 @@ def build_server(
             entries = vocab_mod.item_vocabulary(load_recipe_index())
         elif key == vocab_mod.CURRENCIES_URI:
             entries = await _currency_vocabulary_entries()
+        elif key == vocab_mod.STORES_URI:
+            entries = await _store_vocabulary_entries()
         elif key == vocab_mod.PRICED_ITEMS_URI:
             price_norms = norms_mod.load()
             entries = price_norms.vocabulary(_recipe_items()) if price_norms else []

@@ -28,12 +28,12 @@ A tool's `tools/list` entry carries one-line reply templates so a router answers
 - **Values** - floats print at most 2 decimals. Missing, null, blank, boolean, object, or list values make it ineligible.
 - **Cap** - over 280 code points is ineligible.
 
-Shipped: `find_trade`, `get_market`, `price_recipe`, `get_currency`, `price_by_stage`, `get_server_status`. `find_trade` with `store` and `item` renders `{{reply}}`, built from that one store's shelf and null unless one store matched. `get_recipes` has none (a list needs a loop).
+Shipped: `find_trade`, `get_market`, `price_recipe`, `get_currency`, `price_by_stage`, `get_server_status`. `find_trade` with `store` and `item` renders `{{reply}}`, built from that one store's shelf and null unless one store matched. With `store` alone it renders each matched store's true listing count, how many are in stock and the two deepest lines (up to three stores), and is null when that exceeds the cap, so the model answers. A name no store contains but one is a word or a letter off resolves to that store (`storeResolvedFrom`), or lists the closest as `storeSuggestions`. A store's `listings` counts lines the board cannot show (price 0, no item name) as `unlistedLines`, and `truncated` says the shelf was cut. `get_recipes` has none (a list needs a loop).
 
 ### Argument vocabularies
 
 `_meta["coilyco/args"]` maps an argument to `{"vocabulary": <resource uri>, "field": "id"|"name"}`. The caller matches words there and passes `field`. Source: `src/eco_mcp_app/vocab.py`.
 
-- **Resources** - `eco://vocab/{items,currencies,priced-items,stages}`, each `{"entries": [{"id", "name", "aliases"}]}`, unannotated.
-- **Fields** - `name` for `find_trade.item`, `price_by_stage.item`, `get_currency.currency`. `id` for `get_market.item` (spaces folded from the id only) and `price_recipe.product`.
+- **Resources** - `eco://vocab/{items,currencies,priced-items,stages,stores}`, each `{"entries": [{"id", "name", "aliases"}]}`, unannotated.
+- **Fields** - `name` for `find_trade.store` (a name once however many stores carry it, `Owner's Name` as its own longer entry, no one-word names), `find_trade.item`, `price_by_stage.item`, `get_currency.currency`. `id` for `get_market.item` (spaces folded from the id only) and `price_recipe.product`.
 - **Ignore** - an `ignore` list names domain words that are never values (shop words).

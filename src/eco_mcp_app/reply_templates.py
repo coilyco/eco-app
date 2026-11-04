@@ -28,6 +28,9 @@ REPLY_TEMPLATES: dict[str, list[dict[str, Any]]] = {
         # Store and item both asked: the board is that one store's slice, so the
         # market-wide wording below would misread. The payload carries the line.
         {"when_args": ["store", "item"], "text": "{{reply}}"},
+        # Store alone: a short line with the true listing count, and none at all when
+        # the payload carries none, so a store too big to summarise goes to the model.
+        {"when_args": ["store"], "text": "{{reply}}"},
         {
             "when_args": ["item"],
             "text": (

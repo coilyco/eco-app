@@ -130,7 +130,10 @@ class FindTradeInput(TradeInput):
             "Optional case-insensitive part of a store's name or its owner's handle, such "
             "as a shop name or a player. Returns that store's whole shelf: the items it "
             "sells and buys, stock quantity and price per line, owner, and currency. A "
-            "name that matches no store returns an explicit no-match, not an empty shelf."
+            "name that matches no store but is a word swapped or a letter off one is answered "
+            "as that store, or lists the closest names. A name near nothing returns an "
+            "explicit no-match, not an empty shelf. A store name often holds item words "
+            "such as food, so a question naming a shop sets store, never item."
         ),
     )
 

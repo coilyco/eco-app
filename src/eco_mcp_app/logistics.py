@@ -39,6 +39,7 @@ Design:
 from __future__ import annotations
 
 import os
+import re
 import statistics
 from collections import defaultdict
 from collections.abc import Iterable
@@ -95,6 +96,12 @@ SUPPLY_GAP_ROWS = int(os.environ.get("ECO_LOGI_GAP_ROWS", "40"))
 # own caps: the stores returned, and shelf lines per store. The line count that
 # was cut is reported, never silent (COI-758).
 STORE_ROWS = int(os.environ.get("ECO_LOGI_STORE_ROWS", "10"))
+# A store name no listing contains is tried again for a near one (COI-3279). A
+# lone near store, or one clearly nearer than the rest, is answered as that store.
+_NEAR_MIN_EDIT = 0.85
+_NEAR_MARGIN = 0.2
+_NEAR_MAX_CHARS = 80
+_NEAR_SUGGESTIONS = 3
 STORE_SHELF_LINES = int(os.environ.get("ECO_LOGI_STORE_SHELF_LINES", "60"))
 
 
@@ -123,6 +130,63 @@ def _norm_store(text: str) -> str:
 def _store_matches(offer: ShelfOffer, want_store: str) -> bool:
     """True when a normalized query is part of this offer's store label or owner."""
     return want_store in _norm_store(offer.store_label) or want_store in _norm_store(offer.owner)
+
+
+def _levenshtein(a: str, b: str) -> int:
+    """Edit distance between two short strings."""
+    if a == b:
+        return 0
+    previous = list(range(len(b) + 1))
+    for i, ca in enumerate(a, 1):
+        row = [i]
+        for j, cb in enumerate(b, 1):
+            row.append(min(previous[j] + 1, row[j - 1] + 1, previous[j - 1] + (ca != cb)))
+        previous = row
+    return previous[-1]
+
+
+def _store_words(text: str) -> list[str]:
+    """Words of a store name or handle; the `s` of a possessive is not one."""
+    return [w for w in re.findall(r"[a-z0-9]+", (text or "").lower()) if len(w) > 1 or w.isdigit()]
+
+
+def _store_closeness(query: str, candidate: str) -> float:
+    """How near a query is to one store name, 0 when it is not near at all.
+
+    Near is a one-letter typo in the whole name, or two thirds of the shorter
+    name's words shared (a word within one letter counting as shared). A single
+    shared word is never near: it is a substring match's job, and already failed.
+    """
+    q, c = _store_words(query), _store_words(candidate)
+    fq, fc = "".join(q), "".join(c)
+    if not fq or not fc or len(fq) > _NEAR_MAX_CHARS or len(fc) > _NEAR_MAX_CHARS:
+        return 0.0
+    edit = 1 - _levenshtein(fq, fc) / max(len(fq), len(fc))
+    spent, shared = list(c), 0
+    for word in q:
+        for i, other in enumerate(spent):
+            one_off = len(word) >= 5 and len(other) >= 5 and _levenshtein(word, other) <= 1
+            if word == other or one_off:
+                shared += 1
+                del spent[i]
+                break
+    enough = shared >= 2 and shared * 3 >= 2 * min(len(q), len(c))
+    overlap = shared / max(len(q), len(c)) if enough else 0.0
+    return max(edit if edit >= _NEAR_MIN_EDIT else 0.0, overlap)
+
+
+def _near_stores(priced: Iterable[ShelfOffer], query: str) -> list[tuple[float, ShelfOffer]]:
+    """Stores a query is near to, best first, one offer standing for each store."""
+    best: dict[str, tuple[float, ShelfOffer]] = {}
+    for o in priced:
+        score = max(
+            _store_closeness(query, o.store_name or o.store_label),
+            _store_closeness(query, o.store_label),
+            _store_closeness(query, o.owner),
+        )
+        if score > 0 and score > best.get(o.store_key, (0.0, o))[0]:
+            best[o.store_key] = (score, o)
+    return sorted(best.values(), key=lambda pair: (-pair[0], pair[1].store_label.lower()))
 
 
 def _item_matches(offer: ShelfOffer, want_item: str) -> bool:
@@ -230,6 +294,10 @@ class LogisticsReport:
     # The one-line answer `{{reply}}` templates when `store` and `item` were both
     # asked and exactly one store matched; null otherwise (COI-2612).
     reply: str | None = None
+    # A store name nothing contained, answered as a near one or offered as the
+    # likely match: what was asked, and the stores it is near to (COI-3279).
+    store_resolved_from: str | None = None
+    store_suggestions: list[dict[str, Any]] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
@@ -248,6 +316,8 @@ class LogisticsReport:
             "storeQuery": self.store_query,
             "storesMatched": self.stores_matched,
             "stores": list(self.stores),
+            "storeResolvedFrom": self.store_resolved_from,
+            "storeSuggestions": list(self.store_suggestions),
             "reply": self.reply,
             "warnings": list(self.warnings),
         }
@@ -263,8 +333,12 @@ def _passes_filters(
     want_item: str | None,
     want_currency: str | None,
     want_store: str | None = None,
+    want_keys: set[str] | None = None,
 ) -> bool:
-    if want_store is not None and not _store_matches(offer, want_store):
+    if want_keys is not None:
+        if offer.store_key not in want_keys:
+            return False
+    elif want_store is not None and not _store_matches(offer, want_store):
         return False
     if want_item is not None and not _item_matches(offer, want_item):
         return False
@@ -280,6 +354,7 @@ def build_logistics(
     item: str | None = None,
     currency: str | None = None,
     store: str | None = None,
+    unlisted: dict[str, dict[str, int]] | None = None,
     top_per_item: int = TOP_PER_ITEM,
     top_rows: int = TOP_ROWS,
     top_gap_rows: int = SUPPLY_GAP_ROWS,
@@ -311,7 +386,22 @@ def build_logistics(
     # Kept so an empty filtered result can tell a lookup miss from a dead
     # market — see the warning below (#247).
     total_before_filter = len(priced)
-    kept = [o for o in priced if _passes_filters(o, want_item, want_currency, want_store)]
+    # A name no store contains is tried again as a near one, before the filter runs,
+    # so the resolved store's lines are the ones kept.
+    near_keys: set[str] | None = None
+    resolved_from: str | None = None
+    suggestions: list[tuple[float, ShelfOffer]] = []
+    if want_store is not None and not any(_store_matches(o, want_store) for o in priced):
+        suggestions = _near_stores(priced, store or "")[:_NEAR_SUGGESTIONS]
+        if suggestions and (
+            len(suggestions) == 1 or suggestions[0][0] - suggestions[1][0] >= _NEAR_MARGIN
+        ):
+            near_keys = {suggestions[0][1].store_key}
+            resolved_from = (store or "").strip()
+            suggestions = suggestions[:1]
+    kept = [
+        o for o in priced if _passes_filters(o, want_item, want_currency, want_store, near_keys)
+    ]
 
     # (item, currency) -> {"sell": [...], "buy": [...]}
     markets: dict[tuple[str, str], dict[str, list[ShelfOffer]]] = defaultdict(
@@ -476,10 +566,29 @@ def build_logistics(
 
     matched_keys: set[str] = set()
     if want_store is not None:
-        matched_keys = {o.store_key for o in priced if _store_matches(o, want_store)}
+        matched_keys = near_keys or {o.store_key for o in priced if _store_matches(o, want_store)}
         report.store_query = (store or "").strip()
         report.stores_matched = len(matched_keys)
-        _fill_store_board(report, priced, kept, matched_keys, want_item, want_currency)
+        if resolved_from is not None:
+            near = suggestions[0][1]
+            report.store_resolved_from = resolved_from
+            report.warnings.append(
+                f"no store is named {resolved_from!r}. Showing the closest, {near.store_label}. "
+                "Say so if that is not the store meant."
+            )
+        elif suggestions:
+            report.store_suggestions = [
+                {"store": o.store_label, "owner": o.owner or None, "closeness": round(score, 2)}
+                for score, o in suggestions
+            ]
+            report.warnings.append(
+                f"no store is named {store!r}. Closest: "
+                + "; ".join(f"{o.store_label}" for _, o in suggestions)
+                + ". Ask again with one of those names."
+            )
+        _fill_store_board(
+            report, priced, kept, matched_keys, want_item, want_currency, unlisted or {}
+        )
         # Arbitrage and supply gaps compare stores, and one store's slice of the
         # market cannot say either truthfully (its own buy order would read as
         # unmet demand), so they are left out rather than shown misleading.
@@ -548,6 +657,7 @@ def _fill_store_board(
     matched_keys: set[str],
     want_item: str | None,
     want_currency: str | None,
+    unlisted: dict[str, dict[str, int]],
 ) -> None:
     """Fill `report.stores` with one shelf per store a `store` query matched.
 
@@ -591,9 +701,25 @@ def _fill_store_board(
             "shelfLines": len(lines),
             "shelf": [o.to_dict() for o in lines[:STORE_SHELF_LINES]],
         }
+        # Lines the exporter sent that this board cannot show, counted so the total
+        # a caller reads is the store's, not the priced part of it (COI-3279).
+        dropped = unlisted.get(key, {})
+        free, nameless = dropped.get("free", 0), dropped.get("nameless", 0)
+        row["unlistedLines"] = free + nameless
+        row["listings"] = sum(1 for o in priced if o.store_key == key) + free + nameless
+        row["truncated"] = len(lines) > STORE_SHELF_LINES
         notes: list[str] = []
         if len(lines) > STORE_SHELF_LINES:
             notes.append(f"shelf shows {STORE_SHELF_LINES:,} of {len(lines):,} lines")
+        if free or nameless:
+            parts = []
+            if free:
+                parts.append(f"{free:,} free or barter (price 0)")
+            if nameless:
+                parts.append(f"{nameless:,} with no item name")
+            notes.append(
+                f"{free + nameless:,} more listing(s) are not on this shelf: " + ", ".join(parts)
+            )
         if not live:
             notes.append(
                 "no live shelf for this store: prices are recent median trade prices and "
@@ -607,8 +733,11 @@ def _fill_store_board(
             )
         if notes:
             row["note"] = "; ".join(notes)
-        if want_item and (reply := _store_reply(first.store_label, live, lines)):
-            replies[key] = reply
+        if want_item:
+            if reply := _store_reply(first.store_label, live, lines):
+                replies[key] = reply
+        else:
+            replies[key] = _store_summary(first.store_label, live, lines, row)
         rows.append(row)
     rows.sort(key=lambda r: (-r["shelfLines"], r["store"].lower()))
     if len(rows) > STORE_ROWS:
@@ -617,9 +746,12 @@ def _fill_store_board(
             "most shelf lines first. Narrow the store name to see the rest."
         )
     report.stores = rows[:STORE_ROWS]
-    # One store only: with several matches a single line would speak for all of them.
+    # One store with an item asked: with several matches a single line would speak
+    # for all of them. A store-only question names its stores one by one instead.
     if len(rows) == 1:
         report.reply = replies.get(rows[0]["storeKey"])
+    elif not want_item and 1 < len(rows) <= _SUMMARY_STORES:
+        report.reply = _fit_reply(" ".join(replies[r["storeKey"]] for r in rows))
     if superseded:
         report.warnings.append(
             f"{superseded:,} history-only store(s) left out because their owner has a live shelf"
@@ -629,6 +761,31 @@ def _fill_store_board(
 def _num(value: float, places: int) -> str:
     text = f"{round(value, places):.{places}f}".rstrip("0").rstrip(".")
     return "0" if text in ("", "-0") else text
+
+
+_SUMMARY_STORES = 3
+
+
+def _fit_reply(text: str, limit: int = 280) -> str | None:
+    """A reply, or None when it will not fit, so the call falls through to the model."""
+    return text if len(text) <= limit else None
+
+
+def _store_summary(store: str, live: bool, lines: list[ShelfOffer], row: dict[str, Any]) -> str:
+    """What a store-only question gets as one short line: the true listing count,
+    how many are in stock, and the deepest few. It never passes a cut list off as
+    the whole (COI-3279)."""
+    if not live:
+        return f"{store} has no live shelf, so its stock is not known."
+    stocked = [o for o in lines if o.side == "sell" and o.quantity > 0]
+    head = f"{store}: {row['listings']:,} listings, {len(stocked):,} in stock"
+    if row["unlistedLines"]:
+        head += f", {row['unlistedLines']:,} not shown (free, barter or unnamed)"
+    if not stocked:
+        return head + "."
+    deepest = sorted(stocked, key=lambda o: -o.quantity)[:2]
+    tail = ", ".join(f"{o.item_display} {_num(o.quantity, 2)}" for o in deepest)
+    return f"{head}. Most stocked: {tail}."
 
 
 def _store_reply(store: str, live: bool, lines: list[ShelfOffer]) -> str | None:
@@ -844,13 +1001,22 @@ def _history_offers(fetch: Any) -> tuple[list[ShelfOffer], dict[tuple[str, str],
 # ---------------------------------------------------------------------------
 
 
-def parse_live_stores(stores: Iterable[dict[str, Any]]) -> list[ShelfOffer]:
+def _count_unlisted(unlisted: dict[str, dict[str, int]] | None, key: str, why: str) -> None:
+    if unlisted is not None:
+        counts = unlisted.setdefault(key, {})
+        counts[why] = counts.get(why, 0) + 1
+
+
+def parse_live_stores(
+    stores: Iterable[dict[str, Any]], unlisted: dict[str, dict[str, int]] | None = None
+) -> list[ShelfOffer]:
     """Fold the `/api/v1/stores` DTO array into live shelf offers.
 
     Tolerates the nulls the DTO promises — an unowned store, a currency-less
     store, an orphaned (locationless) store — and skips barter / free shelves
     (a 0 price with no currency) the same way the price boards skip unpriced
-    trades. See `mods/stores/docs/dto.md`.
+    trades. See `mods/stores/docs/dto.md`. A skipped line is counted per store in
+    `unlisted` (`free`, `nameless`) so a store's true total can still be told.
     """
     offers: list[ShelfOffer] = []
     for store in stores:
@@ -864,6 +1030,7 @@ def parse_live_stores(stores: Iterable[dict[str, Any]]) -> list[ShelfOffer]:
         for offer in store.get("offers") or []:
             item_type = (offer.get("itemTypeName") or offer.get("item") or "").strip()
             if not item_type:
+                _count_unlisted(unlisted, store_key, "nameless")
                 continue
             try:
                 price = float(offer.get("price") or 0.0)
@@ -871,6 +1038,7 @@ def parse_live_stores(stores: Iterable[dict[str, Any]]) -> list[ShelfOffer]:
             except (TypeError, ValueError):
                 continue
             if price <= 0:  # barter / free shelf — never a currency price point
+                _count_unlisted(unlisted, store_key, "free")
                 continue
             offers.append(
                 ShelfOffer(
@@ -894,7 +1062,7 @@ def parse_live_stores(stores: Iterable[dict[str, Any]]) -> list[ShelfOffer]:
 
 async def _fetch_live_offers(
     http: httpx.AsyncClient, normalized_base_url: str, api_key: str | None
-) -> tuple[list[ShelfOffer], list[str]]:
+) -> tuple[list[ShelfOffer], list[str], dict[str, dict[str, int]]]:
     """Best-effort GET of the live shelf. Absence is normal (reset-gated), so a
     404 / connection error degrades to history rather than failing the tool."""
     url = f"{normalized_base_url}/api/v1/stores"
@@ -902,16 +1070,17 @@ async def _fetch_live_offers(
     try:
         resp = await http.get(url, headers=headers)
         if resp.status_code == 404:
-            return [], []  # exporter not deployed yet — history carries the day
+            return [], [], {}  # exporter not deployed yet — history carries the day
         resp.raise_for_status()
         data = resp.json()
     except httpx.HTTPStatusError as e:
-        return [], [f"live shelf: HTTP {e.response.status_code} (using history)"]
+        return [], [f"live shelf: HTTP {e.response.status_code} (using history)"], {}
     except (httpx.HTTPError, ValueError) as e:
-        return [], [f"live shelf: {type(e).__name__} (using history)"]
+        return [], [f"live shelf: {type(e).__name__} (using history)"], {}
     if not isinstance(data, list):
-        return [], ["live shelf: unexpected shape (using history)"]
-    return parse_live_stores(data), []
+        return [], ["live shelf: unexpected shape (using history)"], {}
+    unlisted: dict[str, dict[str, int]] = {}
+    return parse_live_stores(data, unlisted), [], unlisted
 
 
 def _merge(history: list[ShelfOffer], live: list[ShelfOffer]) -> list[ShelfOffer]:
@@ -948,13 +1117,15 @@ async def fetch_logistics(
     try:
         fetch = await fetch_parsed_trades(base_url=base_url, api_key=api_key, client=http)
         hist_offers, medians = _history_offers(fetch)
-        live_offers, live_warnings = await _fetch_live_offers(http, normalized, api_key)
+        live_offers, live_warnings, unlisted = await _fetch_live_offers(http, normalized, api_key)
     finally:
         if owns_client:
             await http.aclose()
 
     offers = _merge(hist_offers, live_offers)
-    report = build_logistics(offers, medians=medians, item=item, currency=currency, store=store)
+    report = build_logistics(
+        offers, medians=medians, item=item, currency=currency, store=store, unlisted=unlisted
+    )
     report.fetched_at_iso = _now_iso()
     report.source_base_url = normalized
     report.live = bool(live_offers)
@@ -966,6 +1137,37 @@ async def fetch_logistics(
             "hourly rollups; history-derived offers use detailed rows only (eco-app#132)"
         )
     return report
+
+
+def _store_name(offer: ShelfOffer) -> str:
+    """A store's own name: the live exporter's, else the label less `Owner's `."""
+    if offer.store_name:
+        return offer.store_name
+    prefix = f"{offer.owner}'s "
+    label = offer.store_label
+    return label[len(prefix) :] if offer.owner and label.startswith(prefix) else label
+
+
+async def fetch_store_names(
+    base_url: str | None = None,
+    api_key: str | None = None,
+    *,
+    client: httpx.AsyncClient | None = None,
+) -> list[tuple[str, str]]:
+    """(name, owner) of every store with a priced offer, live shelf or history, for
+    the store vocabulary a client matches a player's words against."""
+    normalized = _normalize_admin_base(base_url)
+    owns_client = client is None
+    http = client or httpx.AsyncClient(timeout=httpx.Timeout(30.0, connect=5.0))
+    try:
+        fetch = await fetch_parsed_trades(base_url=base_url, api_key=api_key, client=http)
+        hist_offers, _ = _history_offers(fetch)
+        live_offers, _, _ = await _fetch_live_offers(http, normalized, api_key)
+    finally:
+        if owns_client:
+            await http.aclose()
+    offers = _merge(hist_offers, live_offers)
+    return sorted({(_store_name(o), o.owner) for o in offers if o.price > 0})
 
 
 # ---------------------------------------------------------------------------
@@ -1008,7 +1210,10 @@ def _store_shelf_markdown(report: LogisticsReport) -> list[str]:
     for st in report.stores:
         kind = "live shelf" if st["live"] else "history only"
         owner = f"owner {st['owner']}, " if st["owner"] else ""
-        lines.append(f"- **{st['store']}** ({owner}{kind}, {st['shelfLines']} line(s))")
+        total = (
+            f", {st['listings']} listing(s) in all" if st["listings"] != st["shelfLines"] else ""
+        )
+        lines.append(f"- **{st['store']}** ({owner}{kind}, {st['shelfLines']} line(s){total})")
         for o in st["shelf"][:_MD_SHELF_LINES]:
             verb = "sells" if o["side"] == "sell" else "buys"
             amount = "in stock" if o["side"] == "sell" else "wanted"
@@ -1095,6 +1300,7 @@ __all__ = [
     "ShelfOffer",
     "build_logistics",
     "fetch_logistics",
+    "fetch_store_names",
     "logistics_markdown",
     "logistics_template_context",
     "parse_live_stores",
