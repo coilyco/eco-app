@@ -39,7 +39,6 @@ Design:
 from __future__ import annotations
 
 import os
-import re
 import statistics
 from collections import defaultdict
 from collections.abc import Iterable
@@ -49,6 +48,10 @@ from typing import Any
 import httpx
 
 from .crafting import _normalize_admin_base, _now_iso, prettify_eco_name
+from .store_match import NEAR_MARGIN as _NEAR_MARGIN
+from .store_match import NEAR_SUGGESTIONS as _NEAR_SUGGESTIONS
+from .store_match import norm_store as _norm_store
+from .store_match import store_closeness as _store_closeness
 from .trades import SECONDS_PER_DAY, _label, fetch_parsed_trades
 
 # ---------------------------------------------------------------------------
@@ -96,12 +99,6 @@ SUPPLY_GAP_ROWS = int(os.environ.get("ECO_LOGI_GAP_ROWS", "40"))
 # own caps: the stores returned, and shelf lines per store. The line count that
 # was cut is reported, never silent (COI-758).
 STORE_ROWS = int(os.environ.get("ECO_LOGI_STORE_ROWS", "10"))
-# A store name no listing contains is tried again for a near one (COI-3279). A
-# lone near store, or one clearly nearer than the rest, is answered as that store.
-_NEAR_MIN_EDIT = 0.85
-_NEAR_MARGIN = 0.2
-_NEAR_MAX_CHARS = 80
-_NEAR_SUGGESTIONS = 3
 STORE_SHELF_LINES = int(os.environ.get("ECO_LOGI_STORE_SHELF_LINES", "60"))
 
 
@@ -120,59 +117,9 @@ def _norm_item(name: str) -> str:
     return stem
 
 
-def _norm_store(text: str) -> str:
-    """Fold a store name or owner handle to a comparison key: lowercase letters
-    and digits only, so `@Quillfeather` and `charred corns & more` both meet the
-    label `quillfeather's Charred Corns & More` (COI-758)."""
-    return "".join(ch for ch in (text or "").lower() if ch.isalnum())
-
-
 def _store_matches(offer: ShelfOffer, want_store: str) -> bool:
     """True when a normalized query is part of this offer's store label or owner."""
     return want_store in _norm_store(offer.store_label) or want_store in _norm_store(offer.owner)
-
-
-def _levenshtein(a: str, b: str) -> int:
-    """Edit distance between two short strings."""
-    if a == b:
-        return 0
-    previous = list(range(len(b) + 1))
-    for i, ca in enumerate(a, 1):
-        row = [i]
-        for j, cb in enumerate(b, 1):
-            row.append(min(previous[j] + 1, row[j - 1] + 1, previous[j - 1] + (ca != cb)))
-        previous = row
-    return previous[-1]
-
-
-def _store_words(text: str) -> list[str]:
-    """Words of a store name or handle; the `s` of a possessive is not one."""
-    return [w for w in re.findall(r"[a-z0-9]+", (text or "").lower()) if len(w) > 1 or w.isdigit()]
-
-
-def _store_closeness(query: str, candidate: str) -> float:
-    """How near a query is to one store name, 0 when it is not near at all.
-
-    Near is a one-letter typo in the whole name, or two thirds of the shorter
-    name's words shared (a word within one letter counting as shared). A single
-    shared word is never near: it is a substring match's job, and already failed.
-    """
-    q, c = _store_words(query), _store_words(candidate)
-    fq, fc = "".join(q), "".join(c)
-    if not fq or not fc or len(fq) > _NEAR_MAX_CHARS or len(fc) > _NEAR_MAX_CHARS:
-        return 0.0
-    edit = 1 - _levenshtein(fq, fc) / max(len(fq), len(fc))
-    spent, shared = list(c), 0
-    for word in q:
-        for i, other in enumerate(spent):
-            one_off = len(word) >= 5 and len(other) >= 5 and _levenshtein(word, other) <= 1
-            if word == other or one_off:
-                shared += 1
-                del spent[i]
-                break
-    enough = shared >= 2 and shared * 3 >= 2 * min(len(q), len(c))
-    overlap = shared / max(len(q), len(c)) if enough else 0.0
-    return max(edit if edit >= _NEAR_MIN_EDIT else 0.0, overlap)
 
 
 def _near_stores(priced: Iterable[ShelfOffer], query: str) -> list[tuple[float, ShelfOffer]]:

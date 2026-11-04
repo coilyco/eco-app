@@ -12,10 +12,17 @@ Older history arrives as rollups rather than rows, so some values below are deta
 ## What it computes
 
 - **Detailed trades** - newest first, capped at `ECO_TRADES_LEDGER_ROWS` (default 4000).
-- **Item filter** - `item` resolves through `Norms.find_qualified`, as in `price_by_stage`, and filters every ledger row before `limit`. It drops a stage qualifier. An unresolved word returns no rows and an `itemFilter` block with candidates. Summary arrays stay whole.
+- **Item filter** - `item` resolves through `Norms.find_qualified`, as in `price_by_stage`, and filters every trade before `limit`. It drops a stage qualifier. A resolved item rebuilds the summary arrays over its trades, so `topBuyers` is that item's. An unresolved word returns no rows and an `itemFilter` block with candidates, and the arrays stay whole.
 - **Top buyers and sellers** - currency spent by `Buyer` and earned by `Seller`, detailed rows only.
 - **Per-currency volume** - includes summed rollup amounts. Most-traded items use detailed rows only.
 - **Price over time** - `CurrencyAmount / NumberOfItems` averaged per in-game day, for the busiest detailed items.
+
+## Store and window
+
+- **`window`** - on every answer: `label` (quote it), `startDay`, `endDay`, `firstTradeDay`, `lastTradeDay`, `requested`. Server days. With no window it reads "all detailed trades on record". `get_stores` carries the same block.
+- **`days`** counts back from the newest trade on record. `since_day` and `until_day` bound it in server days. `days` with `since_day` is refused.
+- **`store`** - a trade row names no store, only `ActionLocation` and the owner. The live store list (`/api/v1/stores`) ties a given name to a place, and a name a word or a letter off resolves as in [find_trade](dual-route-inventory.md) (`storeFilter.resolvedFrom`, `suggestions`). Without that list only an owner's handle matches.
+- **A selection rebuilds every aggregate**, and `aggregateScope` says over what. `byItemUnits`, `topBuyersByUnits` and `topSellersByUnits` rank by units, since a currency sum ranks one currency against another. Detailed trades only.
 
 ## Freshness
 

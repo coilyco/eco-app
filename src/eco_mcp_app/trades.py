@@ -73,6 +73,7 @@ from .crafting import (
     _stream_csv_rows,
     fetch_citizen_name_map,
 )
+from .ledger_window import WindowRequest, describe_window
 
 # Both trade actions share the `/api/v1/exporter/actions` endpoint. CurrencyTrade
 # is the money leg; BarterTrade is item-for-item (empty this cycle, folded
@@ -144,6 +145,18 @@ class TradesLedger:
     # (name, currency_spent) and (name, currency_earned), heaviest first.
     top_buyers: list[tuple[str, float]] = field(default_factory=list)
     top_sellers: list[tuple[str, float]] = field(default_factory=list)
+    # Units rather than currency: a sum across currencies ranks Embers against Orteils.
+    # (item_id, units, trade_count, currency_volume) most units first, then (name, units).
+    by_item_units: list[tuple[str, float, int, float]] = field(default_factory=list)
+    top_buyers_by_units: list[tuple[str, float]] = field(default_factory=list)
+    top_sellers_by_units: list[tuple[str, float]] = field(default_factory=list)
+    # The stretch of trades every aggregate above describes (ledger_window.py), who it was
+    # narrowed to, and a sentence saying so. COI-3316.
+    window: dict[str, Any] | None = None
+    store_filter: dict[str, Any] | None = None
+    aggregate_scope: str | None = None
+    # Detailed trades in the window and store before an item narrowed them. Not serialized.
+    scoped_before_item: int | None = None
     # item_id -> [(day, mean_unit_price)] sorted by day, for the top items.
     price_series: dict[str, list[tuple[float, float]]] = field(default_factory=dict)
     warnings: list[str] = field(default_factory=list)
@@ -196,6 +209,12 @@ class TradesLedger:
             "byCurrency": [[n, v] for n, v in self.by_currency],
             "topBuyers": [[n, v] for n, v in self.top_buyers],
             "topSellers": [[n, v] for n, v in self.top_sellers],
+            "byItemUnits": [[n, u, c, v] for n, u, c, v in self.by_item_units],
+            "topBuyersByUnits": [[n, u] for n, u in self.top_buyers_by_units],
+            "topSellersByUnits": [[n, u] for n, u in self.top_sellers_by_units],
+            "window": self.window,
+            "storeFilter": self.store_filter,
+            "aggregateScope": self.aggregate_scope,
             "priceSeries": {
                 item: [[d, p] for d, p in points] for item, points in self.price_series.items()
             },
@@ -425,6 +444,9 @@ def build_ledger(
     by_currency: dict[str, float] = defaultdict(float)
     buyers: dict[str, float] = defaultdict(float)
     sellers: dict[str, float] = defaultdict(float)
+    item_units: dict[str, float] = defaultdict(float)
+    buyer_units: dict[str, float] = defaultdict(float)
+    seller_units: dict[str, float] = defaultdict(float)
     # item -> day -> [unit prices], collapsed to a per-day mean below.
     price_points: dict[str, dict[int, list[float]]] = defaultdict(lambda: defaultdict(list))
 
@@ -440,6 +462,12 @@ def build_ledger(
         if t.item:
             by_item_count[t.item] += 1
             by_item_volume[t.item] += t.currency_amount
+            item_units[t.item] += t.quantity
+        if t.quantity:
+            if t.buyer_id:
+                buyer_units[_label(t.buyer_id, name_map)] += t.quantity
+            if t.seller_id:
+                seller_units[_label(t.seller_id, name_map)] += t.quantity
         if t.currency_amount:
             if t.buyer_id:
                 buyers[_label(t.buyer_id, name_map)] += t.currency_amount
@@ -452,6 +480,16 @@ def build_ledger(
         ((item, by_item_count[item], by_item_volume[item]) for item in by_item_count),
         key=lambda r: (r[2], r[1]),
         reverse=True,
+    )
+    ledger.by_item_units = sorted(
+        ((i, item_units[i], by_item_count[i], by_item_volume[i]) for i in item_units),
+        key=lambda r: (r[1], r[2]),
+        reverse=True,
+    )
+    ledger.top_buyers_by_units = sorted(buyer_units.items(), key=lambda kv: kv[1], reverse=True)
+    ledger.top_sellers_by_units = sorted(seller_units.items(), key=lambda kv: kv[1], reverse=True)
+    ledger.window = describe_window(
+        WindowRequest(), None, None, [t for t in parsed if not t.is_rollup], ledger.newest_trade_day
     )
     ledger.by_currency = sorted(by_currency.items(), key=lambda kv: kv[1], reverse=True)
     ledger.top_buyers = sorted(buyers.items(), key=lambda kv: kv[1], reverse=True)
@@ -637,6 +675,14 @@ def _ledger_from_dict(data: dict[str, Any]) -> TradesLedger:
         by_currency=[(n, float(v)) for n, v in data.get("byCurrency", [])],
         top_buyers=[(n, float(v)) for n, v in data.get("topBuyers", [])],
         top_sellers=[(n, float(v)) for n, v in data.get("topSellers", [])],
+        by_item_units=[
+            (n, float(u), int(c), float(v)) for n, u, c, v in data.get("byItemUnits", [])
+        ],
+        top_buyers_by_units=[(n, float(u)) for n, u in data.get("topBuyersByUnits", [])],
+        top_sellers_by_units=[(n, float(u)) for n, u in data.get("topSellersByUnits", [])],
+        window=data.get("window"),
+        store_filter=data.get("storeFilter"),
+        aggregate_scope=data.get("aggregateScope"),
         price_series={
             item: [(float(d), float(p)) for d, p in points]
             for item, points in data.get("priceSeries", {}).items()
@@ -704,14 +750,26 @@ def ledger_template_context(
 
 def ledger_markdown(ledger: TradesLedger) -> str:
     """Compact markdown summary for MCP hosts without the SPA / card."""
+    window = (ledger.window or {}).get("label")
     if ledger.total_trades == 0:
-        return f"**Trades ledger** — no trades recorded yet ({ledger.source_base_url})."
+        empty = f"**Trades ledger** — no trades recorded yet ({ledger.source_base_url})."
+        if ledger.store_filter or (ledger.window or {}).get("requested"):
+            empty = f"**Trades ledger** — no trades match, over {window}."
+        return empty
     lines = [
         f"**Trades ledger** — {ledger.total_trades:,} trade events from "
         f"{ledger.exporter_rows:,} exporter rows "
         f"({ledger.total_currency_volume:,.0f} total currency, `{ledger.source_base_url}`)",
         "",
     ]
+    if window:
+        lines.append(f"- Window: {window}. {ledger.aggregate_scope or ''}".rstrip())
+    if ledger.by_item_units:
+        top = ", ".join(f"{name} ({units:,.0f})" for name, units, _, _ in ledger.by_item_units[:3])
+        lines.append(f"- Most units sold: {top}")
+    if ledger.top_buyers_by_units:
+        top = ", ".join(f"{name} ({units:,.0f})" for name, units in ledger.top_buyers_by_units[:3])
+        lines.append(f"- Top buyers by units: {top}")
     if ledger.top_sellers:
         top = ", ".join(f"{name} ({amt:,.0f})" for name, amt in ledger.top_sellers[:3])
         lines.append(f"- Top sellers: {top}")

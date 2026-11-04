@@ -45,6 +45,7 @@ import httpx
 from cachetools import TTLCache
 
 from .crafting import _normalize_admin_base, _now_iso, prettify_eco_name
+from .ledger_window import WindowRequest, describe_window
 from .trades import DEFAULT_CACHE_TTL_S, _label, fetch_parsed_trades
 
 # Same short TTL rationale as the ledger: the directory is viewed in bursts and
@@ -193,6 +194,8 @@ class StoreDirectory:
     traders: list[TraderProfile] = field(default_factory=list)
     total_stores: int = 0
     total_traders: int = 0
+    # The stretch of trades every profile covers, so a "top counterparty" says since when.
+    window: dict[str, Any] | None = None
     warnings: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
@@ -226,6 +229,7 @@ class StoreDirectory:
             "traders": [t.to_dict() for t in self.traders],
             "totalStores": self.total_stores,
             "totalTraders": self.total_traders,
+            "window": self.window,
             "warnings": list(self.warnings),
         }
 
@@ -390,6 +394,13 @@ def build_directory(
             if t.shop_owner_id == t.buyer_id and t.shop_owner_id:
                 acc.stores[f"{t.location}|{t.shop_owner_id}"] += t.currency_amount
 
+    directory.window = describe_window(
+        WindowRequest(),
+        None,
+        None,
+        [t for t in fetch.parsed if not t.is_rollup],
+        max((t.day for t in fetch.parsed), default=None),
+    )
     directory.total_stores = len(stores)
     directory.total_traders = len(traders)
     directory.stores = _materialize_stores(stores, name_map, max_stores, directory)

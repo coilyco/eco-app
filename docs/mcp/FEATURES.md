@@ -12,7 +12,7 @@ Input schemas in [server.py](../../src/eco_mcp_app/server.py) are authoritative.
 - **get_server_status** / **get_climate** / **get_region** / **get_species** - Status, climate, ecoregion, species.
 - **explain_item** - Wikidata and Wikipedia lookup.
 - **get_crafting_atlas** - Top items, stations, leaderboards, `byMiner` ([crafting.md](../crafting.md)).
-- **get_trades** - Detailed ledger, `item` filter, `ledgerFreshness` ([trades.md](../trades.md#freshness)).
+- **get_trades** - Detailed ledger, `item`, `store` and `days` filters, a `window` on every answer, `ledgerFreshness` ([trades.md](../trades.md#store-and-window)).
 - **get_market** - Price history and trend, `ledgerFreshness`, `commodityBenchmark` (FRED, `null` on failure).
 - **get_stores** - Store directories from trade history only. Live shelves: `find_trade` with `store`.
 - **find_trade** - Resale, arbitrage, supply gaps. Only stocked shelves rank `cheapest`, else `soldOutNote`. `store` returns a whole shelf.
