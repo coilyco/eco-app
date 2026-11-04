@@ -411,10 +411,10 @@ async def test_find_trade_publishes_its_store_argument_as_evidence_not_its_item(
 
 
 @pytest.mark.asyncio
-async def test_find_trades_description_leads_with_the_stock_check_it_answers() -> None:
+async def test_find_trades_opening_names_both_the_item_and_the_stock_check_it_answers() -> None:
     handler = build_server().request_handlers[mt.ListToolsRequest]
     result = await handler(mt.ListToolsRequest(method="tools/list"))
     description = next(t for t in result.root.tools if t.name == "find_trade").description or ""
 
-    assert description.startswith("Answer what a named store has in stock right now")
+    assert "what a named store has in stock right now" in description[:140]
     assert "'stock check <store>'" in description

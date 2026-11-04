@@ -153,21 +153,22 @@ def register_wave1_routes(registry: DualRouteRegistry, invoke: ToolInvoker) -> N
         name="find_trade",
         title="Eco - trade and store logistics",
         description=(
-            "Answer what a named store has in stock right now, and where to buy or sell an "
-            "item on this server. For a store, pass store (a store's name or its owner's "
-            "handle): its whole shelf, every item it sells or buys with stock quantity, price "
-            "and owner. That answers 'stock check <store>', 'what is in stock at <store>', "
-            "'what does <store> have' and 'what is <store> selling'. A store name that matches "
-            "nothing returns an explicit no-match, which is not an empty store. For an item: "
-            "its current asking prices, the cheapest store selling it, the store paying the "
-            "most for it, whether anyone is buying it, buy-low-sell-high spreads (which store "
-            "to buy from, which store to resell to, and the profit per unit), and items with "
-            "buyers but no sellers, which is the answer to what a store should carry to earn "
-            "money. Pass item for one item, or currency for offers priced in that currency. "
-            "Reads live store shelves, falling back to recent trade prices. For what an item is "
-            "worth or what to pay or charge for it use price_by_stage, for price trends use "
-            "get_market, for individual past trades get_trades, and for who owns which store "
-            "get_stores. Requires the server-side admin API key."
+            "Answer where to buy or sell an item on this server, and what a named store has in "
+            "stock right now. For an item: its current asking prices, the cheapest store "
+            "selling it, the store paying the most for it, whether anyone is buying it, "
+            "buy-low-sell-high spreads (which store to buy from, which store to resell to, and "
+            "the profit per unit), and items with buyers but no sellers, which is the answer to "
+            "what a store should carry to earn money. Pass item for one item, or currency for "
+            "offers priced in that currency. For a store, pass store (a store's name or its "
+            "owner's handle): its whole shelf, every item it sells or buys with stock quantity, "
+            "price and owner. That answers 'stock check <store>', 'what is in stock at "
+            "<store>', 'what does <store> have', 'does <store> have <item>' and 'what is "
+            "<store> selling'. A store name that matches nothing returns an explicit no-match, "
+            "which is not an empty store. Reads live store shelves, falling back to recent "
+            "trade prices. For what an item is worth or what to pay or charge for it use "
+            "price_by_stage, for price trends use get_market, for individual past trades "
+            "get_trades, and for who owns which store get_stores. Requires the server-side "
+            "admin API key."
         ),
         rest_path="/preview/logistics.json",
         input_model=FindTradeInput,
