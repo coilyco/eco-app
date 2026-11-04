@@ -48,7 +48,7 @@ _FAKE_TITLES: list[dict[str, Any]] = [
             ["Who Can Remove From Office", "…", "None"],
             ["Term Limit Days", "…", "2"],
         ],
-        "OccupantNames": ["Scuba Steve"],
+        "OccupantNames": ["Marlow Fenn"],
         "Id": 339903,
         "Name": "Steamtide Cay Foundation Mayor",
         "State": "Active",
@@ -151,7 +151,7 @@ def test_to_government_payload_extracts_occupant_and_scope() -> None:
     assert payload["scope"] == "Steamtide Cay Foundation"
     assert len(payload["titles"]) == 1
     title = payload["titles"][0]
-    assert title["occupants"] == ["Scuba Steve"]
+    assert title["occupants"] == ["Marlow Fenn"]
     assert title["name"] == "Steamtide Cay Foundation Mayor"
     assert title["successor"] == "None"
     assert title["term_days"] == "2"
@@ -325,7 +325,7 @@ async def test_call_tool_get_government_happy_path() -> None:
     md = blocks[0].text
     payload = json.loads(blocks[1].text)
     assert "Steamtide Cay Foundation" in md
-    assert "Scuba Steve" in md
+    assert "Marlow Fenn" in md
     assert payload["scope"] == "Steamtide Cay Foundation"
     # Just-data per eco-app#87: get_government no longer emits a widget.
     assert result.root.meta is None

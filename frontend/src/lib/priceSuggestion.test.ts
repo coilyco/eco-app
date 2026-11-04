@@ -27,7 +27,7 @@ const HEWN_LOG: [number, string, number][] = [
   [0.29, "Ice Dragon Credit", 3],
   [0.3, "reihtnog Credit", 3],
   [0.4, "Cookie Credit", 3],
-  [0.4, "elizacorn Credit", 1],
+  [0.4, "tarnbright Credit", 1],
 ]
 const hewnLog = () => HEWN_LOG.flatMap(([p, c, n]) => Array.from({ length: n }, () => trade(p, c)))
 

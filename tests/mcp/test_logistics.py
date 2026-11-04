@@ -115,7 +115,7 @@ def test_cheapest_skips_zero_stock_offer_at_equal_price() -> None:
             currency="Spectres",
             quantity=185,
             source="live",
-            owner="Scuba Steve",
+            owner="Marlow Fenn",
         ),
     ]
     report = build_logistics(offers)
@@ -605,7 +605,7 @@ def test_logistics_markdown_populated() -> None:
 _SHELF_STORES: list[dict[str, Any]] = [
     {
         "name": "Charred Corns & More",
-        "owner": "Elizabeth1337",
+        "owner": "Quillfeather",
         "currency": "Spectres",
         "location": {"x": 4, "y": 5, "z": 6},
         "offers": [
@@ -634,7 +634,7 @@ _SHELF_STORES: list[dict[str, Any]] = [
     },
     {
         "name": "Lumberaholics",
-        "owner": "Scuba Steve",
+        "owner": "Marlow Fenn",
         "currency": "Spectres",
         "location": None,
         "offers": [
@@ -662,13 +662,13 @@ def _live_offers() -> list[ShelfOffer]:
 
 
 @pytest.mark.parametrize(
-    "query", ["charred corns", "CHARRED CORNS & MORE", "elizabeth1337", "@Elizabeth1337"]
+    "query", ["charred corns", "CHARRED CORNS & MORE", "quillfeather", "@Quillfeather"]
 )
 def test_store_filter_matches_name_or_owner_case_insensitively(query: str) -> None:
     report = build_logistics(_live_offers(), store=query)
     assert report.stores_matched == 1
     (shelf,) = report.stores
-    assert shelf["owner"] == "Elizabeth1337"
+    assert shelf["owner"] == "Quillfeather"
     assert shelf["name"] == "Charred Corns & More"
     assert shelf["live"] is True
     assert shelf["currencies"] == ["Spectres"]
@@ -676,7 +676,7 @@ def test_store_filter_matches_name_or_owner_case_insensitively(query: str) -> No
 
 
 def test_store_shelf_lists_every_line_with_stock_and_price() -> None:
-    report = build_logistics(_live_offers(), store="elizabeth1337")
+    report = build_logistics(_live_offers(), store="quillfeather")
     (shelf,) = report.stores
     lines = {(o["item"], o["side"]): o for o in shelf["shelf"]}
     assert shelf["shelfLines"] == 3
@@ -737,13 +737,13 @@ def test_store_filter_narrows_the_other_boards_and_drops_market_wide_ones() -> N
 
 
 def test_history_only_store_is_flagged_and_loses_to_a_live_row_of_the_same_owner() -> None:
-    history = _offer("hist-1", "CornItem", "sell", 0.8, owner="Scuba Steve", source="history")
-    history.store_label = "Scuba Steve's Store"
+    history = _offer("hist-1", "CornItem", "sell", 0.8, owner="Marlow Fenn", source="history")
+    history.store_label = "Marlow Fenn's Store"
     only_history = _offer("hist-2", "AppleItem", "sell", 2.0, owner="Ada", source="history")
     only_history.store_label = "Ada's Store"
 
-    report = build_logistics([*_live_offers(), history, only_history], store="scuba")
-    assert [s["storeKey"] for s in report.stores] == ["live:Lumberaholics|Scuba Steve"]
+    report = build_logistics([*_live_offers(), history, only_history], store="marlow")
+    assert [s["storeKey"] for s in report.stores] == ["live:Lumberaholics|Marlow Fenn"]
     assert any("history-only store(s) left out" in w for w in report.warnings)
 
     report = build_logistics([only_history], store="ada")
@@ -756,7 +756,7 @@ def test_store_shelf_is_capped_and_says_so(monkeypatch: pytest.MonkeyPatch) -> N
     from eco_mcp_app import logistics as logistics_mod
 
     monkeypatch.setattr(logistics_mod, "STORE_SHELF_LINES", 2)
-    report = build_logistics(_live_offers(), store="elizabeth1337")
+    report = build_logistics(_live_offers(), store="quillfeather")
     (shelf,) = report.stores
     assert shelf["shelfLines"] == 3
     assert len(shelf["shelf"]) == 2
@@ -764,8 +764,8 @@ def test_store_shelf_is_capped_and_says_so(monkeypatch: pytest.MonkeyPatch) -> N
 
 
 def test_store_shelf_markdown_reads_as_a_shelf() -> None:
-    md = logistics_markdown(build_logistics(_live_offers(), store="elizabeth1337"))
-    assert "**Store shelf for 'elizabeth1337'**" in md
+    md = logistics_markdown(build_logistics(_live_offers(), store="quillfeather"))
+    assert "**Store shelf for 'quillfeather'**" in md
     assert "sells Corn: 185 in stock at 0.70 Spectres" in md
     assert "sells Charred Corn: 0 in stock at 1.50 Spectres" in md
     assert "buys Wheat: 30 wanted at 0.40 Spectres" in md
@@ -907,9 +907,9 @@ def test_preview_logistics_json_route(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def _plank_offer(side: str = "sell", price: float = 1.0) -> ShelfOffer:
     return ShelfOffer(
-        store_key="live:Scuba Steve's Store|scuba",
-        store_label="Scuba Steve's Store",
-        owner="scuba",
+        store_key="live:Marlow Fenn's Store|marlow",
+        store_label="Marlow Fenn's Store",
+        owner="marlow",
         item="WoodenHullPlanksItem",
         item_display="Wooden Hull Planks",
         currency="Spectres",
