@@ -346,3 +346,75 @@ def test_a_line_with_no_item_name_is_the_only_one_still_counted_as_hidden() -> N
     row = build_logistics(offers, store="odd shelf", unlisted=unlisted).stores[0]
 
     assert row["unlistedLines"] == 1 and row["listings"] == 2 and row["shelfLines"] == 1
+
+
+# The one-line reply lists as many in-stock lines as fit, then says how many more (COI-3279).
+
+
+def _stocked_store(name: str, owner: str, count: int) -> dict[str, Any]:
+    offers = [_line(f"Ware {n:02d}", 0.5, 1000 - n) for n in range(count)]
+    return _store(name, owner, offers)
+
+
+def test_a_long_shelf_lists_what_fits_most_stocked_first_and_counts_the_rest() -> None:
+    report = build_logistics(
+        parse_live_stores([_stocked_store("Wide Shelf", "Pip Okoro", 40)]), store="wide shelf"
+    )
+    reply = report.reply
+
+    assert reply is not None and len(reply) <= 280
+    head = "Pip Okoro's Wide Shelf: 40 listings, 40 in stock. In stock: Ware 00 1000, Ware 01 999"
+    assert reply.startswith(head)
+    shown = reply.split("In stock: ")[1].rsplit(" and ", 1)[0].split(", ")
+    more = int(reply.rsplit(" and ", 1)[1].split(" more")[0])
+    # Nothing is dropped without being counted, and the order is most stocked first.
+    assert len(shown) + more == 40 and 0 < len(shown) < 40
+    assert shown == [f"Ware {n:02d} {1000 - n}" for n in range(len(shown))]
+
+
+def test_a_shelf_that_fits_whole_says_no_more() -> None:
+    report = build_logistics(
+        parse_live_stores([_stocked_store("Small Shelf", "Pip Okoro", 3)]), store="small shelf"
+    )
+
+    assert report.reply == (
+        "Pip Okoro's Small Shelf: 3 listings, 3 in stock. In stock: Ware 00 1000, Ware 01 999, "
+        "Ware 02 998."
+    )
+
+
+def test_stores_sharing_a_name_share_the_character_budget() -> None:
+    stores = [
+        _stocked_store("Twin Shelf", "Pip Okoro", 30),
+        _stocked_store("Twin Shelf", "Marlow Fenn", 30),
+    ]
+    report = build_logistics(parse_live_stores(stores), store="twin shelf")
+
+    assert report.reply is not None and len(report.reply) <= 280
+    assert "Pip Okoro's Twin Shelf: 30 listings" in report.reply
+    assert "Marlow Fenn's Twin Shelf: 30 listings" in report.reply
+    assert report.reply.count("more") == 2
+
+
+# The harness reads what find_trade publishes about its store argument.
+
+
+@pytest.mark.asyncio
+async def test_find_trade_publishes_its_store_argument_as_evidence_not_its_item() -> None:
+    handler = build_server().request_handlers[mt.ListToolsRequest]
+    result = await handler(mt.ListToolsRequest(method="tools/list"))
+    tool = next(t for t in result.root.tools if t.name == "find_trade")
+    args = (tool.meta or {})["coilyco/args"]
+
+    assert args["store"]["evidence"] is True
+    assert "evidence" not in args["item"]
+
+
+@pytest.mark.asyncio
+async def test_find_trades_opening_names_both_the_item_and_the_stock_check_it_answers() -> None:
+    handler = build_server().request_handlers[mt.ListToolsRequest]
+    result = await handler(mt.ListToolsRequest(method="tools/list"))
+    description = next(t for t in result.root.tools if t.name == "find_trade").description or ""
+
+    assert "what a named store has in stock right now" in description[:140]
+    assert "'stock check <store>'" in description

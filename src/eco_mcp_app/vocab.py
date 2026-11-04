@@ -31,7 +31,15 @@ TOOL_ARGS: dict[str, dict[str, dict[str, Any]]] = {
     # A store is named by its own words, which are often item words too ("Food Coming
     # Soon"). The harness spends the words a store name matched before it fills item.
     "find_trade": {
-        "store": {"vocabulary": STORES_URI, "field": "name", "ignore": SHOP_WORDS},
+        # `evidence`: a hit is told to the caller's tool picker, since a store is often named
+        # without the word "store" ("stock check food coming soon"), and the picker reads that
+        # as a general question (COI-3279).
+        "store": {
+            "vocabulary": STORES_URI,
+            "field": "name",
+            "ignore": SHOP_WORDS,
+            "evidence": True,
+        },
         "item": {"vocabulary": ITEMS_URI, "field": "name", "ignore": SHOP_WORDS},
     },
     # get_market folds spaces out only on the id side, so a multi-word display

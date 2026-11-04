@@ -636,6 +636,7 @@ def _fill_store_board(
     }
     rows: list[dict[str, Any]] = []
     replies: dict[str, str] = {}
+    summary_args: dict[str, tuple[str, bool, list[ShelfOffer], dict[str, Any]]] = {}
     superseded = 0
     for key in matched_keys:
         first = meta[key]
@@ -700,9 +701,14 @@ def _fill_store_board(
             if reply := _store_reply(first.store_label, live, lines):
                 replies[key] = reply
         else:
-            replies[key] = _store_summary(first.store_label, live, lines, row)
+            summary_args[key] = (first.store_label, live, lines, row)
         rows.append(row)
     rows.sort(key=lambda r: (-r["shelfLines"], r["store"].lower()))
+    if summary_args and rows:
+        # Several stores share one reply, so each gets a share of the budget.
+        budget = (_REPLY_LIMIT - (len(rows) - 1)) // len(rows)
+        for r in rows:
+            replies[r["storeKey"]] = _store_summary(*summary_args[r["storeKey"]], budget=budget)
     if len(rows) > STORE_ROWS:
         report.warnings.append(
             f"stores: showing {STORE_ROWS:,} of {len(rows):,} matching stores, "
@@ -750,21 +756,40 @@ def _fit_reply(text: str, limit: int = 280) -> str | None:
     return text if len(text) <= limit else None
 
 
-def _store_summary(store: str, live: bool, lines: list[ShelfOffer], row: dict[str, Any]) -> str:
-    """What a store-only question gets as one short line: the true listing count,
-    how many are in stock, and the deepest few. It never passes a cut list off as
-    the whole (COI-3279)."""
+_REPLY_LIMIT = 280
+
+
+def _store_summary(
+    store: str,
+    live: bool,
+    lines: list[ShelfOffer],
+    row: dict[str, Any],
+    budget: int = _REPLY_LIMIT,
+) -> str:
+    """What a store-only question gets in one line: the true listing count, how many lines
+    are in stock, then as many in-stock lines as fit the budget, most stocked first, and
+    "and N more" for the rest. It never passes a cut list off as the whole (COI-3279)."""
     if not live:
         return f"{store} has no live shelf, so its stock is not known."
-    stocked = [o for o in lines if o.side == "sell" and o.quantity > 0]
+    stocked = sorted(
+        (o for o in lines if o.side == "sell" and o.quantity > 0),
+        key=lambda o: (-o.quantity, o.item_display.lower()),
+    )
     head = f"{store}: {row['listings']:,} listings, {len(stocked):,} in stock"
     if row["unlistedLines"]:
         head += f", {row['unlistedLines']:,} not shown (no item name)"
-    if not stocked:
+    shown: list[str] = []
+    for i, line in enumerate(stocked):
+        more = len(stocked) - i - 1
+        tail = f" and {more:,} more" if more else ""
+        item = f"{line.item_display} {_num(line.quantity, 2)}"
+        if len(f"{head}. In stock: {', '.join([*shown, item])}{tail}.") > budget:
+            break
+        shown.append(item)
+    if not shown:
         return head + "."
-    deepest = sorted(stocked, key=lambda o: -o.quantity)[:2]
-    tail = ", ".join(f"{o.item_display} {_num(o.quantity, 2)}" for o in deepest)
-    return f"{head}. Most stocked: {tail}."
+    rest = len(stocked) - len(shown)
+    return f"{head}. In stock: {', '.join(shown)}{f' and {rest:,} more' if rest else ''}."
 
 
 def _store_reply(store: str, live: bool, lines: list[ShelfOffer]) -> str | None:
