@@ -90,8 +90,36 @@ class TradesInput(BoundedServerInput):
             "Optional item word. Resolved like price_by_stage's item: a name, an Eco id, "
             "a plural, a bare metal such as iron, or upgrade shorthand such as bu3 or "
             "'iron at au3' (the stage part is dropped, trades have none). Filters the "
-            "whole ledger before `limit` applies."
+            "whole ledger before `limit` applies, and the top buyers, sellers and item "
+            "totals then describe that item only."
         ),
+    )
+    store: str | None = Field(
+        default=None,
+        description=(
+            "Optional store name, as players write it, or its owner's handle. Returns only "
+            "that store's trades, matched to the live store list by where the trade happened. "
+            "A name a word or a letter off the real one is answered as the closest store, "
+            "or the closest names are listed."
+        ),
+    )
+    days: float | None = Field(
+        default=None,
+        gt=0,
+        description=(
+            "Optional count of server days back from the newest trade on record, as in 'the "
+            "last 2 days' or 'this week' (7). Not with since_day."
+        ),
+    )
+    since_day: float | None = Field(
+        default=None,
+        ge=0,
+        description="Optional first server day to include. Leave out for the whole ledger.",
+    )
+    until_day: float | None = Field(
+        default=None,
+        ge=0,
+        description="Optional last server day to include. Leave out for up to the newest trade.",
     )
 
 

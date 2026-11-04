@@ -474,7 +474,11 @@ async def _filtered_trades(
     async def _fake_fetch(**_kwargs: object) -> TradesLedger:
         return ledger
 
+    # A resolved item rebuilds the ledger over its trades (trade_history.py). The stub holds
+    # every row, and the handler's row filter narrows them, as the real rebuild would.
+    ledger.scoped_before_item = 65
     monkeypatch.setattr(eco_server, "fetch_ledger", _fake_fetch)
+    monkeypatch.setattr(eco_server, "fetch_trade_history", _fake_fetch)
     handler = eco_server.build_server().request_handlers[mt.CallToolRequest]
     result = await handler(
         mt.CallToolRequest(

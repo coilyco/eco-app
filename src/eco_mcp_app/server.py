@@ -41,6 +41,7 @@ from .civics import civics_markdown, fetch_civics
 from .crafting import CraftingAtlas, atlas_markdown, fetch_atlas
 from .dual_routes import DualRouteRegistry
 from .ledger_freshness import WorldClock, apply_freshness, read_world_clock
+from .ledger_window import parse_window
 from .logistics import fetch_logistics, fetch_store_names, logistics_markdown, resolved_item_id
 from .mods import read_mods
 from .progression import fetch_history, history_markdown
@@ -50,6 +51,7 @@ from .social import fetch_social, social_markdown
 from .stores import directory_markdown, fetch_directory
 from .tech_progression import build_tech_progression, tech_progression_markdown
 from .telemetry import instrument_mcp_server
+from .trade_history import fetch_trade_history
 from .trades import fetch_ledger, ledger_markdown
 from .world import fetch_world, world_markdown
 from .worldgen import read_world_generator
@@ -1163,7 +1165,11 @@ def _fit_directory(payload: dict[str, Any], max_bytes: int) -> None:
 
 
 def _filter_trades_by_item(
-    payload: dict[str, Any], trade_norms: norms_mod.Norms, word: str
+    payload: dict[str, Any],
+    trade_norms: norms_mod.Norms,
+    word: str,
+    *,
+    narrowed_of: int | None = None,
 ) -> dict[str, Any]:
     """Keep only the ledger rows for the item `word` names, resolved as `price_by_stage` does.
 
@@ -1184,11 +1190,20 @@ def _filter_trades_by_item(
     else:
         payload["trades"] = [r for r in rows if trade_norms.is_item(name, r.get("item") or "")]
         info["matched"] = len(payload["trades"])
+    if narrowed_of is not None and name is not None:
+        # The ledger was rebuilt over this item's trades, so the aggregates describe it too.
+        info["of"] = narrowed_of
+        warning = (
+            f"item filter: trades, byItem, byItemUnits, topBuyers, topSellers and the totals "
+            f"describe {name} only, over the window stated in `window`"
+        )
+    else:
+        warning = (
+            "item filter: trades holds the matching rows only. byItem, byCurrency, topBuyers, "
+            "topSellers and the totals still describe every item"
+        )
     payload["itemFilter"] = info
-    payload.setdefault("warnings", []).append(
-        "item filter: trades holds the matching rows only. byItem, byCurrency, topBuyers, "
-        "topSellers and the totals still describe every item"
-    )
+    payload.setdefault("warnings", []).append(warning)
     return info
 
 
@@ -1821,16 +1836,25 @@ def build_server(
             )
 
         if name == "get_trades":
-            server_arg = arguments.get("server") if arguments else None
+            args = arguments or {}
+            server_arg = args.get("server")
             api_key = os.environ.get(ADMIN_API_KEY_ENV) or _get_admin_token()
             try:
-                ledger = await fetch_ledger(base_url=server_arg, api_key=api_key)
-            except httpx.HTTPError as e:
-                return _unreachable_result("Eco exporter", e)
-            ledger_payload = ledger.to_dict()
-            stale_warning = apply_freshness(ledger_payload, await _world_clock(server_arg))
-            item_arg = ((arguments or {}).get("item") or "").strip()
-            item_filter: dict[str, Any] | None = None
+                window = parse_window(args)
+            except ValueError as e:
+                # A JSON block too, or the dual-route layer swaps the text for a generic one.
+                body = {"view": "error", "error": str(e), "message": str(e)}
+                return CallToolResult(
+                    content=[
+                        TextContent(type="text", text=str(e)),
+                        TextContent(type="text", text=json.dumps(body)),
+                    ],
+                    isError=True,
+                )
+            store_arg = (args.get("store") or "").strip()
+            item_arg = (args.get("item") or "").strip()
+            trade_norms = None
+            resolved_item: str | None = None
             if item_arg:
                 trade_norms = norms_mod.load()
                 if trade_norms is None:
@@ -1840,8 +1864,42 @@ def build_server(
                         ],
                         isError=True,
                     )
+                resolved_item, _miss, _qualifier = trade_norms.find_qualified(
+                    item_arg, _recipe_items()
+                )
+            norms_for_item = trade_norms
+            item_ok = (
+                (lambda row_item: norms_for_item.is_item(resolved_item, row_item))
+                if norms_for_item is not None and resolved_item is not None
+                else None
+            )
+            try:
+                # A store, a window or a resolved item rebuilds every aggregate over the
+                # trades it selects. Otherwise the cached whole-ledger view answers.
+                if store_arg or window.asked or item_ok is not None:
+                    ledger = await fetch_trade_history(
+                        base_url=server_arg,
+                        api_key=api_key,
+                        store=store_arg or None,
+                        window=window,
+                        item_ok=item_ok,
+                        item_label=resolved_item,
+                    )
+                else:
+                    ledger = await fetch_ledger(base_url=server_arg, api_key=api_key)
+            except httpx.HTTPError as e:
+                return _unreachable_result("Eco exporter", e)
+            ledger_payload = ledger.to_dict()
+            stale_warning = apply_freshness(ledger_payload, await _world_clock(server_arg))
+            item_filter: dict[str, Any] | None = None
+            if item_arg and trade_norms is not None:
                 # Whole ledger first, so `limit` bounds the matches and not the newest rows.
-                item_filter = _filter_trades_by_item(ledger_payload, trade_norms, item_arg)
+                item_filter = _filter_trades_by_item(
+                    ledger_payload,
+                    trade_norms,
+                    item_arg,
+                    narrowed_of=ledger.scoped_before_item if item_ok is not None else None,
+                )
             # Every one of these grows with the world: byItem with the item
             # catalogue, byCurrency with the currency roster, and topBuyers /
             # topSellers hold one row per trading citizen despite the name.
@@ -1851,9 +1909,12 @@ def build_server(
                 _resolve_limit(arguments or {}),
                 "trades",
                 "byItem",
+                "byItemUnits",
                 "byCurrency",
                 "topBuyers",
                 "topSellers",
+                "topBuyersByUnits",
+                "topSellersByUnits",
             )
             ledger_text = ledger_markdown(ledger)
             if stale_warning:
