@@ -9,6 +9,7 @@ Contract: docs/dual-route-inventory.md#reply-templates.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from typing import Any
 
 from .crafting import prettify_eco_name
@@ -17,6 +18,7 @@ from .recipes import RecipeIndex
 ITEMS_URI = "eco://vocab/items"
 CURRENCIES_URI = "eco://vocab/currencies"
 PRICED_ITEMS_URI = "eco://vocab/priced-items"
+STORES_URI = "eco://vocab/stores"
 STAGES_URI = "eco://vocab/stages"
 ARGS_META_KEY = "coilyco/args"
 
@@ -26,7 +28,12 @@ ARGS_META_KEY = "coilyco/args"
 # so the trade tools never take them as the item (sirens-echo#8249).
 SHOP_WORDS = ["store", "shop", "market"]
 TOOL_ARGS: dict[str, dict[str, dict[str, Any]]] = {
-    "find_trade": {"item": {"vocabulary": ITEMS_URI, "field": "name", "ignore": SHOP_WORDS}},
+    # A store is named by its own words, which are often item words too ("Food Coming
+    # Soon"). The harness spends the words a store name matched before it fills item.
+    "find_trade": {
+        "store": {"vocabulary": STORES_URI, "field": "name", "ignore": SHOP_WORDS},
+        "item": {"vocabulary": ITEMS_URI, "field": "name", "ignore": SHOP_WORDS},
+    },
     # get_market folds spaces out only on the id side, so a multi-word display
     # name would never match: it takes the id.
     "get_market": {"item": {"vocabulary": ITEMS_URI, "field": "id", "ignore": SHOP_WORDS}},
@@ -55,6 +62,26 @@ def item_vocabulary(index: RecipeIndex) -> list[dict[str, Any]]:
         stem = item_id[: -len("Item")] if item_id.endswith("Item") and item_id != "Item" else ""
         aliases = [a for a in dict.fromkeys((item_id, stem)) if a and a != name]
         entries.append({"id": item_id, "name": name, "aliases": aliases})
+    return entries
+
+
+def store_vocabulary(stores: Iterable[tuple[str, str]]) -> list[dict[str, Any]]:
+    """Store names a player's words can be matched against, from (name, owner) pairs.
+
+    A name alone is one entry however many stores carry it, since the tool's filter
+    answers every store of that name. `Owner's Name` is an entry of its own, longer
+    and so preferred when a player says it. A one-word name is left out: it would
+    match a store whenever the word appears, "food" and "tools" among them.
+    """
+    entries: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for name, owner in sorted(set(stores)):
+        name, owner = name.strip(), owner.strip()
+        for form in (name, f"{owner}'s {name}" if owner else ""):
+            key = form.lower()
+            if form and len(form.split()) >= 2 and key not in seen:
+                seen.add(key)
+                entries.append({"id": form, "name": form, "aliases": []})
     return entries
 
 
