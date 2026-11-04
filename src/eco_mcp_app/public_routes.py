@@ -152,6 +152,10 @@ class TradeInput(BoundedServerInput):
 class FindTradeInput(TradeInput):
     """`find_trade`'s filters: TradeInput plus the named-store query (COI-758)."""
 
+    # None lets the handler pick the default: a few overview rows when no filter
+    # is set, the ordinary slice otherwise (COI-3373).
+    limit: int | None = Field(default=None, ge=0, description=LIMIT_DESCRIPTION)  # type: ignore[assignment]
+
     store: str | None = Field(
         default=None,
         description=(
