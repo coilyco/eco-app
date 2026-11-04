@@ -1071,6 +1071,13 @@ def _format_markdown(payload: dict[str, Any]) -> str:
 # client with no parameter available to bound them (#256).
 MCP_ROW_LIMIT = 50
 
+# An unfiltered find_trade is the whole-server overview, the biggest answer a
+# model is handed. Its rows and the offers inside them are cut to a few, with
+# the count of the rest (COI-3373). A filtered call keeps MCP_ROW_LIMIT.
+OVERVIEW_ROWS = 5
+OVERVIEW_OFFERS = 3
+_OVERVIEW_NESTED = {"cheapest": "offers", "resale": "offers", "supplyGaps": "buyers"}
+
 # A population curve keeps more points than a detail list: 120 evenly-spaced
 # samples still draw a readable shape and cost a few KB.
 MCP_POPULATION_SAMPLES = 120
@@ -1233,6 +1240,24 @@ def _bound_rows(payload: dict[str, Any], limit: int, *keys: str) -> None:
             f"{key}: showing {limit:,} of {total:,} rows; pass limit=0 for all of them "
             "(the summary fields above already cover every row)"
         )
+
+
+def _bound_overview_nested(payload: dict[str, Any], offers: int) -> None:
+    """Cut the offers and buyers inside each kept overview row, with one warning each."""
+    if offers <= 0:
+        return
+    for board, inner in _OVERVIEW_NESTED.items():
+        cut = 0
+        for row in payload.get(board) or []:
+            lines = row.get(inner) if isinstance(row, dict) else None
+            if isinstance(lines, list) and len(lines) > offers:
+                cut += len(lines) - offers
+                row[inner] = lines[:offers]
+        if cut:
+            payload.setdefault("warnings", []).append(
+                f"{board}.{inner}: showing {offers:,} per row, {cut:,} more left out; "
+                "pass limit=0 or a filter for all of them"
+            )
 
 
 def _bound_nested_rows(payload: dict[str, Any], limit: int, key: str, inner: str) -> None:
@@ -2377,9 +2402,13 @@ def build_server(
                 return _unreachable_result("Eco exporter", e)
             logistics_payload = report.to_dict()
             logistics_md = logistics_markdown(report)
+            overview = not (item_arg or currency_arg or store_arg)
+            limit = _resolve_limit(arguments or {}, OVERVIEW_ROWS if overview else MCP_ROW_LIMIT)
+            if overview and limit == OVERVIEW_ROWS:
+                _bound_overview_nested(logistics_payload, OVERVIEW_OFFERS)
             _bound_rows(
                 logistics_payload,
-                _resolve_limit(arguments or {}),
+                limit,
                 "cheapest",
                 "resale",
                 "arbitrage",

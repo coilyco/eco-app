@@ -341,3 +341,64 @@ async def test_government_limit_zero_keeps_every_row() -> None:
 
     assert len(payload["settlements"]) == len(payload["titles"]) == 60
     assert "warnings" not in payload
+
+
+def _overview_rows() -> dict[str, Any]:
+    offers = [{"store": f"Shop {n}"} for n in range(6)]
+    board = [{"item": f"Item{i}", "offers": list(offers)} for i in range(40)]
+    return {
+        "cheapest": list(board),
+        "resale": list(board),
+        "arbitrage": [{"item": f"Item{i}"} for i in range(40)],
+        "supplyGaps": [{"item": f"Item{i}", "buyers": list(offers)} for i in range(40)],
+        "marketSummaries": [{"item": f"Item{i}"} for i in range(160)],
+        "warnings": [],
+    }
+
+
+async def _find_trade(monkeypatch: pytest.MonkeyPatch, arguments: dict[str, Any]) -> dict[str, Any]:
+    async def _fetch(**_: Any) -> _Report:
+        return _Report(_overview_rows())
+
+    monkeypatch.setattr(eco_server, "fetch_logistics", _fetch)
+    monkeypatch.setattr(eco_server, "logistics_markdown", lambda _report: "stub")
+    return await _call("find_trade", arguments)
+
+
+@pytest.mark.asyncio
+async def test_an_unfiltered_find_trade_hands_the_model_a_few_rows_and_the_count_of_the_rest(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    payload = await _find_trade(monkeypatch, {})
+
+    for board in ("cheapest", "resale", "arbitrage", "supplyGaps", "marketSummaries"):
+        assert len(payload[board]) == eco_server.OVERVIEW_ROWS
+        assert any(w.startswith(f"{board}:") for w in payload["warnings"])
+    assert len(payload["cheapest"][0]["offers"]) == eco_server.OVERVIEW_OFFERS
+    assert len(payload["supplyGaps"][0]["buyers"]) == eco_server.OVERVIEW_OFFERS
+    assert any(w.startswith("cheapest.offers:") for w in payload["warnings"])
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "arguments", [{"item": "Item1"}, {"store": "Shop"}, {"currency": "Credit"}]
+)
+async def test_a_filtered_find_trade_keeps_the_ordinary_row_limit(
+    monkeypatch: pytest.MonkeyPatch, arguments: dict[str, Any]
+) -> None:
+    payload = await _find_trade(monkeypatch, arguments)
+
+    assert len(payload["cheapest"]) == 40
+    assert len(payload["cheapest"][0]["offers"]) == 6
+    assert len(payload["marketSummaries"]) == eco_server.MCP_ROW_LIMIT
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(("limit", "rows"), [(0, 160), (12, 12)])
+async def test_an_unfiltered_find_trade_still_gives_the_caller_the_rows_it_asks_for(
+    monkeypatch: pytest.MonkeyPatch, limit: int, rows: int
+) -> None:
+    payload = await _find_trade(monkeypatch, {"limit": limit})
+
+    assert len(payload["marketSummaries"]) == rows
+    assert len(payload["cheapest"][0]["offers"]) == 6
