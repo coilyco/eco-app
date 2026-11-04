@@ -434,11 +434,13 @@ _LIVE_STORES: list[dict[str, Any]] = [
 ]
 
 
-def test_parse_live_stores_tolerates_nulls_and_skips_barter() -> None:
+def test_parse_live_stores_tolerates_nulls_and_keeps_barter_lines() -> None:
     offers = parse_live_stores(_LIVE_STORES)
-    # Corn is a 0-price barter shelf → skipped; Lumber (sell) + Log (buy) kept.
-    assert len(offers) == 2
+    # Corn is a 0-price barter shelf. It stays so a named store can list it, and the price
+    # boards leave it out (build_logistics, COI-3319). Lumber (sell) + Log (buy) are paid.
+    assert len(offers) == 3
     by_item = {o.item: o for o in offers}
+    assert by_item["CornItem"].price == 0
     assert by_item["LumberItem"].side == "sell"
     assert by_item["LumberItem"].source == "live"
     assert by_item["LogItem"].side == "buy"

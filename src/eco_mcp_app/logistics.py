@@ -329,7 +329,10 @@ def build_logistics(
     # Keep the last-writer-wins offer per (store, item, currency, side): a live
     # offer overwrites a history one for the same shelf line (see `_merge`), so
     # by here the list is already deduped; we just bucket by market.
-    priced = [o for o in offers if o.price > 0]
+    everything = list(offers)
+    # The price boards take paid lines only: a 0 or negative price would read there as the
+    # best deal. A named store's own shelf takes every line (COI-3319).
+    priced = [o for o in everything if o.price > 0]
     # Kept so an empty filtered result can tell a lookup miss from a dead
     # market — see the warning below (#247).
     total_before_filter = len(priced)
@@ -338,8 +341,8 @@ def build_logistics(
     near_keys: set[str] | None = None
     resolved_from: str | None = None
     suggestions: list[tuple[float, ShelfOffer]] = []
-    if want_store is not None and not any(_store_matches(o, want_store) for o in priced):
-        suggestions = _near_stores(priced, store or "")[:_NEAR_SUGGESTIONS]
+    if want_store is not None and not any(_store_matches(o, want_store) for o in everything):
+        suggestions = _near_stores(everything, store or "")[:_NEAR_SUGGESTIONS]
         if suggestions and (
             len(suggestions) == 1 or suggestions[0][0] - suggestions[1][0] >= _NEAR_MARGIN
         ):
@@ -348,6 +351,9 @@ def build_logistics(
             suggestions = suggestions[:1]
     kept = [
         o for o in priced if _passes_filters(o, want_item, want_currency, want_store, near_keys)
+    ]
+    kept_shelf = [
+        o for o in everything if _passes_filters(o, want_item, want_currency, want_store, near_keys)
     ]
 
     # (item, currency) -> {"sell": [...], "buy": [...]}
@@ -513,7 +519,9 @@ def build_logistics(
 
     matched_keys: set[str] = set()
     if want_store is not None:
-        matched_keys = near_keys or {o.store_key for o in priced if _store_matches(o, want_store)}
+        matched_keys = near_keys or {
+            o.store_key for o in everything if _store_matches(o, want_store)
+        }
         report.store_query = (store or "").strip()
         report.stores_matched = len(matched_keys)
         if resolved_from is not None:
@@ -533,8 +541,11 @@ def build_logistics(
                 + "; ".join(f"{o.store_label}" for _, o in suggestions)
                 + ". Ask again with one of those names."
             )
+        # The shelf counts every line the matched stores hold, free ones included.
+        report.total_offers = len(kept_shelf)
+        report.total_stores = len({o.store_key for o in kept_shelf})
         _fill_store_board(
-            report, priced, kept, matched_keys, want_item, want_currency, unlisted or {}
+            report, everything, kept_shelf, matched_keys, want_item, want_currency, unlisted or {}
         )
         # Arbitrage and supply gaps compare stores, and one store's slice of the
         # market cannot say either truthfully (its own buy order would read as
@@ -551,14 +562,14 @@ def build_logistics(
     if want_store is not None and not matched_keys:
         # A store name nobody has is a lookup miss. It is never the same fact as a
         # store with nothing on its shelves, so say which, and name real stores.
-        known = sorted({o.store_label for o in priced})
+        known = sorted({o.store_label for o in everything})
         sample = ", ".join(known[:8])
         report.warnings.append(
             f"no store matched store={store!r}. "
             + (
-                f"{len(known):,} store(s) have priced offers, for example: {sample}. "
+                f"{len(known):,} store(s) have offers, for example: {sample}. "
                 if known
-                else "No store has a priced offer at all yet. "
+                else "No store has an offer at all yet. "
             )
             + "This is a lookup miss, not an empty store. Try part of the store's name "
             "or its owner's handle."
@@ -635,6 +646,12 @@ def _fill_store_board(
         lines = sorted(
             by_store.get(key, []), key=lambda o: (o.side != "sell", o.item_display.lower())
         )
+        shelf: list[dict[str, Any]] = []
+        for line in lines[:STORE_SHELF_LINES]:
+            entry = line.to_dict()
+            if note := _price_note(line):
+                entry["priceNote"] = note
+            shelf.append(entry)
         row: dict[str, Any] = {
             "store": first.store_label,
             "name": first.store_name or first.store_label,
@@ -646,26 +663,25 @@ def _fill_store_board(
             "sellLines": sum(1 for o in lines if o.side == "sell"),
             "buyLines": sum(1 for o in lines if o.side == "buy"),
             "shelfLines": len(lines),
-            "shelf": [o.to_dict() for o in lines[:STORE_SHELF_LINES]],
+            "freeLines": sum(1 for o in lines if o.price == 0),
+            "negativeLines": sum(1 for o in lines if o.price < 0),
+            "shelf": shelf,
         }
         # Lines the exporter sent that this board cannot show, counted so the total
-        # a caller reads is the store's, not the priced part of it (COI-3279).
-        dropped = unlisted.get(key, {})
-        free, nameless = dropped.get("free", 0), dropped.get("nameless", 0)
-        row["unlistedLines"] = free + nameless
-        row["listings"] = sum(1 for o in priced if o.store_key == key) + free + nameless
+        # a caller reads is the store's. Only a line with no item name is hidden (COI-3279).
+        nameless = unlisted.get(key, {}).get("nameless", 0)
+        row["unlistedLines"] = nameless
+        row["listings"] = sum(1 for o in priced if o.store_key == key) + nameless
         row["truncated"] = len(lines) > STORE_SHELF_LINES
         notes: list[str] = []
         if len(lines) > STORE_SHELF_LINES:
             notes.append(f"shelf shows {STORE_SHELF_LINES:,} of {len(lines):,} lines")
-        if free or nameless:
-            parts = []
-            if free:
-                parts.append(f"{free:,} free or barter (price 0)")
-            if nameless:
-                parts.append(f"{nameless:,} with no item name")
+        if nameless:
+            notes.append(f"{nameless:,} more listing(s) are not on this shelf: no item name")
+        if row["freeLines"] or row["negativeLines"]:
             notes.append(
-                f"{free + nameless:,} more listing(s) are not on this shelf: " + ", ".join(parts)
+                f"{row['freeLines'] + row['negativeLines']:,} line(s) at price 0 or below are "
+                "listed with their real price and kept off the price boards"
             )
         if not live:
             notes.append(
@@ -676,7 +692,7 @@ def _fill_store_board(
             notes.append(
                 "no line matches the item or currency filter"
                 if want_item or want_currency
-                else "no priced line"
+                else "no line"
             )
         if notes:
             row["note"] = "; ".join(notes)
@@ -713,6 +729,22 @@ def _num(value: float, places: int) -> str:
 _SUMMARY_STORES = 3
 
 
+def _price_note(offer: ShelfOffer) -> str | None:
+    """Words for a shelf line priced 0 or below, from what the exporter documents.
+
+    The DTO says `price` is in the store's currency and that 0.0 with no currency is a
+    barter or free shelf. It does not define a negative price, so that is reported as the
+    number the exporter gave and nothing more (mods/stores/docs/dto.md, COI-3319).
+    """
+    if offer.price < 0:
+        return "negative price. The exporter does not define it, so read the number as given"
+    if offer.price == 0:
+        if not offer.currency:
+            return "price 0 with no currency: a barter or free shelf, not a currency price"
+        return f"price 0 {offer.currency}: no charge"
+    return None
+
+
 def _fit_reply(text: str, limit: int = 280) -> str | None:
     """A reply, or None when it will not fit, so the call falls through to the model."""
     return text if len(text) <= limit else None
@@ -727,7 +759,7 @@ def _store_summary(store: str, live: bool, lines: list[ShelfOffer], row: dict[st
     stocked = [o for o in lines if o.side == "sell" and o.quantity > 0]
     head = f"{store}: {row['listings']:,} listings, {len(stocked):,} in stock"
     if row["unlistedLines"]:
-        head += f", {row['unlistedLines']:,} not shown (free, barter or unnamed)"
+        head += f", {row['unlistedLines']:,} not shown (no item name)"
     if not stocked:
         return head + "."
     deepest = sorted(stocked, key=lambda o: -o.quantity)[:2]
@@ -960,10 +992,10 @@ def parse_live_stores(
     """Fold the `/api/v1/stores` DTO array into live shelf offers.
 
     Tolerates the nulls the DTO promises — an unowned store, a currency-less
-    store, an orphaned (locationless) store — and skips barter / free shelves
-    (a 0 price with no currency) the same way the price boards skip unpriced
-    trades. See `mods/stores/docs/dto.md`. A skipped line is counted per store in
-    `unlisted` (`free`, `nameless`) so a store's true total can still be told.
+    store, an orphaned (locationless) store. Keeps every line with an item name, price
+    0 and negative included: `build_logistics` keeps them off the price boards and a
+    named store's shelf lists them (COI-3319). A line with no item name cannot be listed,
+    so it is counted per store in `unlisted` (`nameless`). See `mods/stores/docs/dto.md`.
     """
     offers: list[ShelfOffer] = []
     for store in stores:
@@ -983,9 +1015,6 @@ def parse_live_stores(
                 price = float(offer.get("price") or 0.0)
                 quantity = float(offer.get("quantity") or 0.0)
             except (TypeError, ValueError):
-                continue
-            if price <= 0:  # barter / free shelf — never a currency price point
-                _count_unlisted(unlisted, store_key, "free")
                 continue
             offers.append(
                 ShelfOffer(
@@ -1114,7 +1143,7 @@ async def fetch_store_names(
         if owns_client:
             await http.aclose()
     offers = _merge(hist_offers, live_offers)
-    return sorted({(_store_name(o), o.owner) for o in offers if o.price > 0})
+    return sorted({(_store_name(o), o.owner) for o in offers})
 
 
 # ---------------------------------------------------------------------------
@@ -1150,6 +1179,12 @@ def logistics_template_context(report: LogisticsReport, *, top: int = 6) -> dict
 _MD_SHELF_LINES = 15
 
 
+def _price_tag(price: float) -> str:
+    if price < 0:
+        return " (negative price)"
+    return " (no charge)" if price == 0 else ""
+
+
 def _store_shelf_markdown(report: LogisticsReport) -> list[str]:
     lines = [
         f"**Store shelf for {report.store_query!r}** — {report.stores_matched} store(s) matched:"
@@ -1164,9 +1199,10 @@ def _store_shelf_markdown(report: LogisticsReport) -> list[str]:
         for o in st["shelf"][:_MD_SHELF_LINES]:
             verb = "sells" if o["side"] == "sell" else "buys"
             amount = "in stock" if o["side"] == "sell" else "wanted"
+            tag = _price_tag(o["price"])
             lines.append(
                 f"  - {verb} {o['itemPretty']}: {o['quantity']:,.0f} {amount} "
-                f"at {o['price']:,.2f} {o['currency']}"
+                f"at {o['price']:,.2f} {o['currency']}{tag}"
             )
         if len(st["shelf"]) > _MD_SHELF_LINES:
             lines.append(f"  - ... {len(st['shelf']) - _MD_SHELF_LINES} more in the JSON block")
