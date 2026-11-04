@@ -182,3 +182,13 @@ jobs:
           SENTRY_DSN: ${{ secrets.SENTRY_CI_DSN }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: python3 scripts/alert_sentry.py
+
+  gate-required:
+    name: gate
+    needs: [test, frontend, frontend-image, kit-check]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - if: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
+        run: exit 1
