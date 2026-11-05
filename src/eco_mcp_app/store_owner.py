@@ -55,7 +55,8 @@ def owner_reply(match: StoreMatch, payload: dict[str, Any]) -> str | None:
     """One line naming the owner, or None when the question needs the model.
 
     Null unless exactly one store was named outright: a near-name or a tie is not an
-    answer to give without saying so.
+    answer to give without saying so. A store with no history row is not said to have no
+    trades: the directory keeps only the top stores by value, so a missing row proves nothing.
     """
     if len(match.matched) != 1 or match.resolved_from:
         return None
@@ -69,6 +70,4 @@ def owner_reply(match: StoreMatch, payload: dict[str, Any]) -> str | None:
         line += (
             f" {trades:,} trades on record, the latest on day {int(rows[0].get('lastDay') or 0)}."
         )
-    elif not rows:
-        line += " It has no trades on record."
     return line if len(line) <= MAX_REPLY_CHARS else None
