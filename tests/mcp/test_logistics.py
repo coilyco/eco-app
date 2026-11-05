@@ -971,3 +971,34 @@ def test_an_unmatched_currency_is_also_a_filter_miss() -> None:
     warning = " ".join(report.warnings)
     assert "filter miss" in warning
     assert "nothing to route" not in warning
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_fetch_logistics_live_only_drops_history_only_offers_and_says_so() -> None:
+    respx.get(CURRENCY_URL).mock(return_value=httpx.Response(200, text=_CURRENCY_CSV))
+    respx.get(BARTER_URL).mock(return_value=httpx.Response(200, text=_BARTER_EMPTY))
+    respx.get(CITIZENS_URL).mock(return_value=httpx.Response(200, json=_CITIZENS_JSON))
+    live = [
+        {
+            "name": "Cheap Ore Yard",
+            "owner": "miner",
+            "currency": "Credit",
+            "location": {"x": 1, "y": 1, "z": 1},
+            "offers": [
+                _live_offer("Iron Ore", "IronOreItem", False, 0.30, 400),
+                _live_offer("Iron Ingot", "IronIngotItem", True, 5.0, 50),
+            ],
+        }
+    ]
+    respx.get(STORES_URL).mock(return_value=httpx.Response(200, json=live))
+
+    everything = await fetch_logistics(base_url=BASE, api_key="k")
+    shelves = await fetch_logistics(base_url=BASE, api_key="k", live_only=True)
+
+    assert everything.total_stores == 2
+    assert shelves.total_stores == 1
+    sources = {o["source"] for row in shelves.cheapest for o in row["offers"]}
+    assert sources <= {"live"}
+    assert any("history-only offers are left out" in w for w in shelves.warnings)
+    assert not any("history-only offers are left out" in w for w in everything.warnings)

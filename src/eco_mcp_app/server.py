@@ -2431,6 +2431,8 @@ def build_server(
                     item=item_arg,
                     currency=currency_arg,
                     store=store_arg,
+                    # A model asking what is for sale gets shelves, not past trade prices.
+                    live_only=MODEL_CALL.get() and not store_arg,
                 )
             except httpx.HTTPError as e:
                 return _unreachable_result("Eco exporter", e)

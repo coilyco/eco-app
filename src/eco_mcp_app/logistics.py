@@ -1102,9 +1102,15 @@ async def fetch_logistics(
     item: str | None = None,
     currency: str | None = None,
     store: str | None = None,
+    live_only: bool = False,
     client: httpx.AsyncClient | None = None,
 ) -> LogisticsReport:
     """Assemble the shelf (history + best-effort live) and fold it into the boards.
+
+    `live_only` keeps the boards to what is on a shelf now when the live exporter answered:
+    a history offer is a past trade price, not stock, and a model read one as "for sale"
+    (COI-3440). History still feeds the reference medians. With no live shelf the history
+    offers stay, and `live` says so.
 
     History is the spine (`fetch_parsed_trades`, shared with the ledger and the
     directory — one fetch, one parse); the live shelf sharpens it when present.
@@ -1124,6 +1130,10 @@ async def fetch_logistics(
             await http.aclose()
 
     offers = _merge(hist_offers, live_offers)
+    left_out = 0
+    if live_only and live_offers:
+        left_out = sum(1 for o in offers if o.source != "live")
+        offers = [o for o in offers if o.source == "live"]
     report = build_logistics(
         offers, medians=medians, item=item, currency=currency, store=store, unlisted=unlisted
     )
@@ -1131,6 +1141,11 @@ async def fetch_logistics(
     report.source_base_url = normalized
     report.live = bool(live_offers)
     report.warnings = list(fetch.warnings) + live_warnings + report.warnings
+    if left_out:
+        report.warnings.append(
+            f"{left_out:,} history-only offers are left out: each is the price of a past trade "
+            "at a store whose shelf does not list the item now, not stock for sale"
+        )
     rollups = [t for t in fetch.parsed if t.is_rollup]
     if rollups:
         report.warnings.append(
