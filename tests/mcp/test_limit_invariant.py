@@ -402,7 +402,9 @@ async def test_an_item_or_currency_filter_gets_the_same_few_rows_as_the_overview
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize(("limit", "rows", "offers"), [(0, 10, 3), (7, 7, 3), (100, 10, 3)])
+@pytest.mark.parametrize(
+    ("limit", "rows", "offers"), [(0, 5, 3), (3, 3, 3), (7, 5, 3), (100, 5, 3)]
+)
 async def test_an_unfiltered_find_trade_caps_a_models_own_limit_zero_included(
     monkeypatch: pytest.MonkeyPatch, limit: int, rows: int, offers: int
 ) -> None:

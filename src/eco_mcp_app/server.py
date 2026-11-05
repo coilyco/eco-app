@@ -1078,7 +1078,7 @@ MCP_ROW_LIMIT = 50
 # them are cut to a few, with the count of the rest (COI-3373). A store query keeps
 # MCP_ROW_LIMIT: its shelf is the answer.
 OVERVIEW_ROWS = 5
-OVERVIEW_MAX_ROWS = 10
+OVERVIEW_MAX_ROWS = 5
 OVERVIEW_OFFERS = 3
 _OVERVIEW_NESTED = {"cheapest": "offers", "resale": "offers", "supplyGaps": "buyers"}
 
