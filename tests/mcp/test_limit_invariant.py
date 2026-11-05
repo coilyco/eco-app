@@ -224,7 +224,8 @@ async def test_the_two_newly_bounded_tools_actually_bound(
     payload = json.loads(result.root.content[-1].text)
 
     assert len(payload[key]) == 5
-    assert any(w.startswith(f"{key}:") for w in payload["warnings"])
+    # find_trade says so once in `coverageNote` (COI-3440), the rest per list in `warnings`.
+    assert "coverageNote" in payload or any(w.startswith(f"{key}:") for w in payload["warnings"])
 
 
 # COI-1649: the arrays the #6076 sweep recorded as small enough to leave alone.
@@ -373,7 +374,7 @@ async def test_an_unfiltered_find_trade_hands_the_model_a_few_rows_and_the_count
 
     for board in ("cheapest", "resale", "arbitrage", "supplyGaps", "marketSummaries"):
         assert len(payload[board]) == eco_server.OVERVIEW_ROWS
-        assert any(w.startswith(f"{board}:") for w in payload["warnings"])
+        assert not any(w.startswith(f"{board}:") for w in payload["warnings"])
     assert len(payload["cheapest"][0]["offers"]) == eco_server.OVERVIEW_OFFERS
     assert len(payload["supplyGaps"][0]["buyers"]) == eco_server.OVERVIEW_OFFERS
     assert any(w.startswith("cheapest.offers:") for w in payload["warnings"])
@@ -397,7 +398,7 @@ async def test_an_item_or_currency_filter_gets_the_same_few_rows_as_the_overview
 
     assert len(payload["cheapest"]) == eco_server.OVERVIEW_ROWS
     assert len(payload["cheapest"][0]["offers"]) == eco_server.OVERVIEW_OFFERS
-    assert any(w.startswith("cheapest:") for w in payload["warnings"])
+    assert "not the list of what is for sale" in payload["coverageNote"]
 
 
 @pytest.mark.asyncio
@@ -433,3 +434,54 @@ async def test_the_spa_s_rest_call_keeps_the_full_board_a_model_call_gets_cut(
     assert len(rest["cheapest"]) == 40
     assert len(rest["cheapest"][0]["offers"]) == 6
     assert len(model["cheapest"]) == eco_server.OVERVIEW_ROWS
+
+
+@pytest.mark.asyncio
+async def test_a_trimmed_view_says_so_first_and_never_teaches_limit_zero(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A model read 5 cheapest rows as the whole server and denied edible food (COI-3440)."""
+
+    async def _fetch(**_: Any) -> _Report:
+        return _Report(_overview_rows())
+
+    monkeypatch.setattr(eco_server, "fetch_logistics", _fetch)
+    monkeypatch.setattr(eco_server, "logistics_markdown", lambda _report: "stub")
+    handler = build_server().request_handlers[mt.CallToolRequest]
+    result = await handler(
+        mt.CallToolRequest(
+            method="tools/call",
+            params=mt.CallToolRequestParams(name="find_trade", arguments={"item": "meat"}),
+        )
+    )
+    first = result.root.content[0].text
+    payload = json.loads(result.root.content[-1].text)
+
+    assert first.startswith("**Partial view.**")
+    assert "cheapest first" in first
+    assert "coverageNote" in list(payload)[:3]
+    assert not any("limit=0" in w for w in payload["warnings"])
+    assert "limit=0" not in payload["coverageNote"]
+
+
+@pytest.mark.asyncio
+async def test_a_view_nothing_was_cut_from_carries_no_partial_note(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def _fetch(**_: Any) -> _Report:
+        return _Report({"cheapest": [{"i": 1}], "warnings": []})
+
+    monkeypatch.setattr(eco_server, "fetch_logistics", _fetch)
+    monkeypatch.setattr(eco_server, "logistics_markdown", lambda _report: "stub")
+
+    payload = await _call("find_trade", {"item": "meat"})
+
+    assert "coverageNote" not in payload
+
+
+def test_the_spa_s_rest_read_carries_no_partial_note() -> None:
+    from eco_mcp_app.public_routes import FindTradeInput
+
+    description = FindTradeInput.model_json_schema()["properties"]["limit"]["description"]
+
+    assert "0 means no limit" not in description

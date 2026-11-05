@@ -1246,6 +1246,23 @@ def _bound_rows(payload: dict[str, Any], limit: int, *keys: str) -> None:
         )
 
 
+def _partial_view_note(before: dict[str, int], shown: int) -> str | None:
+    """Say what a trimmed model view is, or None when no board was cut.
+
+    The boards run cheapest first, so a model that read five rows as the whole server
+    reported that no edible food was for sale, the five cheapest being waste (COI-3440).
+    """
+    biggest = max(before.values(), default=0)
+    if biggest <= shown:
+        return None
+    return (
+        f"Each board shows only its {shown} cheapest rows, cheapest first, of up to {biggest}. "
+        "This is not the list of what is for sale: an item missing from it may still be for "
+        "sale, and cheap waste items lead the boards. Ask about one item by name, or one store, "
+        "to see its offers."
+    )
+
+
 def _bound_overview_nested(payload: dict[str, Any], offers: int) -> None:
     """Cut the offers and buyers inside each kept overview row, with one warning each."""
     if offers <= 0:
@@ -2427,22 +2444,21 @@ def build_server(
                 # and keeps its 50 rows, or all of them at limit=0.
                 limit = min(limit or OVERVIEW_MAX_ROWS, OVERVIEW_MAX_ROWS)
                 _bound_overview_nested(logistics_payload, OVERVIEW_OFFERS)
-            _bound_rows(
-                logistics_payload,
-                limit,
-                "cheapest",
-                "resale",
-                "arbitrage",
-                "supplyGaps",
-                "marketSummaries",
-                "stores",
-            )
+            boards = ("cheapest", "resale", "arbitrage", "supplyGaps", "marketSummaries")
+            before = {key: len(logistics_payload.get(key) or []) for key in boards}
+            _bound_rows(logistics_payload, limit, *boards, "stores")
             if overview:
-                narrow = "ask about one item or store for more"
-                logistics_payload["warnings"] = [
-                    w.replace("pass limit=0 for all of them", narrow)
-                    for w in logistics_payload.get("warnings", [])
-                ]
+                note = _partial_view_note(before, limit)
+                if note:
+                    # The per-board "pass limit=0" warnings taught a model to send limit 0;
+                    # one plain note replaces them (COI-3440).
+                    logistics_payload["warnings"] = [
+                        w
+                        for w in logistics_payload.get("warnings", [])
+                        if not any(w.startswith(f"{key}:") for key in boards)
+                    ]
+                    logistics_payload["coverageNote"] = note
+                    logistics_md = f"**Partial view.** {note}\n\n{logistics_md}"
             return CallToolResult(
                 content=[
                     TextContent(type="text", text=logistics_md),
