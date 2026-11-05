@@ -380,17 +380,24 @@ async def test_an_unfiltered_find_trade_hands_the_model_a_few_rows_and_the_count
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize(
-    "arguments", [{"item": "Item1"}, {"store": "Shop"}, {"currency": "Credit"}]
-)
-async def test_a_filtered_find_trade_keeps_the_ordinary_row_limit(
-    monkeypatch: pytest.MonkeyPatch, arguments: dict[str, Any]
-) -> None:
-    payload = await _find_trade(monkeypatch, arguments)
+async def test_a_store_query_keeps_the_ordinary_row_limit(monkeypatch: pytest.MonkeyPatch) -> None:
+    payload = await _find_trade(monkeypatch, {"store": "Shop"})
 
     assert len(payload["cheapest"]) == 40
     assert len(payload["cheapest"][0]["offers"]) == 6
     assert len(payload["marketSummaries"]) == eco_server.MCP_ROW_LIMIT
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("arguments", [{"item": "Item1"}, {"currency": "Credit"}])
+async def test_an_item_or_currency_filter_gets_the_same_few_rows_as_the_overview(
+    monkeypatch: pytest.MonkeyPatch, arguments: dict[str, Any]
+) -> None:
+    payload = await _find_trade(monkeypatch, arguments)
+
+    assert len(payload["cheapest"]) == eco_server.OVERVIEW_ROWS
+    assert len(payload["cheapest"][0]["offers"]) == eco_server.OVERVIEW_OFFERS
+    assert any(w.startswith("cheapest:") for w in payload["warnings"])
 
 
 @pytest.mark.asyncio

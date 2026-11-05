@@ -1072,9 +1072,10 @@ def _format_markdown(payload: dict[str, Any]) -> str:
 # client with no parameter available to bound them (#256).
 MCP_ROW_LIMIT = 50
 
-# An unfiltered find_trade is the whole-server overview, the biggest answer a
-# model is handed. Its rows and the offers inside them are cut to a few, with
-# the count of the rest (COI-3373). A filtered call keeps MCP_ROW_LIMIT.
+# A find_trade with no store is the biggest answer a model is handed, and a broad
+# item filter ("meat") is as large as the overview. Rows and the offers inside
+# them are cut to a few, with the count of the rest (COI-3373). A store query keeps
+# MCP_ROW_LIMIT: its shelf is the answer.
 OVERVIEW_ROWS = 5
 OVERVIEW_MAX_ROWS = 10
 OVERVIEW_OFFERS = 3
@@ -2417,7 +2418,7 @@ def build_server(
                 return _unreachable_result("Eco exporter", e)
             logistics_payload = report.to_dict()
             logistics_md = logistics_markdown(report)
-            overview = not (item_arg or currency_arg or store_arg)
+            overview = not store_arg
             limit = _resolve_limit(arguments or {}, OVERVIEW_ROWS if overview else MCP_ROW_LIMIT)
             if overview and limit:
                 # A model asks for limit=100 on its own (96 KB live, COI-3373).
