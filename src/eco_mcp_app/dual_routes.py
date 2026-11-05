@@ -14,6 +14,8 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.routing import Route
 
+from .transport import MODEL_CALL
+
 InputModel = TypeVar("InputModel", bound=BaseModel)
 OutputModel = TypeVar("OutputModel", bound=BaseModel)
 RestMethod = Literal["GET", "POST", "PUT", "PATCH", "DELETE"]
@@ -136,6 +138,7 @@ class DualRouteRegistry:
         except ValidationError as error:
             return self._mcp_validation_error(error)
 
+        token = MODEL_CALL.set(True)
         try:
             result = await route.handler(request_model)
             payload_model = route.output_model.model_validate(result.payload)
@@ -143,6 +146,8 @@ class DualRouteRegistry:
         except Exception:
             logger.exception("Dual MCP route %s failed", route.name)
             return self._mcp_internal_error()
+        finally:
+            MODEL_CALL.reset(token)
         encoded = json.dumps(payload, separators=(",", ":"))
         return CallToolResult(
             content=[
