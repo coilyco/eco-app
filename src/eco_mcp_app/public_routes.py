@@ -155,7 +155,15 @@ class FindTradeInput(TradeInput):
 
     # None lets the handler pick the default: a few overview rows when no filter
     # is set, the ordinary slice otherwise (COI-3373).
-    limit: int | None = Field(default=None, ge=0, description=LIMIT_DESCRIPTION)  # type: ignore[assignment]
+    limit: int | None = Field(  # type: ignore[assignment]
+        default=None,
+        ge=0,
+        description=(
+            "Leave unset. Without a store this returns only the cheapest rows of each board, "
+            "never the whole server: ask by item or store for more. The SPA passes 0 for "
+            "every row over REST."
+        ),
+    )
 
     store: str | None = Field(
         default=None,
