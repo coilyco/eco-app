@@ -411,3 +411,26 @@ async def test_an_unfiltered_find_trade_caps_a_models_own_limit_and_zero_means_a
     assert len(payload["cheapest"][0]["offers"]) == offers
     if limit:
         assert not any("limit=0" in w for w in payload["warnings"])
+
+
+@pytest.mark.asyncio
+async def test_the_spa_s_rest_call_keeps_the_full_board_a_model_call_gets_cut(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The SPA reads /preview/logistics.json with no limit, and must keep its rows (COI-3373)."""
+    from fastapi.testclient import TestClient
+
+    from eco_mcp_app.http_app import create_app
+
+    async def _fetch(**_: Any) -> _Report:
+        return _Report(_overview_rows())
+
+    monkeypatch.setattr(eco_server, "fetch_logistics", _fetch)
+    monkeypatch.setattr(eco_server, "logistics_markdown", lambda _report: "stub")
+
+    rest = TestClient(create_app()).get("/preview/logistics.json").json()
+    model = await _call("find_trade", {})
+
+    assert len(rest["cheapest"]) == 40
+    assert len(rest["cheapest"][0]["offers"]) == 6
+    assert len(model["cheapest"]) == eco_server.OVERVIEW_ROWS

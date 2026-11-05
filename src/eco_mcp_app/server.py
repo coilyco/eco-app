@@ -54,6 +54,7 @@ from .tech_progression import build_tech_progression, tech_progression_markdown
 from .telemetry import instrument_mcp_server
 from .trade_history import fetch_trade_history
 from .trades import fetch_ledger, ledger_markdown
+from .transport import MODEL_CALL
 from .world import fetch_world, world_markdown
 from .worldgen import read_world_generator
 
@@ -2418,10 +2419,11 @@ def build_server(
                 return _unreachable_result("Eco exporter", e)
             logistics_payload = report.to_dict()
             logistics_md = logistics_markdown(report)
-            overview = not store_arg
+            overview = not store_arg and MODEL_CALL.get()
             limit = _resolve_limit(arguments or {}, OVERVIEW_ROWS if overview else MCP_ROW_LIMIT)
             if overview and limit:
-                # A model asks for limit=100 on its own (96 KB live, COI-3373).
+                # A model asks for limit=100 on its own (96 KB live, COI-3373). The SPA reads
+                # this route over REST and keeps its 50 rows.
                 limit = min(limit, OVERVIEW_MAX_ROWS)
                 _bound_overview_nested(logistics_payload, OVERVIEW_OFFERS)
             _bound_rows(
