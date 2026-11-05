@@ -68,8 +68,9 @@ class StoresInput(ServerInput):
     store: str | None = Field(
         default=None,
         description=(
-            "Optional case-insensitive part of a store's name or owner, or a trader's "
-            "name. Matching rows come back whole."
+            'Optional store name as its owner gave it ("Fern & Co"), or part of the owner\'s '
+            "name, or a trader's name. Matching rows come back whole, and a store named "
+            "outright adds `reply`: who owns it."
         ),
     )
     item: str | None = Field(

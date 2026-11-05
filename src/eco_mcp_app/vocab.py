@@ -42,6 +42,8 @@ TOOL_ARGS: dict[str, dict[str, dict[str, Any]]] = {
         },
         "item": {"vocabulary": ITEMS_URI, "field": "name", "ignore": SHOP_WORDS},
     },
+    # The store's given name, as in find_trade: the owner question ("who owns <store>").
+    "get_stores": {"store": {"vocabulary": STORES_URI, "field": "name", "ignore": SHOP_WORDS}},
     # get_market folds spaces out only on the id side, so a multi-word display
     # name would never match: it takes the id.
     "get_market": {"item": {"vocabulary": ITEMS_URI, "field": "id", "ignore": SHOP_WORDS}},

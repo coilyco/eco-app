@@ -43,6 +43,9 @@ REPLY_TEMPLATES: dict[str, list[dict[str, Any]]] = {
         # builder sorts such rows after every buyable one (COI-2045).
         {"when_args": ["item"], "text": "{{cheapest.0.soldOutNote}}"},
     ],
+    # Who owns a named store: the payload carries one line, or null when the name did
+    # not resolve to exactly one store (COI-3407).
+    "get_stores": [{"when_args": ["store"], "text": "{{reply}}"}],
     "get_market": [
         {
             "when_args": ["item"],
