@@ -63,14 +63,11 @@ def test_the_owner_is_named_with_the_store_s_own_trade_count() -> None:
     )
 
 
-def test_a_named_store_with_no_history_row_still_names_its_owner() -> None:
+def test_a_named_store_with_no_history_row_names_its_owner_and_claims_nothing_more() -> None:
     payload: dict[str, Any] = {"stores": [], "traders": [], "warnings": []}
     match = narrow_to_roster(payload, "Quill Corner", ROSTER)
 
-    assert (
-        owner_reply(match, payload)
-        == "Quill Corner is owned by Tamsin. It has no trades on record."
-    )
+    assert owner_reply(match, payload) == "Quill Corner is owned by Tamsin."
 
 
 def test_two_stores_matching_one_name_get_no_reply_for_the_model_to_settle() -> None:
