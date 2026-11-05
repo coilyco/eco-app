@@ -48,6 +48,7 @@ from .progression import fetch_history, history_markdown
 from .public_routes import STORES_MAX_JSON_BYTES, STORES_NESTED_LIMIT, STORES_ROW_LIMIT
 from .reply_templates import with_reply_templates
 from .social import fetch_social, social_markdown
+from .store_owner import live_roster, narrow_to_roster, owner_reply
 from .stores import directory_markdown, fetch_directory
 from .tech_progression import build_tech_progression, tech_progression_markdown
 from .telemetry import instrument_mcp_server
@@ -2027,13 +2028,26 @@ def build_server(
             directory_payload = directory.to_dict()
             args = arguments or {}
             limit = _resolve_limit(args, default=STORES_ROW_LIMIT)
+            roster_match = None
+            if args.get("store"):
+                roster = await live_roster(server_arg, api_key)
+                if roster:
+                    roster_match = narrow_to_roster(directory_payload, args["store"], roster)
             if args.get("store") or args.get("item"):
-                _filter_directory(directory_payload, args.get("store"), args.get("item"))
+                if roster_match is not None and roster_match.matched:
+                    store_q = None
+                else:
+                    store_q = args.get("store")
+                if store_q or args.get("item"):
+                    _filter_directory(directory_payload, store_q, args.get("item"))
             elif limit > 0:
                 _shorten_directory_lists(directory_payload, STORES_NESTED_LIMIT)
             _bound_rows(directory_payload, limit, "stores", "traders")
             if limit > 0:
                 _fit_directory(directory_payload, STORES_MAX_JSON_BYTES)
+            if args.get("store") and not args.get("item"):
+                reply = owner_reply(roster_match, directory_payload) if roster_match else None
+                directory_payload["reply"] = reply
             return CallToolResult(
                 content=[
                     TextContent(type="text", text=directory_markdown(directory)),
