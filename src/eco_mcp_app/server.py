@@ -2421,10 +2421,11 @@ def build_server(
             logistics_md = logistics_markdown(report)
             overview = not store_arg and MODEL_CALL.get()
             limit = _resolve_limit(arguments or {}, OVERVIEW_ROWS if overview else MCP_ROW_LIMIT)
-            if overview and limit:
-                # A model asks for limit=100 on its own (96 KB live, COI-3373). The SPA reads
-                # this route over REST and keeps its 50 rows.
-                limit = min(limit, OVERVIEW_MAX_ROWS)
+            if overview:
+                # A model asks for limit=100, or 0, on its own (96 KB live, COI-3373). Every
+                # such limit is cut to OVERVIEW_MAX_ROWS. The SPA reads this route over REST
+                # and keeps its 50 rows, or all of them at limit=0.
+                limit = min(limit or OVERVIEW_MAX_ROWS, OVERVIEW_MAX_ROWS)
                 _bound_overview_nested(logistics_payload, OVERVIEW_OFFERS)
             _bound_rows(
                 logistics_payload,
@@ -2436,7 +2437,7 @@ def build_server(
                 "marketSummaries",
                 "stores",
             )
-            if overview and limit:
+            if overview:
                 narrow = "ask about one item or store for more"
                 logistics_payload["warnings"] = [
                     w.replace("pass limit=0 for all of them", narrow)
